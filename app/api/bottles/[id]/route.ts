@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
-import Bottle from '@/models/Bottle';
-import Location from '@/models/Location';
+import UserBottle from '@/models/UserBottle';
+import MasterBottle from '@/models/MasterBottle';
+import UserStore from '@/models/UserStore';
+import MasterStore from '@/models/MasterStore';
+import mongoose from 'mongoose';
 
 export async function GET(
   req: NextRequest,
@@ -12,22 +15,96 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
+    
+    const searchParams = req.nextUrl.searchParams;
+    const view = searchParams.get('view'); // 'master' for master bottle view
 
-    const bottle = await Bottle.findOne({
-      _id: params.id,
-      owner: session.user.id,
-    }).populate('location', 'name type bins');
+    if (view === 'master') {
+      // Return all user bottles for this master bottle
+      const userBottles = await UserBottle.find({
+        masterBottleId: params.id,
+        userId: session.user.id,
+      })
+        .populate('masterBottleId')
+        .populate({
+          path: 'storeId',
+          populate: {
+            path: 'masterStoreId',
+            model: 'MasterStore'
+          }
+        })
+        .sort('createdAt');
+      
+      if (userBottles.length === 0) {
+        return NextResponse.json({ error: 'No bottles found' }, { status: 404 });
+      }
+      
+      // Group by location for easier scanning
+      const locationGroups = new Map<string, any[]>();
+      const masterBottle = userBottles[0].masterBottleId;
+      
+      for (const bottle of userBottles) {
+        const locationKey = bottle.location?.area || 'No Location';
+        if (!locationGroups.has(locationKey)) {
+          locationGroups.set(locationKey, []);
+        }
+        locationGroups.get(locationKey)!.push(bottle);
+      }
+      
+      const groupedBottles = Array.from(locationGroups.entries()).map(([location, bottles]) => ({
+        location,
+        bottles: bottles.sort((a, b) => (a.location?.bin || '').localeCompare(b.location?.bin || ''))
+      }));
+      
+      return NextResponse.json({
+        masterBottle,
+        userBottles,
+        groupedBottles,
+        totalCount: userBottles.length,
+        openedCount: userBottles.filter(b => b.status === 'opened').length,
+        unopenedCount: userBottles.filter(b => b.status === 'unopened').length,
+        finishedCount: userBottles.filter(b => b.status === 'finished').length,
+      });
+    } else {
+      // Return individual bottle
+      const bottle = await UserBottle.findOne({
+        _id: params.id,
+        userId: session.user.id,
+      })
+        .populate('masterBottleId')
+        .populate({
+          path: 'storeId',
+          populate: {
+            path: 'masterStoreId',
+            model: 'MasterStore'
+          }
+        });
 
-    if (!bottle) {
-      return NextResponse.json({ error: 'Bottle not found' }, { status: 404 });
+      if (!bottle) {
+        return NextResponse.json({ error: 'Bottle not found' }, { status: 404 });
+      }
+      
+      // Debug what's being retrieved from database
+      console.log('Retrieved bottle from DB:', {
+        _id: bottle._id,
+        barcode: bottle.barcode,
+        wineBarcode: bottle.wineBarcode,
+        storeName: bottle.storeName,
+        marketValue: bottle.marketValue,
+        cellarTrackerId: bottle.cellarTrackerId,
+      });
+      
+      // Check raw document
+      const rawBottle = await UserBottle.findById(params.id).lean();
+      console.log('Raw bottle document:', rawBottle);
+
+      return NextResponse.json(bottle);
     }
-
-    return NextResponse.json({ bottle });
   } catch (error) {
     console.error('Error fetching bottle:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -41,7 +118,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -49,68 +126,30 @@ export async function PUT(
     
     await dbConnect();
 
-    const bottle = await Bottle.findOne({
+    const bottle = await UserBottle.findOne({
       _id: params.id,
-      owner: session.user.id,
+      userId: session.user.id,
     });
 
     if (!bottle) {
       return NextResponse.json({ error: 'Bottle not found' }, { status: 404 });
     }
 
-    // Handle location change
-    if (body.location && body.location !== bottle.location?.toString()) {
-      // Verify new location
-      const newLocation = await Location.findOne({
-        _id: body.location,
-        owner: session.user.id,
-      });
-
-      if (!newLocation) {
-        return NextResponse.json({ error: 'Invalid location' }, { status: 400 });
-      }
-
-      // Update old location count
-      if (bottle.location) {
-        if (bottle.binNumber) {
-          await Location.findOneAndUpdate(
-            { _id: bottle.location, 'bins.number': bottle.binNumber },
-            { $inc: { 'bins.$.currentCount': -1, currentCount: -1 } }
-          );
-        } else {
-          await Location.findByIdAndUpdate(
-            bottle.location,
-            { $inc: { currentCount: -1 } }
-          );
-        }
-      }
-
-      // Update new location count
-      if (body.binNumber) {
-        await Location.findOneAndUpdate(
-          { _id: body.location, 'bins.number': body.binNumber },
-          { $inc: { 'bins.$.currentCount': 1, currentCount: 1 } }
-        );
-      } else {
-        await Location.findByIdAndUpdate(
-          body.location,
-          { $inc: { currentCount: 1 } }
-        );
-      }
-    }
-
-    // Calculate ABV from proof if needed
-    if (body.proof && !body.abv) {
-      body.abv = body.proof / 2;
-    }
-
-    // Update bottle
+    // Update bottle with new data
     Object.assign(bottle, body);
     await bottle.save();
 
-    const updatedBottle = await Bottle.findById(bottle._id).populate('location', 'name type');
+    const updatedBottle = await UserBottle.findById(bottle._id)
+      .populate('masterBottleId')
+      .populate({
+        path: 'storeId',
+        populate: {
+          path: 'masterStoreId',
+          model: 'MasterStore'
+        }
+      });
 
-    return NextResponse.json({ bottle: updatedBottle });
+    return NextResponse.json(updatedBottle);
   } catch (error) {
     console.error('Error updating bottle:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -124,34 +163,19 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
 
-    const bottle = await Bottle.findOne({
+    const bottle = await UserBottle.findOne({
       _id: params.id,
-      owner: session.user.id,
+      userId: session.user.id,
     });
 
     if (!bottle) {
       return NextResponse.json({ error: 'Bottle not found' }, { status: 404 });
-    }
-
-    // Update location count
-    if (bottle.location) {
-      if (bottle.binNumber) {
-        await Location.findOneAndUpdate(
-          { _id: bottle.location, 'bins.number': bottle.binNumber },
-          { $inc: { 'bins.$.currentCount': -1, currentCount: -1 } }
-        );
-      } else {
-        await Location.findByIdAndUpdate(
-          bottle.location,
-          { $inc: { currentCount: -1 } }
-        );
-      }
     }
 
     await bottle.deleteOne();

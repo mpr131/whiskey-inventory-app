@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { initializeModels } from './initModels';
 
 declare global {
   var mongoose: {
@@ -30,6 +31,8 @@ async function dbConnect() {
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      // Initialize all models when connecting
+      initializeModels();
       return mongoose.connection;
     });
   }

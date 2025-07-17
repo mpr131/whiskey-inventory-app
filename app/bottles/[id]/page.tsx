@@ -1,369 +1,1154 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera } from 'lucide-react';
+import toast from 'react-hot-toast';
+import PhotoUpload from '@/components/PhotoUpload';
 
-interface Bottle {
+interface MasterBottle {
   _id: string;
   name: string;
+  brand: string;
   distillery: string;
+  region?: string;
+  category: string;
   type: string;
   age?: number;
-  proof: number;
-  abv: number;
-  size: string;
-  vintage?: number;
-  bottledDate?: string;
-  purchaseDate: string;
-  purchasePrice: number;
-  currentValue?: number;
-  location?: {
-    _id: string;
-    name: string;
-    type: string;
-    bins?: { number: string; capacity: number; currentCount: number }[];
-  };
-  binNumber?: string;
-  notes?: string;
-  rating?: number;
-  isOpen: boolean;
-  openedDate?: string;
-  finishedDate?: string;
-  fillLevel?: number;
-  images: string[];
-  barcode?: string;
+  proof?: number;
+  msrp?: number;
+  description?: string;
   isStorePick: boolean;
   storePickDetails?: {
     store: string;
+    pickDate?: string;
     barrel?: string;
-    rickhouse?: string;
-    floor?: string;
-    bottleNumber?: string;
-    totalBottles?: string;
   };
-  tags: string[];
+}
+
+interface UserBottle {
+  _id: string;
+  userId: string;
+  masterBottleId: MasterBottle;
+  purchaseDate?: string;
+  purchasePrice?: number;
+  marketValue?: number;
+  myValue?: number;
+  quantity: number;
+  location?: {
+    area: string;
+    bin: string;
+  };
+  notes?: string;
+  personalNotes?: string;
+  purchaseNote?: string;
+  deliveryDate?: string;
+  barcode?: string;
+  cellarTrackerId?: string;
+  storeId?: {
+    _id: string;
+    masterStoreId: {
+      _id: string;
+      name: string;
+      type: string;
+      state?: string;
+      country: string;
+    };
+  };
+  status: 'unopened' | 'opened' | 'finished';
+  photos: string[];
+  pours: Array<{
+    date: string;
+    amount: number;
+    rating?: number;
+    notes?: string;
+  }>;
+  fillLevel: number;
+  openDate?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface MasterBottleView {
+  masterBottle: MasterBottle;
+  userBottles: UserBottle[];
+  groupedBottles: Array<{
+    location: string;
+    bottles: UserBottle[];
+  }>;
+  totalCount: number;
+  openedCount: number;
+  unopenedCount: number;
+  finishedCount: number;
 }
 
 export default function BottleDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
-  const [bottle, setBottle] = useState<Bottle | null>(null);
+  const bottleId = params.id as string;
+  
+  const [bottle, setBottle] = useState<UserBottle | null>(null);
+  const [masterBottleView, setMasterBottleView] = useState<MasterBottleView | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showOpenModal, setShowOpenModal] = useState(false);
+  const [showPourModal, setShowPourModal] = useState(false);
+  const [fillLevel, setFillLevel] = useState(100);
+  const [pourAmount, setPourAmount] = useState(1);
+  const [pourNotes, setPourNotes] = useState('');
+  const [isMasterView, setIsMasterView] = useState(false);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'loading') return;
+    if (!session) {
       router.push('/auth/signin');
-    } else if (status === 'authenticated' && params.id) {
-      fetchBottle();
+      return;
     }
-  }, [status, params.id, router]);
 
-  const fetchBottle = async () => {
+    fetchBottleDetails();
+  }, [session, status, router, bottleId]);
+
+  const fetchBottleDetails = async () => {
     try {
-      const response = await fetch(`/api/bottles/${params.id}`);
-      const data = await response.json();
-
+      // First try to get as individual bottle
+      let response = await fetch(`/api/bottles/${bottleId}`);
       if (response.ok) {
-        setBottle(data.bottle);
+        const data = await response.json();
+        setBottle(data);
+        setIsMasterView(false);
+      } else if (response.status === 404) {
+        // If not found as individual bottle, try as master bottle
+        response = await fetch(`/api/bottles/${bottleId}?view=master`);
+        if (response.ok) {
+          const data = await response.json();
+          setMasterBottleView(data);
+          setIsMasterView(true);
+        } else {
+          toast.error('Bottle not found');
+          router.push('/bottles');
+        }
       } else {
-        router.push('/bottles');
+        toast.error('Failed to load bottle details');
       }
     } catch (error) {
-      console.error('Error fetching bottle:', error);
-      router.push('/bottles');
+      console.error('Failed to fetch bottle details:', error);
+      toast.error('Failed to load bottle details');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this bottle? This action cannot be undone.')) return;
+    if (!bottle) return;
 
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${bottle.masterBottleId.name}"? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeleting(true);
     try {
-      const response = await fetch(`/api/bottles/${params.id}`, {
+      const response = await fetch(`/api/bottles/${bottleId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
+        toast.success('Bottle deleted successfully');
         router.push('/bottles');
+      } else {
+        toast.error('Failed to delete bottle');
       }
     } catch (error) {
-      console.error('Error deleting bottle:', error);
+      console.error('Failed to delete bottle:', error);
+      toast.error('Failed to delete bottle');
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const toggleOpen = async () => {
+  const handleOpenBottle = async () => {
+    if (!bottle) return;
+
     try {
-      const response = await fetch(`/api/bottles/${params.id}`, {
+      const response = await fetch(`/api/bottles/${bottleId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          isOpen: !bottle?.isOpen,
-          openedDate: !bottle?.isOpen ? new Date().toISOString() : bottle.openedDate,
+          status: 'opened',
+          openDate: new Date().toISOString(),
+          fillLevel: fillLevel,
         }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setBottle(data.bottle);
+        const updatedBottle = await response.json();
+        setBottle(updatedBottle);
+        setShowOpenModal(false);
+        toast.success('Bottle opened successfully!');
+      } else {
+        toast.error('Failed to open bottle');
       }
     } catch (error) {
-      console.error('Error updating bottle:', error);
+      console.error('Failed to open bottle:', error);
+      toast.error('Failed to open bottle');
     }
+  };
+
+  const handlePour = async () => {
+    if (!bottle) return;
+
+    try {
+      const response = await fetch(`/api/bottles/${bottleId}/pour`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: pourAmount,
+          notes: pourNotes,
+        }),
+      });
+
+      if (response.ok) {
+        const updatedBottle = await response.json();
+        setBottle(updatedBottle);
+        setShowPourModal(false);
+        setPourAmount(1);
+        setPourNotes('');
+        toast.success(`Poured ${pourAmount}oz successfully!`);
+      } else {
+        toast.error('Failed to record pour');
+      }
+    } catch (error) {
+      console.error('Failed to record pour:', error);
+      toast.error('Failed to record pour');
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Not specified';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatCurrency = (value?: number) => {
+    if (!value) return 'Not specified';
+    return `$${value.toLocaleString()}`;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'opened':
+        return 'bg-green-900/50 text-green-400';
+      case 'finished':
+        return 'bg-red-900/50 text-red-400';
+      default:
+        return 'bg-gray-700 text-gray-300';
+    }
+  };
+
+  const getFillLevelColor = (fillLevel: number) => {
+    if (fillLevel > 50) return 'bg-green-500';
+    if (fillLevel > 20) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  const calculateRemainingOz = (fillLevel: number) => {
+    // Assuming 750ml bottle = ~25.4 oz
+    const totalOz = 25.4;
+    return Math.round((fillLevel / 100) * totalOz * 10) / 10;
+  };
+
+  const calculatePourCost = (bottle: UserBottle) => {
+    const totalOz = 25.4;
+    const price = bottle.purchasePrice || bottle.marketValue || bottle.myValue || 0;
+    return Math.round((price / totalOz) * 100) / 100;
   };
 
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-copper animate-pulse">Loading...</div>
+        <div className="text-xl text-gray-400">Loading...</div>
       </div>
     );
   }
 
-  if (!bottle) return null;
+  if (!session) {
+    return null;
+  }
 
-  return (
-    <div className="min-h-screen pb-20">
-      <nav className="glass-dark border-b border-white/10 mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/bottles" className="text-gray-300 hover:text-white transition-colors flex items-center">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Collection
+  if (!bottle && !masterBottleView) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl text-gray-400">Bottle not found</div>
+      </div>
+    );
+  }
+  
+  // Master bottle view
+  if (isMasterView && masterBottleView) {
+    return (
+      <div className="max-w-7xl mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <Link 
+              href="/bottles"
+              className="flex items-center space-x-2 text-gray-400 hover:text-copper transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back to Collection</span>
             </Link>
-            <div className="flex gap-2">
-              <Link
-                href={`/bottles/${params.id}/edit`}
-                className="btn-secondary text-sm px-4 py-2"
-              >
-                Edit
-              </Link>
-              <button
-                onClick={handleDelete}
-                className="glass border-red-500/30 text-red-400 px-4 py-2 rounded-lg hover:bg-red-500/10 hover:border-red-500/50 transition-all duration-300 text-sm"
-              >
-                Delete
-              </button>
-            </div>
           </div>
         </div>
-      </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Info */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Master Bottle Header */}
             <div className="card-premium">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold text-gradient mb-2">{bottle.name}</h1>
-                  <p className="text-xl text-gray-300">{bottle.distillery}</p>
-                </div>
-                <div className="text-right">
-                  {bottle.isOpen ? (
-                    <span className="inline-flex items-center glass bg-green-500/20 text-green-400 px-3 py-1 rounded-full">
-                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2h-2.5V7a2.5 2.5 0 10-5 0v2H5V7a5 5 0 015-5zm3 11v3H7v-3h6z"/>
-                      </svg>
-                      Open
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h1 className="text-3xl font-bold text-white mb-2">
+                    {masterBottleView.masterBottle.name}
+                  </h1>
+                  <div className="flex items-center space-x-4 text-gray-400 mb-4">
+                    <span className="text-lg">{masterBottleView.masterBottle.distillery}</span>
+                    {masterBottleView.masterBottle.region && (
+                      <span className="text-sm">• {masterBottleView.masterBottle.region}</span>
+                    )}
+                    <span className="text-sm">• {masterBottleView.masterBottle.category}</span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4 text-sm">
+                    <span className="px-3 py-1 bg-copper/20 text-copper rounded-full">
+                      {masterBottleView.totalCount} bottles
                     </span>
-                  ) : (
-                    <span className="inline-flex items-center glass bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full">
-                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/>
-                      </svg>
-                      Sealed
-                    </span>
-                  )}
+                    <span className="text-gray-400">{masterBottleView.unopenedCount} unopened</span>
+                    <span className="text-gray-400">{masterBottleView.openedCount} opened</span>
+                    {masterBottleView.finishedCount > 0 && (
+                      <span className="text-gray-400">{masterBottleView.finishedCount} finished</span>
+                    )}
+                    {masterBottleView.masterBottle.age && (
+                      <span className="text-gray-400">{masterBottleView.masterBottle.age} Years</span>
+                    )}
+                    {masterBottleView.masterBottle.proof && (
+                      <span className="text-gray-400">{masterBottleView.masterBottle.proof}° Proof</span>
+                    )}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="glass-dark rounded-lg p-4">
-                  <p className="text-sm text-gray-500 mb-1">Type</p>
-                  <p className="text-lg font-semibold text-white">{bottle.type}</p>
+            {/* Master Bottle Details */}
+            <div className="card-premium">
+              <h2 className="text-xl font-semibold text-white mb-4">Bottle Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Brand</label>
+                  <p className="text-white">{masterBottleView.masterBottle.brand}</p>
                 </div>
-                <div className="glass-dark rounded-lg p-4">
-                  <p className="text-sm text-gray-500 mb-1">Age</p>
-                  <p className="text-lg font-semibold text-white">
-                    {bottle.age ? `${bottle.age} Years` : 'NAS'}
-                  </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Distillery</label>
+                  <p className="text-white">{masterBottleView.masterBottle.distillery}</p>
                 </div>
-                <div className="glass-dark rounded-lg p-4">
-                  <p className="text-sm text-gray-500 mb-1">Proof / ABV</p>
-                  <p className="text-lg font-semibold text-white">
-                    {bottle.proof} / {bottle.abv}%
-                  </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Category</label>
+                  <p className="text-white">{masterBottleView.masterBottle.category}</p>
                 </div>
-                <div className="glass-dark rounded-lg p-4">
-                  <p className="text-sm text-gray-500 mb-1">Size</p>
-                  <p className="text-lg font-semibold text-white">{bottle.size}</p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Type</label>
+                  <p className="text-white">{masterBottleView.masterBottle.type || 'Not specified'}</p>
                 </div>
-                <div className="glass-dark rounded-lg p-4">
-                  <p className="text-sm text-gray-500 mb-1">Purchase Price</p>
-                  <p className="text-lg font-semibold text-copper-light">${bottle.purchasePrice}</p>
-                </div>
-                {bottle.currentValue && (
-                  <div className="glass-dark rounded-lg p-4">
-                    <p className="text-sm text-gray-500 mb-1">Current Value</p>
-                    <p className="text-lg font-semibold text-green-400">${bottle.currentValue}</p>
+                {masterBottleView.masterBottle.region && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Region</label>
+                    <p className="text-white">{masterBottleView.masterBottle.region}</p>
+                  </div>
+                )}
+                {masterBottleView.masterBottle.msrp && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">MSRP</label>
+                    <p className="text-white">{formatCurrency(masterBottleView.masterBottle.msrp)}</p>
                   </div>
                 )}
               </div>
-
-              <button
-                onClick={toggleOpen}
-                className={`w-full mt-6 ${bottle.isOpen ? 'btn-secondary' : 'btn-primary'}`}
-              >
-                {bottle.isOpen ? 'Mark as Sealed' : 'Mark as Open'}
-              </button>
-            </div>
-
-            {/* Store Pick Details */}
-            {bottle.isStorePick && bottle.storePickDetails && (
-              <div className="card-premium">
-                <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                  <svg className="w-6 h-6 mr-2 text-copper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                  </svg>
-                  Store Pick Details
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {bottle.storePickDetails.store && (
-                    <div>
-                      <p className="text-sm text-gray-500">Store</p>
-                      <p className="text-white">{bottle.storePickDetails.store}</p>
-                    </div>
-                  )}
-                  {bottle.storePickDetails.barrel && (
-                    <div>
-                      <p className="text-sm text-gray-500">Barrel</p>
-                      <p className="text-white">{bottle.storePickDetails.barrel}</p>
-                    </div>
-                  )}
-                  {bottle.storePickDetails.rickhouse && (
-                    <div>
-                      <p className="text-sm text-gray-500">Rickhouse</p>
-                      <p className="text-white">{bottle.storePickDetails.rickhouse}</p>
-                    </div>
-                  )}
-                  {bottle.storePickDetails.floor && (
-                    <div>
-                      <p className="text-sm text-gray-500">Floor</p>
-                      <p className="text-white">{bottle.storePickDetails.floor}</p>
-                    </div>
-                  )}
-                  {bottle.storePickDetails.bottleNumber && (
-                    <div>
-                      <p className="text-sm text-gray-500">Bottle #</p>
-                      <p className="text-white">
-                        {bottle.storePickDetails.bottleNumber}
-                        {bottle.storePickDetails.totalBottles && ` of ${bottle.storePickDetails.totalBottles}`}
-                      </p>
-                    </div>
-                  )}
+              
+              {masterBottleView.masterBottle.description && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
+                  <p className="text-white">{masterBottleView.masterBottle.description}</p>
                 </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            {bottle.notes && (
-              <div className="card-premium">
-                <h2 className="text-xl font-semibold text-white mb-4">Notes</h2>
-                <p className="text-gray-300 whitespace-pre-wrap">{bottle.notes}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Location */}
-            <div className="card-premium">
-              <h3 className="text-lg font-semibold text-white mb-4">Storage Location</h3>
-              {bottle.location ? (
-                <div className="space-y-2">
-                  <p className="text-gray-300">{bottle.location.name}</p>
-                  <p className="text-sm text-gray-500">{bottle.location.type}</p>
-                  {bottle.binNumber && (
-                    <p className="text-sm text-gray-500">Bin: {bottle.binNumber}</p>
-                  )}
+              )}
+              
+              {masterBottleView.masterBottle.isStorePick && masterBottleView.masterBottle.storePickDetails && (
+                <div className="mt-4 p-4 bg-copper/10 rounded-lg border border-copper/20">
+                  <h3 className="text-copper font-semibold mb-2">Store Pick Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-400">Store:</span>
+                      <span className="text-white ml-2">{masterBottleView.masterBottle.storePickDetails.store}</span>
+                    </div>
+                    {masterBottleView.masterBottle.storePickDetails.barrel && (
+                      <div>
+                        <span className="text-gray-400">Barrel:</span>
+                        <span className="text-white ml-2">{masterBottleView.masterBottle.storePickDetails.barrel}</span>
+                      </div>
+                    )}
+                    {masterBottleView.masterBottle.storePickDetails.pickDate && (
+                      <div>
+                        <span className="text-gray-400">Pick Date:</span>
+                        <span className="text-white ml-2">{formatDate(masterBottleView.masterBottle.storePickDetails.pickDate)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-gray-500">No location assigned</p>
               )}
             </div>
 
-            {/* Rating */}
-            {bottle.rating && (
-              <div className="card-premium">
-                <h3 className="text-lg font-semibold text-white mb-4">Rating</h3>
-                <div className="flex items-center">
-                  <div className="text-3xl font-bold text-yellow-500">{bottle.rating}</div>
-                  <div className="text-gray-500 ml-2">/ 100</div>
-                </div>
-              </div>
-            )}
-
-            {/* Tags */}
-            {bottle.tags.length > 0 && (
-              <div className="card-premium">
-                <h3 className="text-lg font-semibold text-white mb-4">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {bottle.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="glass bg-copper/20 text-copper-light px-3 py-1 rounded-full text-sm"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Metadata */}
+            {/* Your Bottles Section */}
             <div className="card-premium">
-              <h3 className="text-lg font-semibold text-white mb-4">Details</h3>
-              <div className="space-y-2 text-sm">
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <Package className="w-5 h-5 mr-2" />
+                Your Bottles ({masterBottleView.totalCount})
+              </h2>
+              
+              {masterBottleView.groupedBottles.map((group, groupIndex) => (
+                <div key={groupIndex} className="mb-6 last:mb-0">
+                  <h3 className="text-lg font-medium text-copper mb-3 flex items-center">
+                    <MapPin className="w-4 h-4 mr-2" />
+                    {group.location} ({group.bottles.length} bottles)
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {group.bottles.map((userBottle) => (
+                      <div key={userBottle._id} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              userBottle.status === 'opened' ? 'bg-green-900/50 text-green-400' :
+                              userBottle.status === 'finished' ? 'bg-red-900/50 text-red-400' :
+                              'bg-gray-700 text-gray-300'
+                            }`}>
+                              {userBottle.status}
+                            </span>
+                            {userBottle.status === 'opened' && userBottle.fillLevel < 20 && (
+                              <span className="px-2 py-1 bg-red-900/50 text-red-400 rounded-full text-xs">
+                                Low Stock
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Link
+                              href={`/bottles/${userBottle._id}`}
+                              className="text-copper hover:text-copper-light transition-colors"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                            <Link
+                              href={`/bottles/${userBottle._id}/edit`}
+                              className="text-gray-400 hover:text-white transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                            <Link
+                              href={`/bottles/${userBottle._id}/print`}
+                              className="text-gray-400 hover:text-white transition-colors"
+                              title="Print Label"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                              </svg>
+                            </Link>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Location:</span>
+                            <span className="text-white">
+                              {userBottle.location?.area || 'N/A'}
+                              {userBottle.location?.bin && ` - ${userBottle.location.bin}`}
+                            </span>
+                          </div>
+                          
+                          {userBottle.purchaseDate && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Purchase Date:</span>
+                              <span className="text-white">{formatDate(userBottle.purchaseDate)}</span>
+                            </div>
+                          )}
+                          
+                          {userBottle.purchasePrice && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Purchase Price:</span>
+                              <span className="text-copper">{formatCurrency(userBottle.purchasePrice)}</span>
+                            </div>
+                          )}
+                          
+                          {userBottle.storeId?.masterStoreId?.name && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Store:</span>
+                              <span className="text-white">
+                                {userBottle.storeId.masterStoreId.name}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {userBottle.status === 'opened' && (
+                            <div className="mt-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-gray-400 text-xs">Fill Level</span>
+                                <span className="text-white text-xs">{userBottle.fillLevel}%</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-1">
+                                <div
+                                  className={`h-1 rounded-full transition-all duration-300 ${
+                                    userBottle.fillLevel > 50 ? 'bg-green-500' : 
+                                    userBottle.fillLevel > 20 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${userBottle.fillLevel}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sidebar - Summary Stats */}
+          <div className="space-y-6">
+            <div className="card-premium">
+              <h2 className="text-xl font-semibold text-white mb-4">Collection Summary</h2>
+              <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Purchase Date</span>
-                  <span className="text-gray-300">
-                    {new Date(bottle.purchaseDate).toLocaleDateString()}
+                  <span className="text-gray-400">Total Bottles:</span>
+                  <span className="text-white font-medium">{masterBottleView.totalCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Unopened:</span>
+                  <span className="text-white">{masterBottleView.unopenedCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Opened:</span>
+                  <span className="text-white">{masterBottleView.openedCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Finished:</span>
+                  <span className="text-white">{masterBottleView.finishedCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Locations:</span>
+                  <span className="text-white">{masterBottleView.groupedBottles.length}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="card-premium">
+              <h2 className="text-xl font-semibold text-white mb-4">Value Summary</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Total Value:</span>
+                  <span className="text-copper font-medium">
+                    {formatCurrency(
+                      masterBottleView.userBottles.reduce((sum, b) => 
+                        sum + (b.purchasePrice || b.marketValue || b.myValue || 0), 0
+                      )
+                    )}
                   </span>
                 </div>
-                {bottle.openedDate && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Opened Date</span>
-                    <span className="text-gray-300">
-                      {new Date(bottle.openedDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                {bottle.barcode && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Barcode</span>
-                    <span className="text-gray-300">{bottle.barcode}</span>
-                  </div>
-                )}
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Added</span>
-                  <span className="text-gray-300">
-                    {new Date(bottle.createdAt).toLocaleDateString()}
+                  <span className="text-gray-400">Average Price:</span>
+                  <span className="text-copper">
+                    {formatCurrency(
+                      masterBottleView.userBottles.reduce((sum, b) => 
+                        sum + (b.purchasePrice || b.marketValue || b.myValue || 0), 0
+                      ) / masterBottleView.totalCount
+                    )}
                   </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
+    );
+  }
+  
+  // Individual bottle view (existing code continues below)
+  if (!bottle) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl text-gray-400">Bottle not found</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto py-8 px-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center space-x-4">
+          <Link 
+            href="/bottles"
+            className="flex items-center space-x-2 text-gray-400 hover:text-copper transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back to Collection</span>
+          </Link>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          {bottle.status === 'unopened' && (
+            <button
+              onClick={() => setShowOpenModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg transition-colors"
+            >
+              <Package className="w-4 h-4" />
+              <span>Open Bottle</span>
+            </button>
+          )}
+          
+          {bottle.status === 'opened' && (
+            <button
+              onClick={() => setShowPourModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors"
+            >
+              <Package className="w-4 h-4" />
+              <span>Take a Pour</span>
+            </button>
+          )}
+          
+          <Link
+            href={`/bottles/${bottleId}/print`}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span>Print Label</span>
+          </Link>
+          
+          <Link
+            href={`/bottles/${bottleId}/edit`}
+            className="flex items-center space-x-2 px-4 py-2 bg-copper/20 hover:bg-copper/30 text-copper rounded-lg transition-colors"
+          >
+            <Edit className="w-4 h-4" />
+            <span>Edit</span>
+          </Link>
+          
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex items-center space-x-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>{deleting ? 'Deleting...' : 'Delete'}</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Info */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Bottle Header */}
+          <div className="card-premium">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  {bottle.masterBottleId.name}
+                </h1>
+                <div className="flex items-center space-x-4 text-gray-400 mb-4">
+                  <span className="text-lg">{bottle.masterBottleId.distillery}</span>
+                  {bottle.masterBottleId.region && (
+                    <span className="text-sm">• {bottle.masterBottleId.region}</span>
+                  )}
+                  <span className="text-sm">• {bottle.masterBottleId.category}</span>
+                </div>
+                
+                <div className="flex items-center space-x-4 text-sm">
+                  <span className={`px-3 py-1 rounded-full ${getStatusColor(bottle.status)}`}>
+                    {bottle.status}
+                  </span>
+                  <span className="text-gray-400">Quantity: {bottle.quantity}</span>
+                  {bottle.masterBottleId.age && (
+                    <span className="text-gray-400">{bottle.masterBottleId.age} Years</span>
+                  )}
+                  {bottle.masterBottleId.proof && (
+                    <span className="text-gray-400">{bottle.masterBottleId.proof}° Proof</span>
+                  )}
+                  {bottle.fillLevel < 20 && (
+                    <span className="px-2 py-1 bg-red-900/50 text-red-400 rounded-full text-xs">
+                      Low Stock
+                    </span>
+                  )}
+                </div>
+                
+                {/* Fill Level Indicator */}
+                {bottle.status === 'opened' && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-400">Fill Level</span>
+                      <span className="text-sm text-white">
+                        {bottle.fillLevel}% ({calculateRemainingOz(bottle.fillLevel)}oz remaining)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${getFillLevelColor(bottle.fillLevel)}`}
+                        style={{ width: `${bottle.fillLevel}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Master Bottle Details */}
+          <div className="card-premium">
+            <h2 className="text-xl font-semibold text-white mb-4">Bottle Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Brand</label>
+                <p className="text-white">{bottle.masterBottleId.brand}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Distillery</label>
+                <p className="text-white">{bottle.masterBottleId.distillery}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Category</label>
+                <p className="text-white">{bottle.masterBottleId.category}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Type</label>
+                <p className="text-white">{bottle.masterBottleId.type || 'Not specified'}</p>
+              </div>
+              {bottle.masterBottleId.region && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Region</label>
+                  <p className="text-white">{bottle.masterBottleId.region}</p>
+                </div>
+              )}
+              {bottle.masterBottleId.msrp && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">MSRP</label>
+                  <p className="text-white">{formatCurrency(bottle.masterBottleId.msrp)}</p>
+                </div>
+              )}
+            </div>
+            
+            {bottle.masterBottleId.description && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
+                <p className="text-white">{bottle.masterBottleId.description}</p>
+              </div>
+            )}
+            
+            {bottle.masterBottleId.isStorePick && bottle.masterBottleId.storePickDetails && (
+              <div className="mt-4 p-4 bg-copper/10 rounded-lg border border-copper/20">
+                <h3 className="text-copper font-semibold mb-2">Store Pick Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-400">Store:</span>
+                    <span className="text-white ml-2">{bottle.masterBottleId.storePickDetails.store}</span>
+                  </div>
+                  {bottle.masterBottleId.storePickDetails.barrel && (
+                    <div>
+                      <span className="text-gray-400">Barrel:</span>
+                      <span className="text-white ml-2">{bottle.masterBottleId.storePickDetails.barrel}</span>
+                    </div>
+                  )}
+                  {bottle.masterBottleId.storePickDetails.pickDate && (
+                    <div>
+                      <span className="text-gray-400">Pick Date:</span>
+                      <span className="text-white ml-2">{formatDate(bottle.masterBottleId.storePickDetails.pickDate)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          {(bottle.notes || bottle.personalNotes) && (
+            <div className="card-premium">
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                Notes
+              </h2>
+              <div className="space-y-4">
+                {bottle.notes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Tasting Notes</label>
+                    <p className="text-white whitespace-pre-wrap">{bottle.notes}</p>
+                  </div>
+                )}
+                {bottle.personalNotes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Personal Notes</label>
+                    <p className="text-white whitespace-pre-wrap">{bottle.personalNotes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Pour History */}
+          {bottle.pours && bottle.pours.length > 0 && (
+            <div className="card-premium">
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <Package className="w-5 h-5 mr-2" />
+                Pour History
+              </h2>
+              <div className="space-y-3">
+                {bottle.pours.slice(-10).reverse().map((pour, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-white font-medium">{pour.amount}oz</span>
+                        <span className="text-gray-400 text-sm">
+                          {new Date(pour.date).toLocaleDateString()} at {new Date(pour.date).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      {pour.notes && (
+                        <p className="text-gray-400 text-sm mt-1">{pour.notes}</p>
+                      )}
+                    </div>
+                    <div className="text-copper text-sm font-medium">
+                      ${(calculatePourCost(bottle) * pour.amount).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+                {bottle.pours.length > 10 && (
+                  <div className="text-center text-gray-400 text-sm">
+                    Showing last 10 pours ({bottle.pours.length} total)
+                  </div>
+                )}
+                <div className="border-t border-gray-700 pt-3 mt-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Total poured:</span>
+                    <span className="text-white">
+                      {bottle.pours.reduce((total, pour) => total + pour.amount, 0).toFixed(1)}oz
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Total cost:</span>
+                    <span className="text-copper font-medium">
+                      ${(bottle.pours.reduce((total, pour) => total + pour.amount, 0) * calculatePourCost(bottle)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Purchase & Value Info */}
+          <div className="card-premium">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+              <DollarSign className="w-5 h-5 mr-2" />
+              Purchase & Value
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Purchase Price</label>
+                <p className="text-white">{formatCurrency(bottle.purchasePrice)}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Market Value</label>
+                <p className="text-white">{formatCurrency(bottle.marketValue)}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">My Value</label>
+                <p className="text-white">{formatCurrency(bottle.myValue)}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Purchase Date</label>
+                <p className="text-white">{formatDate(bottle.purchaseDate)}</p>
+              </div>
+              {bottle.deliveryDate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Delivery Date</label>
+                  <p className="text-white">{formatDate(bottle.deliveryDate)}</p>
+                </div>
+              )}
+              {bottle.openDate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Opened Date</label>
+                  <p className="text-white">{formatDate(bottle.openDate)}</p>
+                </div>
+              )}
+              {bottle.status === 'opened' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Cost per Pour</label>
+                  <p className="text-copper font-medium">${calculatePourCost(bottle)}/oz</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Location */}
+          {bottle.location && (
+            <div className="card-premium">
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <MapPin className="w-5 h-5 mr-2" />
+                Location
+              </h2>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Area</label>
+                  <p className="text-white">{bottle.location.area || 'Not specified'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Bin</label>
+                  <p className="text-white">{bottle.location.bin || 'Not specified'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Additional Details */}
+          <div className="card-premium">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+              <Package className="w-5 h-5 mr-2" />
+              Additional Details
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Status</label>
+                <p className="text-white capitalize">{bottle.status}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Quantity</label>
+                <p className="text-white">{bottle.quantity}</p>
+              </div>
+              {bottle.storeId?.masterStoreId?.name && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Store</label>
+                  <p className="text-white">{bottle.storeId.masterStoreId.name}</p>
+                </div>
+              )}
+              {bottle.barcode && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Barcode</label>
+                  <p className="text-white font-mono text-sm">{bottle.barcode}</p>
+                </div>
+              )}
+              {bottle.cellarTrackerId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">CellarTracker ID</label>
+                  <p className="text-white font-mono text-sm">{bottle.cellarTrackerId}</p>
+                </div>
+              )}
+              {bottle.purchaseNote && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Purchase Note</label>
+                  <p className="text-white text-sm">{bottle.purchaseNote}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Photos */}
+          <div className="card-premium">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+              <Camera className="w-5 h-5 mr-2" />
+              Photos
+            </h2>
+            <PhotoUpload
+              bottleId={bottle._id}
+              photos={bottle.photos}
+              onPhotosUpdate={(newPhotos) => {
+                setBottle({ ...bottle, photos: newPhotos });
+              }}
+            />
+          </div>
+
+          {/* Timestamps */}
+          <div className="card-premium">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+              <Calendar className="w-5 h-5 mr-2" />
+              Record Info
+            </h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Added</label>
+                <p className="text-white">{formatDate(bottle.createdAt)}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Last Updated</label>
+                <p className="text-white">{formatDate(bottle.updatedAt)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Open Bottle Modal */}
+      {showOpenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-12">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setShowOpenModal(false)} />
+          
+          <div className="relative z-10 w-full max-w-md">
+            <div className="card-premium">
+              <h2 className="text-2xl font-bold text-white mb-6">Open Bottle</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Current Fill Level
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={fillLevel}
+                      onChange={(e) => setFillLevel(Number(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div className="flex justify-between text-sm text-gray-400">
+                      <span>0%</span>
+                      <span className="text-white font-medium">{fillLevel}%</span>
+                      <span>100%</span>
+                    </div>
+                    <div className="text-center text-sm text-gray-400">
+                      {calculateRemainingOz(fillLevel)}oz remaining
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
+                  <p>Setting the fill level helps track your consumption and calculate pour costs.</p>
+                  <p className="mt-1">Cost per oz: ${calculatePourCost(bottle)}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-6">
+                <button
+                  onClick={() => setShowOpenModal(false)}
+                  className="flex-1 btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleOpenBottle}
+                  className="flex-1 btn-primary"
+                >
+                  Open Bottle
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pour Modal */}
+      {showPourModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-12">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setShowPourModal(false)} />
+          
+          <div className="relative z-10 w-full max-w-md">
+            <div className="card-premium">
+              <h2 className="text-2xl font-bold text-white mb-6">Take a Pour</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Pour Amount
+                  </label>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {[1, 1.5, 2, 3].map((amount) => (
+                      <button
+                        key={amount}
+                        onClick={() => setPourAmount(amount)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          pourAmount === amount
+                            ? 'bg-copper text-white'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                        }`}
+                      >
+                        {amount}oz
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="number"
+                      value={pourAmount}
+                      onChange={(e) => setPourAmount(Number(e.target.value))}
+                      step="0.1"
+                      min="0.1"
+                      max="25"
+                      className="flex-1 input-premium"
+                      placeholder="Custom amount"
+                    />
+                    <span className="text-gray-400">oz</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    value={pourNotes}
+                    onChange={(e) => setPourNotes(e.target.value)}
+                    className="w-full input-premium resize-none"
+                    rows={3}
+                    placeholder="Tasting notes, occasion, etc."
+                  />
+                </div>
+                
+                <div className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
+                  <div className="flex justify-between">
+                    <span>Pour cost:</span>
+                    <span className="text-copper font-medium">
+                      ${(calculatePourCost(bottle) * pourAmount).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span>New fill level:</span>
+                    <span className="text-white">
+                      {Math.max(0, Math.round((bottle.fillLevel - (pourAmount / 25.4 * 100)) * 10) / 10)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-6">
+                <button
+                  onClick={() => setShowPourModal(false)}
+                  className="flex-1 btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePour}
+                  className="flex-1 btn-primary"
+                >
+                  Record Pour
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,23 +4,23 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { MapPin, Package, DollarSign, ArrowRight } from 'lucide-react';
 
-interface Location {
+interface LocationBottle {
   _id: string;
   name: string;
-  type: string;
-  description?: string;
-  capacity?: number;
-  currentCount: number;
-  bins?: {
-    number: string;
-    capacity: number;
-    currentCount: number;
-    description?: string;
-  }[];
-  isTemperatureControlled: boolean;
-  temperature?: number;
-  humidity?: number;
+  distillery: string;
+  quantity: number;
+  bin: string;
+  value: number;
+}
+
+interface Location {
+  name: string;
+  totalBottles: number;
+  totalValue: number;
+  uniqueBins: number;
+  bottles: LocationBottle[];
 }
 
 export default function LocationsPage() {
@@ -28,21 +28,17 @@ export default function LocationsPage() {
   const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'Cabinet',
-    description: '',
-    capacity: '',
-  });
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'loading') return;
+    if (!session) {
       router.push('/auth/signin');
-    } else if (status === 'authenticated') {
-      fetchLocations();
+      return;
     }
-  }, [status, router]);
+    
+    fetchLocations();
+  }, [status, session, router]);
 
   const fetchLocations = async () => {
     try {
@@ -59,41 +55,14 @@ export default function LocationsPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const locationData = {
-        ...formData,
-        capacity: formData.capacity ? parseInt(formData.capacity) : undefined,
-      };
-
-      const response = await fetch('/api/locations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(locationData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setLocations([...locations, data.location]);
-        setShowAddForm(false);
-        setFormData({
-          name: '',
-          type: 'Cabinet',
-          description: '',
-          capacity: '',
-        });
-      }
-    } catch (error) {
-      console.error('Error creating location:', error);
-    }
+  const formatCurrency = (value: number) => {
+    return `$${value.toLocaleString()}`;
   };
 
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-copper animate-pulse">Loading...</div>
+        <div className="text-xl text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -119,83 +88,75 @@ export default function LocationsPage() {
                 </Link>
               </div>
             </div>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="btn-primary text-sm px-4 py-2"
-            >
-              Add Location
-            </button>
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-300">Welcome, {session?.user?.name}</span>
+              <Link href="/api/auth/signout" className="btn-secondary text-sm px-4 py-2">
+                Sign Out
+              </Link>
+            </div>
           </div>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-white mb-8">Storage Locations</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-white">Storage Locations</h1>
+          <div className="text-sm text-gray-400">
+            {locations.length} location{locations.length !== 1 ? 's' : ''}
+          </div>
+        </div>
 
         {locations.length === 0 ? (
           <div className="card-premium text-center py-16">
-            <svg className="w-24 h-24 text-copper/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">No locations yet</h3>
-            <p className="text-gray-500 mb-6">Create your first storage location to organize your collection</p>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="btn-primary inline-flex items-center"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Create First Location
-            </button>
+            <MapPin className="w-24 h-24 text-copper/30 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-400 mb-2">No locations found</h3>
+            <p className="text-gray-500 mb-6">
+              Your bottles don't have location information yet. 
+              You can add location data when importing bottles or editing existing ones.
+            </p>
+            <Link href="/bottles/import" className="btn-primary inline-flex items-center">
+              <Package className="w-5 h-5 mr-2" />
+              Import Bottles with Locations
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {locations.map((location) => (
-              <div key={location._id} className="card-premium hover:border-copper/30 transition-all duration-300">
+              <div 
+                key={location.name} 
+                className="card-premium hover:border-copper/50 transition-all duration-300 cursor-pointer"
+                onClick={() => setSelectedLocation(location)}
+              >
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-white">{location.name}</h3>
-                    <p className="text-gray-400">{location.type}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <MapPin className="w-5 h-5 text-copper" />
+                      <h3 className="text-xl font-bold text-white">{location.name}</h3>
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-gray-400">
+                      <span>{location.uniqueBins} bin{location.uniqueBins !== 1 ? 's' : ''}</span>
+                      <span>•</span>
+                      <span>{formatCurrency(location.totalValue)}</span>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-copper-light">{location.currentCount}</p>
-                    {location.capacity && (
-                      <p className="text-sm text-gray-500">of {location.capacity}</p>
-                    )}
+                    <p className="text-3xl font-bold text-copper">{location.totalBottles}</p>
+                    <p className="text-sm text-gray-500">bottles</p>
                   </div>
                 </div>
 
-                {location.description && (
-                  <p className="text-gray-300 text-sm mb-4">{location.description}</p>
-                )}
-
-                <div className="space-y-2">
-                  {location.isTemperatureControlled && (
-                    <div className="flex items-center text-sm text-gray-400">
-                      <svg className="w-4 h-4 mr-2 text-copper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                      Temperature Controlled
+                <div className="flex items-center justify-between pt-4 border-t border-gray-700">
+                  <div className="flex items-center space-x-4 text-sm text-gray-400">
+                    <div className="flex items-center space-x-1">
+                      <Package className="w-4 h-4" />
+                      <span>{location.totalBottles} bottles</span>
                     </div>
-                  )}
-
-                  {location.capacity && (
-                    <div className="mt-4">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-500">Capacity</span>
-                        <span className="text-gray-400">
-                          {Math.round((location.currentCount / location.capacity) * 100)}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-black/50 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-copper to-copper-light h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min((location.currentCount / location.capacity) * 100, 100)}%` }}
-                        />
-                      </div>
+                    <div className="flex items-center space-x-1">
+                      <DollarSign className="w-4 h-4" />
+                      <span>{formatCurrency(location.totalValue)}</span>
                     </div>
-                  )}
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-gray-500" />
                 </div>
               </div>
             ))}
@@ -203,92 +164,91 @@ export default function LocationsPage() {
         )}
       </main>
 
-      {/* Add Location Modal */}
-      {showAddForm && (
+      {/* Location Details Modal */}
+      {selectedLocation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-12">
-          <div className="absolute inset-0 bg-black/80" onClick={() => setShowAddForm(false)} />
+          <div className="absolute inset-0 bg-black/80" onClick={() => setSelectedLocation(null)} />
           
-          <div className="relative z-10 w-full max-w-md">
+          <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="card-premium">
-              <h2 className="text-2xl font-bold text-white mb-6">Add Storage Location</h2>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Name <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="input-premium w-full"
-                    placeholder="e.g., Main Cabinet"
-                  />
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <MapPin className="w-6 h-6 text-copper" />
+                  <h2 className="text-2xl font-bold text-white">{selectedLocation.name}</h2>
                 </div>
+                <button
+                  onClick={() => setSelectedLocation(null)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Type <span className="text-red-400">*</span>
-                  </label>
-                  <select
-                    required
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="input-premium w-full"
-                  >
-                    <option value="Cabinet">Cabinet</option>
-                    <option value="Shelf">Shelf</option>
-                    <option value="Box">Box</option>
-                    <option value="Cellar">Cellar</option>
-                    <option value="Display">Display</option>
-                    <option value="Other">Other</option>
-                  </select>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="glass-dark rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Package className="w-5 h-5 text-copper" />
+                    <span className="text-sm text-gray-400">Total Bottles</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">{selectedLocation.totalBottles}</p>
                 </div>
+                <div className="glass-dark rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <DollarSign className="w-5 h-5 text-copper" />
+                    <span className="text-sm text-gray-400">Total Value</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">{formatCurrency(selectedLocation.totalValue)}</p>
+                </div>
+                <div className="glass-dark rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <MapPin className="w-5 h-5 text-copper" />
+                    <span className="text-sm text-gray-400">Unique Bins</span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">{selectedLocation.uniqueBins}</p>
+                </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Capacity
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                    className="input-premium w-full"
-                    placeholder="e.g., 50"
-                    min="1"
-                  />
+              <div className="max-h-96 overflow-y-auto">
+                <h3 className="text-lg font-semibold text-white mb-4">Bottles in this Location</h3>
+                <div className="space-y-2">
+                  {selectedLocation.bottles.map((bottle) => (
+                    <Link
+                      key={bottle._id}
+                      href={`/bottles/${bottle._id}`}
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-white">{bottle.name}</div>
+                        <div className="text-sm text-gray-400">{bottle.distillery}</div>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm">
+                        {bottle.bin && (
+                          <div className="text-gray-400">
+                            Bin: <span className="text-white">{bottle.bin}</span>
+                          </div>
+                        )}
+                        <div className="text-gray-400">
+                          Qty: <span className="text-white">{bottle.quantity}</span>
+                        </div>
+                        <div className="text-copper font-medium">
+                          {formatCurrency(bottle.value)}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="input-premium w-full resize-none"
-                    rows={3}
-                    placeholder="Optional description..."
-                  />
-                </div>
-
-                <div className="flex gap-4 pt-4">
-                  <button
-                    type="submit"
-                    className="btn-primary flex-1"
-                  >
-                    Create Location
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(false)}
-                    className="btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+              <div className="flex justify-end pt-6 border-t border-gray-700">
+                <button
+                  onClick={() => setSelectedLocation(null)}
+                  className="btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

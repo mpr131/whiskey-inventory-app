@@ -1,13 +1,89 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
+interface DashboardStats {
+  totalBottles: number;
+  totalValue: number;
+  openBottles: number;
+  uniqueBottles: number;
+  locations: number;
+}
+
+interface RecentBottle {
+  _id: string;
+  name: string;
+  distillery: string;
+  quantity: number;
+  status: string;
+  fillLevel: number;
+  createdAt: string;
+}
+
+interface TopValuedBottle {
+  _id: string;
+  name: string;
+  distillery: string;
+  quantity: number;
+  totalValue: number;
+}
+
+export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalBottles: 0,
+    totalValue: 0,
+    openBottles: 0,
+    uniqueBottles: 0,
+    locations: 0,
+    lowStockBottles: 0,
+  });
+  const [recentBottles, setRecentBottles] = useState<RecentBottle[]>([]);
+  const [topValuedBottles, setTopValuedBottles] = useState<TopValuedBottle[]>([]);
+  const [lowStockBottles, setLowStockBottles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    fetchDashboardStats();
+  }, [session, status, router]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await fetch('/api/dashboard/stats');
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data.stats);
+        setRecentBottles(data.recentBottles || []);
+        setTopValuedBottles(data.topValuedBottles || []);
+        setLowStockBottles(data.lowStockBottles || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl text-gray-400">Loading...</div>
+      </div>
+    );
+  }
 
   if (!session) {
-    redirect('/auth/signin');
+    return null;
   }
 
   return (
@@ -30,50 +106,50 @@ export default async function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <div className="card-premium">
+          <Link href="/bottles" className="card-premium hover:border-copper/50 hover:bg-gray-800/50 transition-all duration-300 cursor-pointer group">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-300">Total Bottles</h3>
-              <svg className="w-8 h-8 text-copper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <h3 className="text-lg font-semibold text-gray-300 group-hover:text-copper transition-colors">Total Bottles</h3>
+              <svg className="w-8 h-8 text-copper group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             </div>
-            <p className="text-3xl font-bold text-white">0</p>
-            <p className="text-sm text-gray-500 mt-2">In your collection</p>
-          </div>
+            <p className="text-3xl font-bold text-white group-hover:text-copper transition-colors">{stats.totalBottles.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">In your collection</p>
+          </Link>
 
-          <div className="card-premium">
+          <Link href="/bottles?sort=-value" className="card-premium hover:border-copper/50 hover:bg-gray-800/50 transition-all duration-300 cursor-pointer group">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-300">Total Value</h3>
-              <svg className="w-8 h-8 text-copper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <h3 className="text-lg font-semibold text-gray-300 group-hover:text-copper transition-colors">Total Value</h3>
+              <svg className="w-8 h-8 text-copper group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-3xl font-bold text-white">$0</p>
-            <p className="text-sm text-gray-500 mt-2">Current estimate</p>
-          </div>
+            <p className="text-3xl font-bold text-white group-hover:text-copper transition-colors">${stats.totalValue.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">Current estimate</p>
+          </Link>
 
-          <div className="card-premium">
+          <Link href="/bottles?status=opened" className="card-premium hover:border-copper/50 hover:bg-gray-800/50 transition-all duration-300 cursor-pointer group">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-300">Open Bottles</h3>
-              <svg className="w-8 h-8 text-copper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <h3 className="text-lg font-semibold text-gray-300 group-hover:text-copper transition-colors">Open Bottles</h3>
+              <svg className="w-8 h-8 text-copper group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
               </svg>
             </div>
-            <p className="text-3xl font-bold text-white">0</p>
-            <p className="text-sm text-gray-500 mt-2">Currently sampling</p>
-          </div>
+            <p className="text-3xl font-bold text-white group-hover:text-copper transition-colors">{stats.openBottles.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">Currently sampling</p>
+          </Link>
 
-          <div className="card-premium">
+          <Link href="/locations" className="card-premium hover:border-copper/50 hover:bg-gray-800/50 transition-all duration-300 cursor-pointer group">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-300">Locations</h3>
-              <svg className="w-8 h-8 text-copper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <h3 className="text-lg font-semibold text-gray-300 group-hover:text-copper transition-colors">Locations</h3>
+              <svg className="w-8 h-8 text-copper group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <p className="text-3xl font-bold text-white">0</p>
-            <p className="text-sm text-gray-500 mt-2">Storage areas</p>
-          </div>
+            <p className="text-3xl font-bold text-white group-hover:text-copper transition-colors">{stats.locations.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">Storage areas</p>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -99,17 +175,133 @@ export default async function DashboardPage() {
             </div>
           </Link>
 
-          <Link href="/locations" className="card-premium hover:border-copper/50 transition-all duration-300 group">
+          <Link href="/bottles/import" className="card-premium hover:border-copper/50 transition-all duration-300 group">
             <div className="flex items-center justify-center h-32">
               <div className="text-center">
                 <svg className="w-12 h-12 text-copper mx-auto mb-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <p className="text-lg font-semibold text-white">Manage Locations</p>
+                <p className="text-lg font-semibold text-white">Import CSV</p>
               </div>
             </div>
           </Link>
         </div>
+
+        {/* Recent Activity */}
+        {recentBottles.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-white mb-6">Recent Activity</h2>
+            <div className="card-premium">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left border-b border-gray-700">
+                      <th className="pb-3 text-sm font-medium text-gray-400">Bottle</th>
+                      <th className="pb-3 text-sm font-medium text-gray-400">Quantity</th>
+                      <th className="pb-3 text-sm font-medium text-gray-400">Status</th>
+                      <th className="pb-3 text-sm font-medium text-gray-400">Added</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentBottles.map((bottle) => (
+                      <tr key={bottle._id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                        <td className="py-3">
+                          <Link href={`/bottles/${bottle._id}`} className="hover:text-copper transition-colors">
+                            <div className="font-medium">{bottle.name}</div>
+                            <div className="text-sm text-gray-500">{bottle.distillery}</div>
+                          </Link>
+                        </td>
+                        <td className="py-3 text-sm">{bottle.quantity}</td>
+                        <td className="py-3">
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              bottle.status === 'opened' ? 'bg-green-900/50 text-green-400' : 'bg-gray-700 text-gray-300'
+                            }`}>
+                              {bottle.status}
+                            </span>
+                            {bottle.status === 'opened' && bottle.fillLevel !== undefined && (
+                              <div className="flex items-center space-x-1">
+                                <div className="w-8 bg-gray-700 rounded-full h-1">
+                                  <div
+                                    className={`h-1 rounded-full ${
+                                      bottle.fillLevel > 50 ? 'bg-green-500' : 
+                                      bottle.fillLevel > 20 ? 'bg-yellow-500' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${bottle.fillLevel}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-400">{bottle.fillLevel}%</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 text-sm text-gray-500">
+                          {new Date(bottle.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Low Stock Bottles */}
+        {lowStockBottles.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-white mb-6">Low Stock Alert</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {lowStockBottles.map((bottle) => (
+                <Link 
+                  key={bottle._id} 
+                  href={`/bottles/${bottle._id}`}
+                  className="card-premium hover:border-red-500/50 transition-all duration-300 border-red-500/20"
+                >
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-white mb-1">{bottle.name}</div>
+                    <div className="text-sm text-gray-400 mb-2">{bottle.distillery}</div>
+                    <div className="mb-2">
+                      <div className="w-full bg-gray-700 rounded-full h-2 mb-1">
+                        <div
+                          className="h-2 rounded-full bg-red-500"
+                          style={{ width: `${bottle.fillLevel}%` }}
+                        />
+                      </div>
+                      <div className="text-red-400 font-semibold">{bottle.fillLevel}% remaining</div>
+                    </div>
+                    {bottle.location && (
+                      <div className="text-xs text-gray-500">{bottle.location.area} - {bottle.location.bin}</div>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Top Valued Bottles */}
+        {topValuedBottles.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-white mb-6">Most Valuable Bottles</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {topValuedBottles.map((bottle) => (
+                <Link 
+                  key={bottle._id} 
+                  href={`/bottles/${bottle._id}`}
+                  className="card-premium hover:border-copper/50 transition-all duration-300"
+                >
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-white mb-1">{bottle.name}</div>
+                    <div className="text-sm text-gray-400 mb-2">{bottle.distillery}</div>
+                    <div className="text-2xl font-bold text-copper">${bottle.totalValue.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500 mt-1">Qty: {bottle.quantity}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {session.user.isAdmin && (
           <div className="mt-12">

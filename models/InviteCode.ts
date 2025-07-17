@@ -43,7 +43,6 @@ const InviteCodeSchema = new Schema<IInviteCode>(
   }
 );
 
-InviteCodeSchema.index({ code: 1 });
 InviteCodeSchema.index({ expiresAt: 1 });
 InviteCodeSchema.index({ isActive: 1, expiresAt: 1 });
 
