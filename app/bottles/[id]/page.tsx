@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PhotoUpload from '@/components/PhotoUpload';
 
@@ -138,6 +138,41 @@ export default function BottleDetailPage() {
       toast.error('Failed to load bottle details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBottleKill = async () => {
+    if (!bottle) return;
+
+    const confirmed = window.confirm(
+      `Finished this bottle? This will mark it as empty and set quantity to 0.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/bottles/${bottleId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'finished',
+          fillLevel: 0,
+          quantity: 0,
+          notes: bottle.notes ? `${bottle.notes}\n\nBottle finished on ${new Date().toLocaleDateString()}` : `Bottle finished on ${new Date().toLocaleDateString()}`,
+        }),
+      });
+
+      if (response.ok) {
+        const updatedBottle = await response.json();
+        setBottle(updatedBottle);
+        toast.success('💀 Bottle killed! RIP to a good dram.');
+      } else {
+        toast.error('Failed to update bottle status');
+      }
+    } catch (error) {
+      toast.error('Failed to update bottle');
     }
   };
 
@@ -340,6 +375,9 @@ export default function BottleDetailPage() {
                     {masterBottleView.masterBottle.proof && (
                       <span className="text-gray-400">{masterBottleView.masterBottle.proof}° Proof</span>
                     )}
+                    {masterBottleView.masterBottle.abv && (
+                      <span className="text-gray-400">{masterBottleView.masterBottle.abv}% ABV</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -505,7 +543,7 @@ export default function BottleDetailPage() {
                             <div className="mt-3">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-gray-400 text-xs">Fill Level</span>
-                                <span className="text-white text-xs">{userBottle.fillLevel}%</span>
+                                <span className="text-white text-xs">{Math.round(userBottle.fillLevel)}%</span>
                               </div>
                               <div className="w-full bg-gray-700 rounded-full h-1">
                                 <div
@@ -609,52 +647,22 @@ export default function BottleDetailPage() {
           </Link>
         </div>
         
-        <div className="flex items-center space-x-3">
-          {bottle.status === 'unopened' && (
-            <button
-              onClick={() => setShowOpenModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg transition-colors"
-            >
-              <Package className="w-4 h-4" />
-              <span>Open Bottle</span>
-            </button>
-          )}
-          
-          {bottle.status === 'opened' && (
-            <button
-              onClick={() => setShowPourModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors"
-            >
-              <Package className="w-4 h-4" />
-              <span>Take a Pour</span>
-            </button>
-          )}
-          
-          <Link
-            href={`/bottles/${bottleId}/print`}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            <span>Print Label</span>
-          </Link>
-          
+        <div className="flex items-center space-x-2">
           <Link
             href={`/bottles/${bottleId}/edit`}
-            className="flex items-center space-x-2 px-4 py-2 bg-copper/20 hover:bg-copper/30 text-copper rounded-lg transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
+            title="Edit bottle"
           >
-            <Edit className="w-4 h-4" />
-            <span>Edit</span>
+            <Edit className="w-5 h-5" />
           </Link>
           
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="flex items-center space-x-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors disabled:opacity-50"
+            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all disabled:opacity-50"
+            title="Delete bottle"
           >
-            <Trash2 className="w-4 h-4" />
-            <span>{deleting ? 'Deleting...' : 'Delete'}</span>
+            <Trash2 className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -701,7 +709,7 @@ export default function BottleDetailPage() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-gray-400">Fill Level</span>
                       <span className="text-sm text-white">
-                        {bottle.fillLevel}% ({calculateRemainingOz(bottle.fillLevel)}oz remaining)
+                        {Math.round(bottle.fillLevel)}% ({calculateRemainingOz(bottle.fillLevel)}oz remaining)
                       </span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
@@ -713,6 +721,39 @@ export default function BottleDetailPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="mt-6 flex flex-wrap gap-3">
+              {bottle.status === 'unopened' && (
+                <button
+                  onClick={() => setShowOpenModal(true)}
+                  className="btn-primary bg-green-600 hover:bg-green-700 flex items-center space-x-2"
+                >
+                  <Wine className="w-4 h-4" />
+                  <span>Open Bottle</span>
+                </button>
+              )}
+              
+              {bottle.status === 'opened' && (
+                <>
+                  <button
+                    onClick={() => setShowPourModal(true)}
+                    className="btn-primary bg-copper hover:bg-copper-dark flex items-center space-x-2"
+                  >
+                    <Wine className="w-4 h-4" />
+                    <span>Log Pour</span>
+                  </button>
+                  
+                  <button
+                    onClick={handleBottleKill}
+                    className="btn-primary bg-red-600 hover:bg-red-700 flex items-center space-x-2"
+                  >
+                    <Skull className="w-4 h-4" />
+                    <span>Bottle Kill</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -1024,7 +1065,7 @@ export default function BottleDetailPage() {
                     />
                     <div className="flex justify-between text-sm text-gray-400">
                       <span>0%</span>
-                      <span className="text-white font-medium">{fillLevel}%</span>
+                      <span className="text-white font-medium">{Math.round(fillLevel)}%</span>
                       <span>100%</span>
                     </div>
                     <div className="text-center text-sm text-gray-400">

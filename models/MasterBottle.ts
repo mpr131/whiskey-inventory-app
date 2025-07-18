@@ -9,6 +9,8 @@ export interface IMasterBottle extends Document {
   type: string;
   age?: number;
   proof?: number;
+  abv?: number;
+  statedProof?: string;
   msrp?: number;
   description?: string;
   isStorePick: boolean;
@@ -64,6 +66,15 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
       type: Number,
       min: 0,
       max: 200,
+    },
+    abv: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
+    statedProof: {
+      type: String,
+      trim: true,
     },
     msrp: {
       type: Number,

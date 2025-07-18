@@ -7,6 +7,7 @@ import UserBottle from '@/models/UserBottle';
 import MasterStore from '@/models/MasterStore';
 import UserStore from '@/models/UserStore';
 import mongoose from 'mongoose';
+import { extractAbvFromName } from '@/utils/extractAbv';
 
 interface ImportedBottle {
   [key: string]: string | undefined;
@@ -152,6 +153,9 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // Extract ABV/proof from wine name
+          const abvData = extractAbvFromName(wine);
+
           // Create new MasterBottle
           try {
             masterBottle = await MasterBottle.create({
@@ -162,6 +166,9 @@ export async function POST(request: NextRequest) {
               category: category,
               type: category,
               age: age && age > 0 && age < 100 ? age : undefined,
+              abv: abvData.abv || undefined,
+              proof: abvData.proof || undefined,
+              statedProof: abvData.statedProof || undefined,
               createdBy: new mongoose.Types.ObjectId(session.user.id),
             });
             results.masterBottlesCreated++;

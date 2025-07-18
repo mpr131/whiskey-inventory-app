@@ -21,6 +21,7 @@ export interface IUserBottle extends Document {
   bottleNumber?: string;
   barrelNumber?: string;
   actualProof?: number;
+  actualAbv?: number;
   notes?: string;
   personalNotes?: string;
   purchaseNote?: string;
@@ -105,6 +106,11 @@ const UserBottleSchema = new Schema<IUserBottle>(
       type: Number,
       min: 0,
       max: 200,
+    },
+    actualAbv: {
+      type: Number,
+      min: 0,
+      max: 100,
     },
     notes: {
       type: String,

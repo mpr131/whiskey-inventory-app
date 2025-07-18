@@ -7,6 +7,8 @@ import MasterBottle from '@/models/MasterBottle';
 import UserStore from '@/models/UserStore';
 import MasterStore from '@/models/MasterStore';
 import mongoose from 'mongoose';
+import { extractAbvFromName } from '@/utils/extractAbv';
+import { findOrCreateStore } from '@/utils/storeHelpers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,6 +25,7 @@ export async function GET(req: NextRequest) {
     const brand = searchParams.get('brand');
     const category = searchParams.get('category');
     const status = searchParams.get('status');
+    const proof = searchParams.get('proof');
     const sort = searchParams.get('sort') || '-createdAt';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -56,6 +59,30 @@ export async function GET(req: NextRequest) {
         masterQuery.category = category;
       }
 
+      // Apply proof filter
+      if (proof) {
+        switch (proof) {
+          case '80-90':
+            masterQuery.proof = { $gte: 80, $lte: 90 };
+            break;
+          case '90-100':
+            masterQuery.proof = { $gte: 90, $lte: 100 };
+            break;
+          case '100-110':
+            masterQuery.proof = { $gte: 100, $lte: 110 };
+            break;
+          case '110-120':
+            masterQuery.proof = { $gte: 110, $lte: 120 };
+            break;
+          case '120+':
+            masterQuery.proof = { $gte: 120 };
+            break;
+          case 'cask':
+            masterQuery.proof = { $gte: 110 };
+            break;
+        }
+      }
+
       const [bottles, total] = await Promise.all([
         MasterBottle.find(masterQuery)
           .sort(sort)
@@ -79,22 +106,50 @@ export async function GET(req: NextRequest) {
       let masterIds: mongoose.Types.ObjectId[] = [];
       
       if (search || brand) {
-        let masterBottleQuery: any = {};
-        
+        // Search both barcode fields and text fields simultaneously
         if (search) {
-          // Create flexible search patterns for better fuzzy matching
+          // First, search UserBottles by barcode fields
+          const barcodeQuery = {
+            $and: [
+              { userId: session.user.id },
+              {
+                $or: [
+                  { barcode: search },
+                  { cellarTrackerId: search },
+                  { wineBarcode: search },
+                ]
+              }
+            ]
+          };
+          
+          const bottlesWithBarcode = await UserBottle.find(barcodeQuery).select('masterBottleId');
+          const barcodeMatchIds = [...new Set(bottlesWithBarcode.map(b => b.masterBottleId))];
+          
+          // Then, search MasterBottles by name/brand/distillery
           const searchWords = search.toLowerCase().split(' ').filter(word => word.length > 0);
           const searchRegex = searchWords.map(word => `(?=.*${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`).join('');
           
-          masterBottleQuery.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { brand: { $regex: search, $options: 'i' } },
-            { distillery: { $regex: search, $options: 'i' } },
-            // Add fuzzy matching for partial words
-            { name: { $regex: searchRegex, $options: 'i' } },
-            { brand: { $regex: searchRegex, $options: 'i' } },
-            { distillery: { $regex: searchRegex, $options: 'i' } },
-          ];
+          const masterBottleQuery = {
+            $or: [
+              { name: { $regex: search, $options: 'i' } },
+              { brand: { $regex: search, $options: 'i' } },
+              { distillery: { $regex: search, $options: 'i' } },
+              // Add fuzzy matching for partial words
+              { name: { $regex: searchRegex, $options: 'i' } },
+              { brand: { $regex: searchRegex, $options: 'i' } },
+              { distillery: { $regex: searchRegex, $options: 'i' } },
+            ]
+          };
+          
+          const masterBottles = await MasterBottle.find(masterBottleQuery).select('_id');
+          const textMatchIds = masterBottles.map(b => b._id);
+          
+          // Combine both barcode and text search results
+          masterIds = [...new Set([...barcodeMatchIds, ...textMatchIds])];
+          
+          if (masterIds.length > 0) {
+            query.masterBottleId = { $in: masterIds };
+          }
         }
         
         if (brand) {
@@ -106,19 +161,19 @@ export async function GET(req: NextRequest) {
             ]
           };
           
-          if (masterBottleQuery.$or) {
-            masterBottleQuery = { $and: [masterBottleQuery, brandCondition] };
+          const brandBottles = await MasterBottle.find(brandCondition).select('_id');
+          const brandIds = brandBottles.map(b => b._id);
+          
+          // If we already have search results, intersect with brand filter
+          if (masterIds.length > 0) {
+            masterIds = masterIds.filter(id => brandIds.some(brandId => brandId.equals(id)));
           } else {
-            masterBottleQuery = brandCondition;
+            masterIds = brandIds;
           }
-        }
-        
-        const masterBottles = await MasterBottle.find(masterBottleQuery).select('_id');
-        
-        masterIds = masterBottles.map(b => b._id);
-        
-        if (masterIds.length > 0) {
-          query.masterBottleId = { $in: masterIds };
+          
+          if (masterIds.length > 0) {
+            query.masterBottleId = { $in: masterIds };
+          }
         }
       }
 
@@ -222,6 +277,31 @@ export async function GET(req: NextRequest) {
         });
       }
       
+      // Apply proof filter
+      if (proof) {
+        filteredGroups = filteredGroups.filter(group => {
+          const bottleProof = group.masterBottleId.proof;
+          if (!bottleProof) return false;
+          
+          switch (proof) {
+            case '80-90':
+              return bottleProof >= 80 && bottleProof <= 90;
+            case '90-100':
+              return bottleProof >= 90 && bottleProof <= 100;
+            case '100-110':
+              return bottleProof >= 100 && bottleProof <= 110;
+            case '110-120':
+              return bottleProof >= 110 && bottleProof <= 120;
+            case '120+':
+              return bottleProof >= 120;
+            case 'cask':
+              return bottleProof >= 110;
+            default:
+              return true;
+          }
+        });
+      }
+      
       // Sort the groups
       filteredGroups.sort((a, b) => {
         switch (sort) {
@@ -239,6 +319,10 @@ export async function GET(req: NextRequest) {
             return b.averagePrice - a.averagePrice;
           case '-value':
             return b.totalValue - a.totalValue;
+          case 'proof':
+            return (a.masterBottleId.proof || 0) - (b.masterBottleId.proof || 0);
+          case '-proof':
+            return (b.masterBottleId.proof || 0) - (a.masterBottleId.proof || 0);
           default:
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
@@ -290,9 +374,15 @@ export async function POST(req: NextRequest) {
       });
 
       if (!masterBottle) {
+        // Extract ABV/proof from name
+        const abvData = extractAbvFromName(body.masterBottle.name);
+        
         // Create new master bottle
         masterBottle = await MasterBottle.create({
           ...body.masterBottle,
+          abv: body.masterBottle.abv || abvData.abv,
+          proof: body.masterBottle.proof || abvData.proof,
+          statedProof: abvData.statedProof,
           createdBy: new mongoose.Types.ObjectId(session.user.id),
         });
       }
@@ -304,10 +394,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Master bottle information required' }, { status: 400 });
     }
 
+    // Handle purchase location (store) with case-insensitive matching
+    let storeId;
+    if (body.purchaseLocation) {
+      const storeResult = await findOrCreateStore(body.purchaseLocation, session.user.id);
+      storeId = storeResult.userStoreId;
+    }
+
     const userBottle = await UserBottle.create({
       ...body,
       userId: new mongoose.Types.ObjectId(session.user.id),
       masterBottleId: new mongoose.Types.ObjectId(masterBottleId),
+      storeId: storeId,
       photos: body.photos || [],
       pours: [],
     });

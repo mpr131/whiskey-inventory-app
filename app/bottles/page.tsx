@@ -4,9 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, Eye, Globe, Package, Trash2 } from 'lucide-react';
+import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+
+const BarcodeScanner = dynamic(() => import('@/components/BarcodeScanner'), {
+  ssr: false,
+});
 
 interface MasterBottle {
   _id: string;
@@ -17,6 +22,8 @@ interface MasterBottle {
   type?: string;
   age?: number;
   proof?: number;
+  abv?: number;
+  statedProof?: string;
   msrp?: number;
   description?: string;
   isStorePick: boolean;
@@ -65,14 +72,16 @@ export default function BottlesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [brandFilter, setBrandFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [proofFilter, setProofFilter] = useState('');
   const [viewMode, setViewMode] = useState<'my' | 'community' | 'all'>('my');
   const [sortBy, setSortBy] = useState('-createdAt');
   const [isMasterBottles, setIsMasterBottles] = useState(false);
   const [isGrouped, setIsGrouped] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 24,
@@ -95,7 +104,6 @@ export default function BottlesPage() {
     const sortParam = searchParams.get('sort');
     const searchParam = searchParams.get('search');
     const categoryParam = searchParams.get('category');
-    const brandParam = searchParams.get('brand');
     
     if (statusParam) setStatusFilter(statusParam);
     if (sortParam) setSortBy(sortParam);
@@ -104,7 +112,6 @@ export default function BottlesPage() {
       setDebouncedSearch(searchParam);
     }
     if (categoryParam) setCategoryFilter(categoryParam);
-    if (brandParam) setBrandFilter(brandParam);
   }, [searchParams]);
 
   useEffect(() => {
@@ -116,7 +123,7 @@ export default function BottlesPage() {
   useEffect(() => {
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when filters change
     fetchBottles();
-  }, [debouncedSearch, brandFilter, categoryFilter, statusFilter, sortBy, viewMode]);
+  }, [debouncedSearch, categoryFilter, statusFilter, proofFilter, sortBy, viewMode]);
 
   useEffect(() => {
     fetchBottles();
@@ -126,9 +133,9 @@ export default function BottlesPage() {
     try {
       const params = new URLSearchParams();
       if (debouncedSearch) params.append('search', debouncedSearch);
-      if (brandFilter) params.append('brand', brandFilter);
       if (categoryFilter) params.append('category', categoryFilter);
       if (statusFilter) params.append('status', statusFilter);
+      if (proofFilter) params.append('proof', proofFilter);
       params.append('sort', sortBy);
       params.append('view', viewMode);
       params.append('page', pagination.page.toString());
@@ -152,6 +159,15 @@ export default function BottlesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBarcodeScanned = (barcode: string) => {
+    setShowScanner(false);
+    // Search by barcode - clear other filters for focused search
+    setSearch('');
+    setDebouncedSearch(barcode);
+    // The search will trigger automatically via the useEffect
+    toast.success(`Searching for barcode: ${barcode}`);
   };
 
   const handleDelete = async (id: string) => {
@@ -243,20 +259,20 @@ export default function BottlesPage() {
                 </Link>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/bottles/import" className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
-                <Upload className="w-5 h-5" />
-                Import CSV
+            <div className="flex items-center space-x-6">
+              <Link href="/bottles/import" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Upload className="w-4 h-4 inline mr-1" />
+                Import
               </Link>
               {viewMode === 'my' && bottles.length > 0 && (
                 <button
                   onClick={handleClearCollection}
                   disabled={clearing}
-                  className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                  className="text-gray-400 hover:text-red-400 transition-colors text-sm disabled:opacity-50"
                   title="Clear entire collection"
                 >
-                  <Trash2 className="w-5 h-5" />
-                  {clearing ? 'Clearing...' : 'Clear Collection'}
+                  <Trash2 className="w-4 h-4 inline mr-1" />
+                  Clear
                 </button>
               )}
               <Link href="/bottles/add" className="btn-primary text-sm px-4 py-2">
@@ -268,94 +284,158 @@ export default function BottlesPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-4 md:mb-0">
-            {viewMode === 'my' ? 'My Collection' : viewMode === 'community' ? 'Community Bottles' : 'All Bottles'}
-          </h1>
-          
-          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-            <div className="flex gap-2 mb-4 md:mb-0">
-              <button
-                onClick={() => setViewMode('my')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  viewMode === 'my'
-                    ? 'bg-amber-600 text-white'
-                    : 'glass-dark text-gray-400 hover:text-white'
-                }`}
-              >
-                <Package className="w-4 h-4 inline mr-2" />
-                My Bottles
-              </button>
-              <button
-                onClick={() => setViewMode('community')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  viewMode === 'community'
-                    ? 'bg-amber-600 text-white'
-                    : 'glass-dark text-gray-400 hover:text-white'
-                }`}
-              >
-                <Globe className="w-4 h-4 inline mr-2" />
-                Community
-              </button>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                placeholder="Search bottles..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="input-premium md:w-64"
-              />
-              <input
-                type="text"
-                placeholder="Filter by brand..."
-                value={brandFilter}
-                onChange={(e) => setBrandFilter(e.target.value)}
-                className="input-premium md:w-48"
-              />
+        {/* Clean Header Section */}
+        <div className="mb-8">
+          {/* Top Row - Title and Search */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-6">
+            {/* Title */}
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              {viewMode === 'my' ? 'My Collection' : 'Community Bottles'}
+            </h1>
+            
+            {/* Centered Search Bar */}
+            <div className="flex-1 md:max-w-xl md:mx-8">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search bottles..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-12 pr-12 py-4 md:py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-copper transition-all text-lg md:text-sm min-h-[56px] md:min-h-0"
+                />
+                <button
+                  onClick={() => setShowScanner(true)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-3 md:p-2 hover:bg-gray-700 rounded-lg transition-all"
+                  title="Scan barcode"
+                >
+                  <ScanLine className="w-5 h-5 text-gray-400 hover:text-copper" />
+                </button>
+              </div>
             </div>
             
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="input-premium"
-            >
-              <option value="">All Categories</option>
-              <option value="Bourbon">Bourbon</option>
-              <option value="Scotch">Scotch</option>
-              <option value="Irish">Irish</option>
-              <option value="Rye">Rye</option>
-              <option value="Japanese">Japanese</option>
-              <option value="Other">Other</option>
-            </select>
-
-            {viewMode !== 'community' && (
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="input-premium"
-              >
-                <option value="">All Status</option>
-                <option value="unopened">Unopened</option>
-                <option value="opened">Opened</option>
-                <option value="finished">Finished</option>
-              </select>
-            )}
-
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="input-premium"
-            >
-              <option value="-createdAt">Newest First</option>
-              <option value="createdAt">Oldest First</option>
-              <option value="name">Name (A-Z)</option>
-              <option value="-name">Name (Z-A)</option>
-              <option value="-purchasePrice">Price (High-Low)</option>
-              <option value="purchasePrice">Price (Low-High)</option>
-              <option value="-rating">Rating (High-Low)</option>
-            </select>
+            {/* Placeholder for balance - hidden on mobile */}
+            <div className="hidden md:block w-32"></div>
           </div>
+          
+          {/* Bottom Row - View Toggle and Filters */}
+          <div className="flex items-center justify-between">
+            {/* View Toggle */}
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewMode('my')}
+                  className={`px-4 py-2 rounded-lg transition-all ${
+                    viewMode === 'my'
+                      ? 'bg-copper text-white'
+                      : 'bg-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  My Bottles
+                </button>
+                <button
+                  onClick={() => setViewMode('community')}
+                  className={`px-4 py-2 rounded-lg transition-all ${
+                    viewMode === 'community'
+                      ? 'bg-copper text-white'
+                      : 'bg-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Community
+                </button>
+              </div>
+            </div>
+            
+            {/* Filter Toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-400 hover:text-white rounded-lg transition-all"
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              {(categoryFilter || statusFilter || proofFilter || sortBy !== '-createdAt') && (
+                <span className="ml-1 px-2 py-0.5 bg-copper text-white text-xs rounded-full">
+                  {[categoryFilter, statusFilter, proofFilter, sortBy !== '-createdAt' && 'sorted'].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+          </div>
+          
+          {/* Collapsible Filters */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-gray-800/30 rounded-lg border border-gray-700">
+              <div className="flex flex-wrap gap-3">
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer focus:outline-none focus:border-copper"
+                >
+                  <option value="">All Categories</option>
+                  <option value="Bourbon">Bourbon</option>
+                  <option value="Scotch">Scotch</option>
+                  <option value="Irish">Irish</option>
+                  <option value="Rye">Rye</option>
+                  <option value="Japanese">Japanese</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                {viewMode !== 'community' && (
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer focus:outline-none focus:border-copper"
+                  >
+                    <option value="">All Status</option>
+                    <option value="unopened">Unopened</option>
+                    <option value="opened">Opened</option>
+                    <option value="finished">Finished</option>
+                  </select>
+                )}
+
+                <select
+                  value={proofFilter}
+                  onChange={(e) => setProofFilter(e.target.value)}
+                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer focus:outline-none focus:border-copper"
+                >
+                  <option value="">All Proofs</option>
+                  <option value="80-90">80-90 Proof</option>
+                  <option value="90-100">90-100 Proof</option>
+                  <option value="100-110">100-110 Proof</option>
+                  <option value="110-120">110-120 Proof</option>
+                  <option value="120+">120+ Proof</option>
+                  <option value="cask">Cask Strength (110+)</option>
+                </select>
+
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer focus:outline-none focus:border-copper"
+                >
+                  <option value="-createdAt">Newest First</option>
+                  <option value="createdAt">Oldest First</option>
+                  <option value="name">Name (A-Z)</option>
+                  <option value="-name">Name (Z-A)</option>
+                  <option value="-purchasePrice">Price (High to Low)</option>
+                  <option value="purchasePrice">Price (Low to High)</option>
+                  <option value="-proof">Proof (High to Low)</option>
+                  <option value="proof">Proof (Low to High)</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Results Summary */}
+        <div className="mb-6 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            {pagination.total > 0 ? (
+              <>
+                Showing <span className="text-white">{(pagination.page - 1) * pagination.limit + 1}</span> - <span className="text-white">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="text-white">{pagination.total}</span> bottles
+              </>
+            ) : (
+              'No bottles found'
+            )}
+          </p>
         </div>
 
         {bottles.length === 0 ? (
@@ -434,7 +514,13 @@ export default function BottlesPage() {
                       {masterData.proof && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">Proof:</span>
-                          <span className="text-gray-300">{masterData.proof}</span>
+                          <span className="text-gray-300">{masterData.proof}°</span>
+                        </div>
+                      )}
+                      {masterData.abv && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">ABV:</span>
+                          <span className="text-gray-300">{masterData.abv}%</span>
                         </div>
                       )}
                       <div className="flex justify-between">
@@ -530,7 +616,13 @@ export default function BottlesPage() {
                       {masterData.proof && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">Proof:</span>
-                          <span className="text-gray-300">{masterData.proof}</span>
+                          <span className="text-gray-300">{masterData.proof}°</span>
+                        </div>
+                      )}
+                      {masterData.abv && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">ABV:</span>
+                          <span className="text-gray-300">{masterData.abv}%</span>
                         </div>
                       )}
                       {isUser && (
@@ -684,6 +776,14 @@ export default function BottlesPage() {
           Quick Add
         </span>
       </Link>
+
+      {/* Barcode Scanner Modal */}
+      {showScanner && (
+        <BarcodeScanner
+          onScan={handleBarcodeScanned}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   );
 }

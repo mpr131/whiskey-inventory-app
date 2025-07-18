@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Search, Plus } from 'lucide-react';
+import AutocompleteInput from '@/components/AutocompleteInput';
 
 interface MasterBottle {
   _id: string;
@@ -28,6 +29,13 @@ export default function AddBottlePage() {
   const [selectedMaster, setSelectedMaster] = useState<MasterBottle | null>(null);
   const [createNew, setCreateNew] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Autocomplete suggestions
+  const [storeSuggestions, setStoreSuggestions] = useState<string[]>([]);
+  const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
+  const [binSuggestions, setBinSuggestions] = useState<string[]>([]);
+  const [distillerySuggestions, setDistillerySuggestions] = useState<string[]>([]);
+  const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
 
   // Master bottle fields (for creating new)
   const [masterData, setMasterData] = useState({
@@ -258,27 +266,35 @@ export default function AddBottlePage() {
                   />
                 </div>
 
-                <div>
-                  <label className="label-premium">Brand *</label>
-                  <input
-                    type="text"
-                    required
-                    value={masterData.brand}
-                    onChange={(e) => setMasterData({...masterData, brand: e.target.value})}
-                    className="input-premium w-full"
-                  />
-                </div>
+                <AutocompleteInput
+                  label="Brand"
+                  value={masterData.brand}
+                  onChange={(value) => setMasterData({...masterData, brand: value})}
+                  onSearch={async (query) => {
+                    const res = await fetch(`/api/master-bottles/producers?q=${encodeURIComponent(query)}&field=brand`);
+                    const data = await res.json();
+                    setBrandSuggestions(data.producers || []);
+                  }}
+                  suggestions={brandSuggestions}
+                  placeholder="e.g., Russell's Reserve"
+                  allowNew={true}
+                  required
+                />
 
-                <div>
-                  <label className="label-premium">Distillery *</label>
-                  <input
-                    type="text"
-                    required
-                    value={masterData.distillery}
-                    onChange={(e) => setMasterData({...masterData, distillery: e.target.value})}
-                    className="input-premium w-full"
-                  />
-                </div>
+                <AutocompleteInput
+                  label="Distillery"
+                  value={masterData.distillery}
+                  onChange={(value) => setMasterData({...masterData, distillery: value})}
+                  onSearch={async (query) => {
+                    const res = await fetch(`/api/master-bottles/producers?q=${encodeURIComponent(query)}&field=distillery`);
+                    const data = await res.json();
+                    setDistillerySuggestions(data.producers || []);
+                  }}
+                  suggestions={distillerySuggestions}
+                  placeholder="e.g., Wild Turkey"
+                  allowNew={true}
+                  required
+                />
 
                 <div>
                   <label className="label-premium">Category *</label>
@@ -380,16 +396,19 @@ export default function AddBottlePage() {
                 />
               </div>
 
-              <div>
-                <label className="label-premium">Purchase Location</label>
-                <input
-                  type="text"
-                  value={userData.purchaseLocation}
-                  onChange={(e) => setUserData({...userData, purchaseLocation: e.target.value})}
-                  placeholder="Store name"
-                  className="input-premium w-full"
-                />
-              </div>
+              <AutocompleteInput
+                label="Purchase Location"
+                value={userData.purchaseLocation}
+                onChange={(value) => setUserData({...userData, purchaseLocation: value})}
+                onSearch={async (query) => {
+                  const res = await fetch(`/api/stores/search?q=${encodeURIComponent(query)}`);
+                  const data = await res.json();
+                  setStoreSuggestions(data.stores || []);
+                }}
+                suggestions={storeSuggestions}
+                placeholder="Store name"
+                allowNew={true}
+              />
 
               <div>
                 <label className="label-premium">Quantity</label>
@@ -402,27 +421,42 @@ export default function AddBottlePage() {
                 />
               </div>
 
-              <div>
-                <label className="label-premium">Storage Area</label>
-                <input
-                  type="text"
-                  value={userData.location.area}
-                  onChange={(e) => setUserData({...userData, location: {...userData.location, area: e.target.value}})}
-                  placeholder="e.g., Bar, Cellar"
-                  className="input-premium w-full"
-                />
-              </div>
+              <AutocompleteInput
+                label="Storage Area"
+                value={userData.location.area}
+                onChange={(value) => {
+                  setUserData({...userData, location: {...userData.location, area: value}});
+                  // Clear bin when area changes
+                  if (value !== userData.location.area) {
+                    setUserData(prev => ({...prev, location: {...prev.location, bin: ''}}));
+                    setBinSuggestions([]);
+                  }
+                }}
+                onSearch={async (query) => {
+                  const res = await fetch(`/api/locations/areas?q=${encodeURIComponent(query)}`);
+                  const data = await res.json();
+                  setAreaSuggestions(data.areas || []);
+                }}
+                suggestions={areaSuggestions}
+                placeholder="e.g., Bar, Cellar"
+                allowNew={true}
+              />
 
-              <div>
-                <label className="label-premium">Bin/Shelf</label>
-                <input
-                  type="text"
-                  value={userData.location.bin}
-                  onChange={(e) => setUserData({...userData, location: {...userData.location, bin: e.target.value}})}
-                  placeholder="e.g., A1, Top Shelf"
-                  className="input-premium w-full"
-                />
-              </div>
+              <AutocompleteInput
+                label="Bin/Shelf"
+                value={userData.location.bin}
+                onChange={(value) => setUserData({...userData, location: {...userData.location, bin: value}})}
+                onSearch={async (query) => {
+                  if (userData.location.area) {
+                    const res = await fetch(`/api/locations/bins?area=${encodeURIComponent(userData.location.area)}&q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    setBinSuggestions(data.bins || []);
+                  }
+                }}
+                suggestions={binSuggestions}
+                placeholder="e.g., A1, Top Shelf"
+                allowNew={true}
+              />
 
               <div>
                 <label className="label-premium">Bottle Number</label>
