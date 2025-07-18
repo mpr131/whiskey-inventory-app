@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import AutocompleteInput from '@/components/AutocompleteInput';
 
 interface MasterBottle {
   _id: string;
@@ -46,6 +47,13 @@ interface UserBottle {
   deliveryDate?: string;
   barcode?: string;
   cellarTrackerId?: string;
+  storeId?: {
+    _id: string;
+    masterStoreId?: {
+      _id: string;
+      name: string;
+    };
+  };
   status: 'unopened' | 'opened' | 'finished';
   photos: string[];
   pours: Array<{
@@ -70,6 +78,12 @@ export default function EditBottlePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [stores, setStores] = useState<any[]>([]);
+  
+  // Autocomplete suggestions
+  const [storeSuggestions, setStoreSuggestions] = useState<string[]>([]);
+  const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
+  const [binSuggestions, setBinSuggestions] = useState<string[]>([]);
+  const [purchaseLocation, setPurchaseLocation] = useState('');
   
   // Form state
   const [formData, setFormData] = useState({
@@ -134,6 +148,11 @@ export default function EditBottlePage() {
           cellarTrackerId: data.cellarTrackerId || '',
           storeId: data.storeId?._id || '',
         });
+        
+        // Set purchase location from store name
+        if (data.storeId?.masterStoreId?.name) {
+          setPurchaseLocation(data.storeId.masterStoreId.name);
+        }
       } else if (response.status === 404) {
         toast.error('Bottle not found');
         router.push('/bottles');
@@ -176,7 +195,7 @@ export default function EditBottlePage() {
         deliveryDate: formData.deliveryDate ? new Date(formData.deliveryDate).toISOString() : undefined,
         barcode: formData.barcode,
         cellarTrackerId: formData.cellarTrackerId,
-        storeId: formData.storeId || null,
+        purchaseLocation: purchaseLocation || undefined,
       };
 
       const response = await fetch(`/api/bottles/${bottleId}`, {
@@ -370,33 +389,42 @@ export default function EditBottlePage() {
               <h2 className="text-xl font-semibold text-white mb-4">Location & Details</h2>
               
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Location Area
-                  </label>
-                  <input
-                    type="text"
-                    name="locationArea"
-                    value={formData.locationArea}
-                    onChange={handleInputChange}
-                    className="input-premium w-full"
-                    placeholder="e.g., Living Room, Wine Cellar"
-                  />
-                </div>
+                <AutocompleteInput
+                  label="Location Area"
+                  value={formData.locationArea}
+                  onChange={(value) => {
+                    setFormData({...formData, locationArea: value});
+                    // Clear bin when area changes
+                    if (value !== formData.locationArea) {
+                      setFormData(prev => ({...prev, locationBin: ''}));
+                      setBinSuggestions([]);
+                    }
+                  }}
+                  onSearch={async (query) => {
+                    const res = await fetch(`/api/locations/areas?q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    setAreaSuggestions(data.areas || []);
+                  }}
+                  suggestions={areaSuggestions}
+                  placeholder="e.g., Living Room, Wine Cellar"
+                  allowNew={true}
+                />
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Bin/Position
-                  </label>
-                  <input
-                    type="text"
-                    name="locationBin"
-                    value={formData.locationBin}
-                    onChange={handleInputChange}
-                    className="input-premium w-full"
-                    placeholder="e.g., A1, Shelf 2"
-                  />
-                </div>
+                <AutocompleteInput
+                  label="Bin/Position"
+                  value={formData.locationBin}
+                  onChange={(value) => setFormData({...formData, locationBin: value})}
+                  onSearch={async (query) => {
+                    if (formData.locationArea) {
+                      const res = await fetch(`/api/locations/bins?area=${encodeURIComponent(formData.locationArea)}&q=${encodeURIComponent(query)}`);
+                      const data = await res.json();
+                      setBinSuggestions(data.bins || []);
+                    }
+                  }}
+                  suggestions={binSuggestions}
+                  placeholder="e.g., A1, Shelf 2"
+                  allowNew={true}
+                />
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -412,24 +440,19 @@ export default function EditBottlePage() {
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Store
-                  </label>
-                  <select
-                    name="storeId"
-                    value={formData.storeId}
-                    onChange={handleInputChange}
-                    className="input-premium w-full"
-                  >
-                    <option value="">No store selected</option>
-                    {stores.map((store) => (
-                      <option key={store._id} value={store._id}>
-                        {store.masterStoreId?.name || 'Unknown Store'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <AutocompleteInput
+                  label="Purchase Location"
+                  value={purchaseLocation}
+                  onChange={(value) => setPurchaseLocation(value)}
+                  onSearch={async (query) => {
+                    const res = await fetch(`/api/stores/search?q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    setStoreSuggestions(data.stores || []);
+                  }}
+                  suggestions={storeSuggestions}
+                  placeholder="Store name"
+                  allowNew={true}
+                />
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">

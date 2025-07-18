@@ -7,6 +7,7 @@ import MasterBottle from '@/models/MasterBottle';
 import UserStore from '@/models/UserStore';
 import MasterStore from '@/models/MasterStore';
 import mongoose from 'mongoose';
+import { findOrCreateStore } from '@/utils/storeHelpers';
 
 export async function GET(
   req: NextRequest,
@@ -133,6 +134,17 @@ export async function PUT(
 
     if (!bottle) {
       return NextResponse.json({ error: 'Bottle not found' }, { status: 404 });
+    }
+
+    // Handle purchase location (store) with case-insensitive matching
+    if (body.purchaseLocation !== undefined) {
+      if (body.purchaseLocation) {
+        const storeResult = await findOrCreateStore(body.purchaseLocation, session.user.id);
+        body.storeId = storeResult.userStoreId;
+      } else {
+        body.storeId = null;
+      }
+      delete body.purchaseLocation;
     }
 
     // Update bottle with new data
