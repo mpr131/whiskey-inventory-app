@@ -5,7 +5,6 @@ import dbConnect from '@/lib/mongodb';
 import mongoose from 'mongoose';
 import UserBottle from '@/models/UserBottle';
 import Pour from '@/models/Pour';
-import MasterBottle from '@/models/MasterBottle';
 
 export async function GET(request: Request) {
   console.log('Analytics API route called at:', new Date().toISOString());
@@ -314,7 +313,7 @@ export async function GET(request: Request) {
 
     // Group pours by date
     const dailyPours: Record<string, { pours: number; totalAmount: number; ratings: number[] }> = {};
-    const weekdayStats: Record<number, { pours: number[]; ratings: number[] }> = {
+    const weekdayStats: Record<number, { pours: string[]; ratings: number[] }> = {
       0: { pours: [], ratings: [] }, // Sunday
       1: { pours: [], ratings: [] },
       2: { pours: [], ratings: [] },
@@ -493,10 +492,21 @@ export async function GET(request: Request) {
     console.timeEnd('Kill Rate Query');
 
     // Calculate depletion predictions
-    const depletionPredictions = [];
-    const burnRateData = [];
+    const depletionPredictions: Array<{
+      bottleId: string;
+      bottleName: string;
+      fillLevel: number;
+      daysUntilEmpty: number;
+      depletionRate: number;
+      remainingOz: number;
+    }> = [];
+    const burnRateData: Array<{
+      bottleName: string;
+      history: Array<{ date: string; fillLevel: number }>;
+      projection: Array<{ date: string; fillLevel: number }>;
+    }> = [];
     
-    for (const [bottleId, data] of Object.entries(bottlePourData)) {
+    for (const [, data] of Object.entries(bottlePourData)) {
       const { pours, bottle } = data;
       const totalPoured = pours.reduce((sum, p) => sum + p.amount, 0);
       const daysSinceFirstPour = Math.max(1, (Date.now() - pours[0].createdAt.getTime()) / (1000 * 60 * 60 * 24));
@@ -564,11 +574,15 @@ export async function GET(request: Request) {
     depletionPredictions.sort((a, b) => a.daysUntilEmpty - b.daysUntilEmpty);
 
     // Calculate consumption changes
-    const consumptionChanges = [];
+    const consumptionChanges: Array<{
+      bottle: string;
+      change: string;
+      isUp: boolean;
+    }> = [];
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
     
-    for (const [bottleId, data] of Object.entries(bottlePourData).slice(0, 3)) {
+    for (const [, data] of Object.entries(bottlePourData).slice(0, 3)) {
       const recentPours = data.pours.filter(p => p.createdAt >= twoWeeksAgo);
       const olderPours = data.pours.filter(p => p.createdAt < twoWeeksAgo);
       
@@ -588,8 +602,8 @@ export async function GET(request: Request) {
     }
 
     // Generate warnings and projections
-    const warnings = [];
-    const projections = [];
+    const warnings: string[] = [];
+    const projections: string[] = [];
     
     const emptyingSoon = depletionPredictions.filter(b => b.daysUntilEmpty <= 14);
     if (emptyingSoon.length > 0) {
