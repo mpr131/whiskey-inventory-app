@@ -5,9 +5,9 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, ScanLine } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 
-const BarcodeScanner = dynamic(() => import('@/components/BarcodeScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
   ssr: false,
 });
 
