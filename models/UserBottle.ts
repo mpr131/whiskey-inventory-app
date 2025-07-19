@@ -43,6 +43,11 @@ export interface IUserBottle extends Document {
   lastPourDate?: Date;
   createdAt: Date;
   updatedAt: Date;
+  
+  // Methods
+  getTotalPours(): number;
+  updateFillLevel(): void;
+  updatePourStats(): Promise<IUserBottle>;
 }
 
 const PourSchema = new Schema<IPour>({
