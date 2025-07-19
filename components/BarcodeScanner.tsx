@@ -115,7 +115,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
         ) : (
           <>
             <video
-              ref={ref}
+              ref={ref as React.RefObject<HTMLVideoElement>}
               className="w-full h-full object-cover"
               playsInline
               muted

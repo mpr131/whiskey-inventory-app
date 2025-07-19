@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         }
       },
       {
-        $sort: { _id: 1 }
+        $sort: { _id: 1 as 1 }
       },
       {
         $limit: 20

@@ -32,8 +32,9 @@ export async function GET(req: NextRequest) {
     const storeNames = new Set<string>();
     
     userStores.forEach(store => {
-      if (store.masterStoreId?.name) {
-        const storeName = store.masterStoreId.name;
+      const masterStore = store.masterStoreId as any;
+      if (masterStore?.name) {
+        const storeName = masterStore.name;
         // Case-insensitive matching
         if (storeName.toLowerCase().includes(query.toLowerCase())) {
           storeNames.add(storeName);

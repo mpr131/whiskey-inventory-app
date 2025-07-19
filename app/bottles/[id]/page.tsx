@@ -19,6 +19,7 @@ interface MasterBottle {
   type: string;
   age?: number;
   proof?: number;
+  abv?: number;
   msrp?: number;
   description?: string;
   isStorePick: boolean;

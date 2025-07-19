@@ -19,7 +19,7 @@ if (!MONGODB_URI) {
 async function seedDatabase() {
   try {
     console.log('Connecting to MongoDB...');
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI as string);
     console.log('✅ Connected to MongoDB');
 
     // Create initial invite code

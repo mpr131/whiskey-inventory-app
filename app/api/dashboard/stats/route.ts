@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
       // Track unique master bottles
       if (bottle.masterBottleId) {
-        uniqueMasterBottles.add(bottle.masterBottleId._id.toString());
+        uniqueMasterBottles.add((bottle.masterBottleId as any)._id.toString());
       }
     }
 
@@ -71,12 +71,12 @@ export async function GET(req: NextRequest) {
 
     // Get low stock bottles (opened bottles with fill level < 20%)
     const lowStockBottles = userBottles
-      .filter(bottle => bottle.status === 'opened' && bottle.fillLevel < 20)
+      .filter(bottle => bottle.status === 'opened' && bottle.fillLevel !== undefined && bottle.fillLevel < 20)
       .map(bottle => ({
         _id: bottle._id,
-        name: bottle.masterBottleId?.name || 'Unknown',
-        distillery: bottle.masterBottleId?.distillery || 'Unknown',
-        fillLevel: bottle.fillLevel,
+        name: (bottle.masterBottleId as any)?.name || 'Unknown',
+        distillery: (bottle.masterBottleId as any)?.distillery || 'Unknown',
+        fillLevel: bottle.fillLevel ?? 100,
         quantity: bottle.quantity,
         location: bottle.location,
         openDate: bottle.openDate,
@@ -95,8 +95,8 @@ export async function GET(req: NextRequest) {
       },
       recentBottles: recentBottles.map(bottle => ({
         _id: bottle._id,
-        name: bottle.masterBottleId?.name || 'Unknown',
-        distillery: bottle.masterBottleId?.distillery || 'Unknown',
+        name: (bottle.masterBottleId as any)?.name || 'Unknown',
+        distillery: (bottle.masterBottleId as any)?.distillery || 'Unknown',
         quantity: bottle.quantity,
         status: bottle.status,
         fillLevel: bottle.fillLevel,
@@ -104,8 +104,8 @@ export async function GET(req: NextRequest) {
       })),
       topValuedBottles: topValuedBottles.map(bottle => ({
         _id: bottle._id,
-        name: bottle.masterBottleId?.name || 'Unknown',
-        distillery: bottle.masterBottleId?.distillery || 'Unknown',
+        name: (bottle.masterBottleId as any)?.name || 'Unknown',
+        distillery: (bottle.masterBottleId as any)?.distillery || 'Unknown',
         quantity: bottle.quantity,
         totalValue: bottle.totalValue,
       })),

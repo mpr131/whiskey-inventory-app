@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
           };
           
           const bottlesWithBarcode = await UserBottle.find(barcodeQuery).select('masterBottleId');
-          const barcodeMatchIds = [...new Set(bottlesWithBarcode.map(b => b.masterBottleId))];
+          const barcodeMatchIds = Array.from(new Set(bottlesWithBarcode.map(b => b.masterBottleId)));
           
           // Then, search MasterBottles by name/brand/distillery
           const searchWords = search.toLowerCase().split(' ').filter(word => word.length > 0);
@@ -145,7 +145,8 @@ export async function GET(req: NextRequest) {
           const textMatchIds = masterBottles.map(b => b._id);
           
           // Combine both barcode and text search results
-          masterIds = [...new Set([...barcodeMatchIds, ...textMatchIds])];
+          const combinedIds = [...barcodeMatchIds, ...textMatchIds];
+          masterIds = Array.from(new Set(combinedIds));
           
           if (masterIds.length > 0) {
             query.masterBottleId = { $in: masterIds };
@@ -229,8 +230,9 @@ export async function GET(req: NextRequest) {
         }
         
         // Track stores from populated store data
-        if (bottle.storeId?.masterStoreId?.name) {
-          group.stores.add(bottle.storeId.masterStoreId.name);
+        const storeData = bottle.storeId as any;
+        if (storeData?.masterStoreId?.name) {
+          group.stores.add(storeData.masterStoreId.name);
         }
         
         // Calculate values

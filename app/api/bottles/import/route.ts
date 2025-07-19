@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or find MasterBottles for unique wines
-    for (const [key, bottleGroup] of groupedBottles) {
+    for (const [key, bottleGroup] of Array.from(groupedBottles.entries())) {
       const firstBottle = bottleGroup[0];
       const wine = firstBottle[columnMapping.wine] || '';
       const producer = firstBottle[columnMapping.producer] || '';
@@ -95,13 +95,16 @@ export async function POST(request: NextRequest) {
       // Map CellarTracker's Varietal to our category
       let category = 'Bourbon';
       if (columnMapping.varietal && firstBottle[columnMapping.varietal]) {
-        const varietal = firstBottle[columnMapping.varietal].toLowerCase();
-        if (varietal.includes('bourbon')) category = 'Bourbon';
-        else if (varietal.includes('rye')) category = 'Rye';
-        else if (varietal.includes('scotch') || varietal.includes('single malt')) category = 'Scotch';
-        else if (varietal.includes('irish')) category = 'Irish';
-        else if (varietal.includes('japanese')) category = 'Japanese';
-        else category = 'Other';
+        const varietalValue = firstBottle[columnMapping.varietal];
+        if (typeof varietalValue === 'string') {
+          const varietal = varietalValue.toLowerCase();
+          if (varietal.includes('bourbon')) category = 'Bourbon';
+          else if (varietal.includes('rye')) category = 'Rye';
+          else if (varietal.includes('scotch') || varietal.includes('single malt')) category = 'Scotch';
+          else if (varietal.includes('irish')) category = 'Irish';
+          else if (varietal.includes('japanese')) category = 'Japanese';
+          else category = 'Other';
+        }
       }
 
       try {
@@ -202,7 +205,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create ONE UserBottle per CSV row (no grouping)
-    for (const [key, bottleGroup] of groupedBottles) {
+    for (const [key, bottleGroup] of Array.from(groupedBottles.entries())) {
       const masterBottleId = masterBottleMap[key];
       
       if (!masterBottleId) {
@@ -268,10 +271,16 @@ export async function POST(request: NextRequest) {
             userBottleData.purchaseDate = new Date(purchaseDate);
           }
           if (bottle[columnMapping.price]) {
-            userBottleData.purchasePrice = Math.round(parseFloat(bottle[columnMapping.price]) * 100) / 100;
+            const priceValue = bottle[columnMapping.price];
+            if (typeof priceValue === 'string') {
+              userBottleData.purchasePrice = Math.round(parseFloat(priceValue) * 100) / 100;
+            }
           }
           if (bottle[columnMapping.value]) {
-            userBottleData.marketValue = Math.round(parseFloat(bottle[columnMapping.value]) * 100) / 100;
+            const marketValue = bottle[columnMapping.value];
+            if (typeof marketValue === 'string') {
+              userBottleData.marketValue = Math.round(parseFloat(marketValue) * 100) / 100;
+            }
           }
           if (location || bin) {
             userBottleData.location = {
@@ -305,7 +314,9 @@ export async function POST(request: NextRequest) {
           if (columnMapping.storeName && bottle[columnMapping.storeName]) {
             
             try {
-              const storeName = bottle[columnMapping.storeName].trim();
+              const storeNameValue = bottle[columnMapping.storeName];
+              if (typeof storeNameValue === 'string') {
+                const storeName = storeNameValue.trim();
               
               // Find or create MasterStore
               let masterStore = await MasterStore.findOne({
@@ -337,6 +348,7 @@ export async function POST(request: NextRequest) {
               
               userBottleData.storeId = userStore._id;
               console.log(`Setting storeId for bottle: ${userStore._id} (UserStore) -> ${masterStore._id} (MasterStore: ${storeName})`);
+              }
             } catch (storeError) {
               console.error(`Error handling store ${bottle[columnMapping.storeName]}:`, storeError);
               // Continue without store if there's an error
@@ -599,7 +611,7 @@ function analyzeCSVData(headers: string[], preview: any[], isCellarTracker: bool
     }
 
     // Check if any wine has multiple locations
-    for (const locations of wineLocationMap.values()) {
+    for (const locations of Array.from(wineLocationMap.values())) {
       if (locations.size > 1) {
         analysis.hasMultipleLocations = true;
         break;
@@ -628,7 +640,7 @@ function analyzeCSVData(headers: string[], preview: any[], isCellarTracker: bool
     }
 
     // Check if any wine has multiple locations
-    for (const locations of wineLocationMap.values()) {
+    for (const locations of Array.from(wineLocationMap.values())) {
       if (locations.size > 1) {
         analysis.hasMultipleLocations = true;
         break;

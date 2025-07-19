@@ -25,9 +25,9 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
-        // Clean up credentials - convert "undefined" strings to actual undefined
-        if (credentials?.name === 'undefined') credentials.name = undefined;
-        if (credentials?.inviteCode === 'undefined') credentials.inviteCode = undefined;
+        // Clean up credentials - convert "undefined" strings to empty strings
+        if (credentials?.name === 'undefined') credentials.name = '';
+        if (credentials?.inviteCode === 'undefined') credentials.inviteCode = '';
 
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password are required');

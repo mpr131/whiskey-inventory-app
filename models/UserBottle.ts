@@ -29,6 +29,7 @@ export interface IUserBottle extends Document {
   deliveryDate?: Date;
   barcode?: string;
   wineBarcode?: string;
+  storeName?: string;
   storeId?: mongoose.Types.ObjectId;
   cellarTrackerId?: string;
   photos: string[];
@@ -136,6 +137,10 @@ const UserBottleSchema = new Schema<IUserBottle>(
       trim: true,
     },
     wineBarcode: {
+      type: String,
+      trim: true,
+    },
+    storeName: {
       type: String,
       trim: true,
     },

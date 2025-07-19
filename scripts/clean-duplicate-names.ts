@@ -91,7 +91,7 @@ async function cleanDuplicateNames() {
     // Display updates grouped by prefix
     console.log('=== PLANNED UPDATES ===\n');
     let totalShown = 0;
-    for (const [prefix, prefixUpdates] of updatesByPrefix) {
+    for (const [prefix, prefixUpdates] of Array.from(updatesByPrefix.entries())) {
       console.log(`--- ${prefix} (${prefixUpdates.length} updates) ---`);
       
       // Show first 3 examples for each prefix

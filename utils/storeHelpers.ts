@@ -50,7 +50,7 @@ export async function findOrCreateStore(
   }
 
   return {
-    userStoreId: userStore._id,
-    masterStoreId: masterStore._id,
+    userStoreId: userStore._id as mongoose.Types.ObjectId,
+    masterStoreId: masterStore._id as mongoose.Types.ObjectId,
   };
 }

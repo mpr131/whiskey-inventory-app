@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Generate unique code
     while (!isUnique) {
-      code = InviteCode.schema.statics.generateCode();
+      code = (InviteCode.schema.statics.generateCode as any)() as string;
       const existing = await InviteCode.findOne({ code });
       if (!existing) {
         isUnique = true;

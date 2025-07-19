@@ -114,7 +114,7 @@ LocationSchema.methods.hasSpace = function(): boolean {
 LocationSchema.methods.findAvailableBin = function() {
   if (!this.bins || this.bins.length === 0) return null;
   
-  return this.bins.find(bin => bin.currentCount < bin.capacity);
+  return this.bins.find((bin: any) => bin.currentCount < bin.capacity);
 };
 
 const Location = mongoose.models.Location || mongoose.model<ILocation>('Location', LocationSchema);

@@ -95,7 +95,6 @@ export async function GET(
         _id: bottle._id,
         barcode: bottle.barcode,
         wineBarcode: bottle.wineBarcode,
-        storeName: bottle.storeName,
         marketValue: bottle.marketValue,
         cellarTrackerId: bottle.cellarTrackerId,
       });

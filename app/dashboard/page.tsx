@@ -17,6 +17,7 @@ interface DashboardStats {
   openBottles: number;
   uniqueBottles: number;
   locations: number;
+  lowStockBottles: number;
 }
 
 interface RecentBottle {
@@ -387,10 +388,7 @@ export default function DashboardPage() {
             
             <BarcodeScanner
               onScan={handleBarcodeScan}
-              onError={(error) => {
-                console.error('Scanner error:', error);
-                setShowScanner(false);
-              }}
+              onClose={() => setShowScanner(false)}
             />
           </div>
         </div>
