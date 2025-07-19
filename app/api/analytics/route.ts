@@ -102,7 +102,9 @@ export async function GET(request: Request) {
     const userBottles = await UserBottle.find({ 
       userId: session.user.id,
       status: { $ne: 'finished' }
-    }).populate('masterBottleId').lean();
+    })
+    .populate('masterBottleId')
+    .lean();
     console.timeEnd('Collection Query');
 
     // Category breakdown
@@ -120,8 +122,8 @@ export async function GET(request: Request) {
     const valuableBottles: Array<{ name: string; value: number }> = [];
 
     userBottles.forEach(bottle => {
-      const master = bottle.masterBottleId;
-      if (!master) return;
+      const master = bottle.masterBottleId as any;
+      if (!master || typeof master === 'string') return;
 
       // Category
       const category = master.category || 'Other';
@@ -507,7 +509,7 @@ export async function GET(request: Request) {
       
       depletionPredictions.push({
         bottleId: bottle._id.toString(),
-        bottleName: bottle.masterBottleId?.name || 'Unknown',
+        bottleName: (bottle.masterBottleId as any)?.name || 'Unknown',
         fillLevel: bottle.fillLevel,
         daysUntilEmpty,
         depletionRate: ozPerWeek,
@@ -551,7 +553,7 @@ export async function GET(request: Request) {
         }
         
         burnRateData.push({
-          bottleName: bottle.masterBottleId?.name || 'Unknown',
+          bottleName: (bottle.masterBottleId as any)?.name || 'Unknown',
           history: history.slice(-10), // Last 10 data points
           projection
         });
@@ -577,7 +579,7 @@ export async function GET(request: Request) {
         
         if (Math.abs(changePercent) > 20) {
           consumptionChanges.push({
-            bottle: data.bottle.masterBottleId?.name || 'Unknown',
+            bottle: (data.bottle.masterBottleId as any)?.name || 'Unknown',
             change: `${changePercent > 0 ? 'up' : 'down'} ${Math.abs(Math.round(changePercent))}% this month`,
             isUp: changePercent > 0
           });
