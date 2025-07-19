@@ -145,7 +145,7 @@ export async function GET(request: Request) {
       }
 
       // Value
-      const value = bottle.currentValue || bottle.purchasePrice || 0;
+      const value = bottle.marketValue || bottle.purchasePrice || 0;
       totalValue += value;
       if (value > 0) {
         valuableBottles.push({ name: master.name, value });
