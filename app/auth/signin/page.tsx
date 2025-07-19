@@ -23,17 +23,36 @@ export default function SignInPage() {
     const inviteCode = formData.get('inviteCode') as string;
 
     try {
-      const result = await signIn('credentials', {
+      // Build credentials object
+      const credentials: any = {
         email,
         password,
-        name: isRegistering ? name : undefined,
-        inviteCode: isRegistering ? inviteCode : undefined,
         redirect: false,
+      };
+
+      // Only add name and inviteCode if registering
+      if (isRegistering) {
+        credentials.name = name;
+        credentials.inviteCode = inviteCode;
+      }
+
+      console.log('🚀 Signin attempt:', {
+        email,
+        isRegistering,
+        hasName: !!name,
+        hasInviteCode: !!inviteCode,
+        credentials,
       });
 
+      const result = await signIn('credentials', credentials);
+
+      console.log('📨 Signin result:', result);
+
       if (result?.error) {
+        console.error('❌ Signin error:', result.error);
         setError(result.error);
       } else {
+        console.log('✅ Signin successful, redirecting...');
         router.push('/dashboard');
         router.refresh();
       }
