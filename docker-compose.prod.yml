@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  whiskey-vault-app:
+    container_name: whiskey-vault-prod
+    image: whiskey-vault:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        # Build-time environment variables
+        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+        - MONGODB_URI=${MONGODB_URI}
+        - NEXTAUTH_URL=${NEXTAUTH_URL}
+        - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    ports:
+      # Map to custom port if needed
+      - "${PORT:-3000}:3000"
+    volumes:
+      # Volume for uploaded images
+      - whiskey-uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # MongoDB connection for production
+      - MONGODB_URI=${MONGODB_URI}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      # Cloudinary environment variables
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    env_file:
+      - .env.production
+    restart: always
+    networks:
+      - whiskey-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  whiskey-network:
+    driver: bridge
+
+volumes:
+  whiskey-uploads:
+    driver: local
