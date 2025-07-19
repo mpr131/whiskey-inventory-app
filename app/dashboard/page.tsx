@@ -202,7 +202,7 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           <Link href="/bottles/add" className="card-premium hover:border-copper/50 transition-all duration-300 group">
             <div className="flex items-center justify-center h-32">
               <div className="text-center">
@@ -232,6 +232,40 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 <p className="text-lg font-semibold text-white">Import CSV</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/pour/quick" className="card-premium hover:border-copper/50 transition-all duration-300 group">
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <svg className="w-12 h-12 text-copper mx-auto mb-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <p className="text-lg font-semibold text-white">Quick Pour</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/pour/sessions" className="card-premium hover:border-copper/50 transition-all duration-300 group">
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <svg className="w-12 h-12 text-copper mx-auto mb-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-lg font-semibold text-white">Pour Sessions</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/analytics" className="card-premium hover:border-copper/50 transition-all duration-300 group">
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <svg className="w-12 h-12 text-copper mx-auto mb-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <p className="text-lg font-semibold text-white">Analytics</p>
               </div>
             </div>
           </Link>

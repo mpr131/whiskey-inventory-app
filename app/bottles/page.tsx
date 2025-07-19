@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Search } from 'lucide-react';
+import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Search, Wine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import dynamicImport from 'next/dynamic';
@@ -45,6 +45,8 @@ interface UserBottle {
   notes?: string;
   createdAt: string;
   fillLevel?: number;
+  barcode?: string;
+  vaultBarcode?: string;
 }
 
 interface GroupedBottle {
@@ -255,6 +257,9 @@ export default function BottlesPage() {
                 </Link>
                 <Link href="/bottles" className="text-copper-light">
                   Bottles
+                </Link>
+                <Link href="/pour/sessions" className="text-gray-300 hover:text-white transition-colors">
+                  Pour Sessions
                 </Link>
                 <Link href="/locations" className="text-gray-300 hover:text-white transition-colors">
                   Locations
@@ -489,6 +494,15 @@ export default function BottlesPage() {
                           {masterData.name}
                         </h3>
                         <p className="text-gray-400">{masterData.distillery}</p>
+                        {bottle.userBottles && bottle.userBottles.length > 0 && bottle.userBottles[0].vaultBarcode && (
+                          <div className="mt-2">
+                            <span className="inline-flex items-center px-2 py-0.5 bg-copper/10 text-copper text-xs font-mono rounded">
+                              {bottle.userBottles.length === 1 
+                                ? bottle.userBottles[0].vaultBarcode 
+                                : `${bottle.userBottles[0].vaultBarcode} +${bottle.userBottles.length - 1}`}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className="glass bg-copper/20 text-copper text-xs px-2 py-1 rounded-full">
@@ -587,6 +601,13 @@ export default function BottlesPage() {
                           {masterData.name}
                         </h3>
                         <p className="text-gray-400">{masterData.distillery}</p>
+                        {isUser && bottle.vaultBarcode && (
+                          <div className="mt-2">
+                            <span className="inline-flex items-center px-2 py-0.5 bg-copper/10 text-copper text-xs font-mono rounded">
+                              {bottle.vaultBarcode}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       {isUser && bottle.status === 'opened' && (
                         <div className="flex items-center space-x-2">
@@ -769,18 +790,32 @@ export default function BottlesPage() {
         )}
       </main>
 
-      {/* Floating Action Button for Quick Add */}
-      <Link
-        href="/bottles/quick-add"
-        className="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-r from-copper to-copper-light text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        <span className="absolute right-full mr-3 bg-black/90 text-white text-sm px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-          Quick Add
-        </span>
-      </Link>
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-8 right-8 flex flex-col gap-4">
+        {/* Quick Pour Button */}
+        <Link
+          href="/pour/quick"
+          className="w-14 h-14 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+        >
+          <Wine className="w-6 h-6" />
+          <span className="absolute right-full mr-3 bg-black/90 text-white text-sm px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Quick Pour
+          </span>
+        </Link>
+        
+        {/* Quick Add Button */}
+        <Link
+          href="/bottles/quick-add"
+          className="w-14 h-14 bg-gradient-to-r from-copper to-copper-light text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span className="absolute right-full mr-3 bg-black/90 text-white text-sm px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Quick Add
+          </span>
+        </Link>
+      </div>
 
       {/* Barcode Scanner Modal */}
       {showScanner && (

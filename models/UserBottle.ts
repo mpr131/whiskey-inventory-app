@@ -29,6 +29,7 @@ export interface IUserBottle extends Document {
   deliveryDate?: Date;
   barcode?: string;
   wineBarcode?: string;
+  vaultBarcode?: string;
   storeName?: string;
   storeId?: mongoose.Types.ObjectId;
   cellarTrackerId?: string;
@@ -37,6 +38,9 @@ export interface IUserBottle extends Document {
   openDate?: Date;
   fillLevel?: number;
   pours: IPour[];
+  averageRating?: number;
+  totalPours?: number;
+  lastPourDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -140,6 +144,13 @@ const UserBottleSchema = new Schema<IUserBottle>(
       type: String,
       trim: true,
     },
+    vaultBarcode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      match: [/^[A-Z]{2,3}\d{3}-\d{6}$/, 'Vault barcode must match format: PREFIX-SEQUENCE (e.g., WV001-000001)'],
+    },
     storeName: {
       type: String,
       trim: true,
@@ -169,6 +180,17 @@ const UserBottleSchema = new Schema<IUserBottle>(
       default: 100,
     },
     pours: [PourSchema],
+    averageRating: {
+      type: Number,
+      min: 0,
+      max: 10,
+    },
+    totalPours: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lastPourDate: Date,
   },
   {
     timestamps: true,
@@ -177,6 +199,14 @@ const UserBottleSchema = new Schema<IUserBottle>(
 
 // Compound index for user's bottles
 UserBottleSchema.index({ userId: 1, masterBottleId: 1 });
+
+// Index for vault barcode lookups
+UserBottleSchema.index({ vaultBarcode: 1 });
+
+// Additional indexes for analytics queries
+UserBottleSchema.index({ userId: 1, status: 1 });
+UserBottleSchema.index({ userId: 1, status: 1, fillLevel: 1 });
+UserBottleSchema.index({ userId: 1, createdAt: -1 });
 
 // Virtual populate for master bottle details
 UserBottleSchema.virtual('masterBottle', {
@@ -199,6 +229,31 @@ UserBottleSchema.methods.updateFillLevel = function() {
     const bottleSize = 750;
     this.fillLevel = Math.max(0, 100 - (totalPoured / bottleSize * 100));
   }
+};
+
+// Method to update pour statistics from the new Pour model
+UserBottleSchema.methods.updatePourStats = async function() {
+  const Pour = mongoose.model('Pour');
+  const pours = await Pour.find({ userBottleId: this._id });
+  
+  this.totalPours = pours.length;
+  
+  // Calculate average rating
+  const ratedPours = pours.filter((pour: any) => pour.rating !== undefined && pour.rating !== null);
+  if (ratedPours.length > 0) {
+    const totalRating = ratedPours.reduce((sum: number, pour: any) => sum + pour.rating, 0);
+    this.averageRating = Math.round((totalRating / ratedPours.length) * 10) / 10;
+  }
+  
+  // Update last pour date
+  if (pours.length > 0) {
+    const latestPour = pours.reduce((latest: any, pour: any) => 
+      pour.date > latest.date ? pour : latest
+    );
+    this.lastPourDate = latestPour.date;
+  }
+  
+  return this.save();
 };
 
 // Pre-save hook to update status

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine, Copy, CheckCircle, Users, Tag, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PhotoUpload from '@/components/PhotoUpload';
 import BarrelRating from '@/components/BarrelRating';
@@ -48,6 +48,7 @@ interface UserBottle {
   purchaseNote?: string;
   deliveryDate?: string;
   barcode?: string;
+  vaultBarcode?: string;
   cellarTrackerId?: string;
   storeId?: {
     _id: string;
@@ -86,6 +87,22 @@ interface MasterBottleView {
   finishedCount: number;
 }
 
+interface Pour {
+  _id: string;
+  date: string;
+  amount: number;
+  rating?: number;
+  notes?: string;
+  location?: string;
+  companions?: string[];
+  tags?: string[];
+  costPerPour?: number;
+  sessionId?: {
+    _id: string;
+    sessionName: string;
+  };
+}
+
 export default function BottleDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -94,6 +111,7 @@ export default function BottleDetailPage() {
   
   const [bottle, setBottle] = useState<UserBottle | null>(null);
   const [masterBottleView, setMasterBottleView] = useState<MasterBottleView | null>(null);
+  const [pours, setPours] = useState<Pour[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [showOpenModal, setShowOpenModal] = useState(false);
@@ -102,6 +120,12 @@ export default function BottleDetailPage() {
   const [pourAmount, setPourAmount] = useState(1);
   const [pourNotes, setPourNotes] = useState('');
   const [pourRating, setPourRating] = useState(0);
+  const [pourLocation, setPourLocation] = useState('Home');
+  const [pourCompanions, setPourCompanions] = useState<string[]>([]);
+  const [pourTags, setPourTags] = useState<string[]>([]);
+  const [companionInput, setCompanionInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [showPourDetails, setShowPourDetails] = useState(false);
   const [isMasterView, setIsMasterView] = useState(false);
 
   useEffect(() => {
@@ -123,6 +147,13 @@ export default function BottleDetailPage() {
         const data = await response.json();
         setBottle(data);
         setIsMasterView(false);
+        
+        // Fetch pours for this bottle
+        const poursResponse = await fetch(`/api/pours?userBottleId=${bottleId}`);
+        if (poursResponse.ok) {
+          const poursData = await poursResponse.json();
+          setPours(poursData.pours || []);
+        }
       } else if (response.status === 404) {
         // If not found as individual bottle, try as master bottle
         response = await fetch(`/api/bottles/${bottleId}?view=master`);
@@ -256,12 +287,51 @@ export default function BottleDetailPage() {
       });
 
       if (response.ok) {
-        const updatedBottle = await response.json();
-        setBottle(updatedBottle);
+        // Use the new Pour API
+        const pourResponse = await fetch('/api/pours', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userBottleId: bottle._id,
+            amount: pourAmount,
+            rating: pourRating > 0 ? pourRating : undefined,
+            notes: pourNotes || undefined,
+            location: pourLocation,
+            companions: pourCompanions.length > 0 ? pourCompanions : undefined,
+            tags: pourTags.length > 0 ? pourTags : undefined,
+          }),
+        });
+        
+        if (pourResponse.ok) {
+          // Refresh bottle data
+          const bottleResponse = await fetch(`/api/bottles/${bottleId}`);
+          if (bottleResponse.ok) {
+            const refreshedBottle = await bottleResponse.json();
+            setBottle(refreshedBottle);
+          }
+          
+          // Refresh pours list
+          const poursResponse = await fetch(`/api/pours?userBottleId=${bottleId}`);
+          if (poursResponse.ok) {
+            const poursData = await poursResponse.json();
+            setPours(poursData.pours || []);
+          }
+        }
+        
         setShowPourModal(false);
+        // Reset all fields
         setPourAmount(1);
         setPourNotes('');
         setPourRating(0);
+        setPourLocation('Home');
+        setPourCompanions([]);
+        setPourTags([]);
+        setCompanionInput('');
+        setTagInput('');
+        setShowPourDetails(false);
+        
         toast.success(`Poured ${pourAmount}oz successfully!`);
       } else {
         toast.error('Failed to record pour');
@@ -680,9 +750,26 @@ export default function BottleDetailPage() {
           <div className="card-premium">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  {bottle.masterBottleId.name}
-                </h1>
+                <div className="flex items-center gap-4 mb-2">
+                  <h1 className="text-3xl font-bold text-white">
+                    {bottle.masterBottleId.name}
+                  </h1>
+                  {bottle.vaultBarcode && (
+                    <div className="flex items-center gap-2 bg-copper/10 px-3 py-1 rounded-lg">
+                      <span className="text-copper font-mono text-sm font-semibold">{bottle.vaultBarcode}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(bottle.vaultBarcode!);
+                          toast.success('Vault ID copied');
+                        }}
+                        className="text-copper/60 hover:text-copper transition-colors"
+                        title="Copy Vault ID"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center space-x-4 text-gray-400 mb-4">
                   <span className="text-lg">{bottle.masterBottleId.distillery}</span>
                   {bottle.masterBottleId.region && (
@@ -854,54 +941,104 @@ export default function BottleDetailPage() {
           )}
 
           {/* Pour History */}
-          {bottle.pours && bottle.pours.length > 0 && (
+          {pours.length > 0 && (
             <div className="card-premium">
               <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
                 <Package className="w-5 h-5 mr-2" />
                 Pour History
               </h2>
               <div className="space-y-3">
-                {bottle.pours.slice(-10).reverse().map((pour, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
+                {pours.slice(0, 10).map((pour) => (
+                  <div key={pour._id} className="p-4 bg-gray-800/50 rounded-lg">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-3">
                         <span className="text-white font-medium">{pour.amount}oz</span>
                         <span className="text-gray-400 text-sm">
                           {new Date(pour.date).toLocaleDateString()} at {new Date(pour.date).toLocaleTimeString()}
                         </span>
                       </div>
-                      {pour.rating && (
-                        <div className="mt-1">
-                          <BarrelRating value={pour.rating} onChange={() => {}} readonly size="sm" />
-                        </div>
-                      )}
-                      {pour.notes && (
-                        <p className="text-gray-400 text-sm mt-1">{pour.notes}</p>
-                      )}
+                      <div className="text-right">
+                        {pour.costPerPour ? (
+                          <span className="text-copper font-medium">${pour.costPerPour.toFixed(2)}</span>
+                        ) : (
+                          <span className="text-copper text-sm font-medium">
+                            ${(calculatePourCost(bottle) * pour.amount).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-copper text-sm font-medium">
-                      ${(calculatePourCost(bottle) * pour.amount).toFixed(2)}
+                    
+                    {pour.rating && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm text-gray-400">Rating:</span>
+                        <span className="text-copper font-medium">{pour.rating}/10</span>
+                        <BarrelRating value={pour.rating} onChange={() => {}} readonly size="sm" />
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {pour.location && pour.location !== 'Home' && (
+                        <span className="text-xs px-2 py-1 bg-gray-700 rounded-full flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {pour.location}
+                        </span>
+                      )}
+                      
+                      {pour.companions && pour.companions.length > 0 && (
+                        <span className="text-xs px-2 py-1 bg-gray-700 rounded-full flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {pour.companions.join(', ')}
+                        </span>
+                      )}
+                      
+                      {pour.tags && pour.tags.map((tag) => (
+                        <span key={tag} className="text-xs px-2 py-1 bg-copper/20 text-copper rounded-full">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
+                    
+                    {pour.notes && (
+                      <p className="text-gray-400 text-sm">{pour.notes}</p>
+                    )}
+                    
+                    {pour.sessionId && (
+                      <Link 
+                        href={`/pour/session/${pour.sessionId._id}`}
+                        className="text-xs text-copper hover:text-copper-light mt-2 inline-flex items-center gap-1"
+                      >
+                        View Session: {pour.sessionId.sessionName}
+                        <ChevronRight className="w-3 h-3" />
+                      </Link>
+                    )}
                   </div>
                 ))}
-                {bottle.pours.length > 10 && (
+                
+                {pours.length > 10 && (
                   <div className="text-center text-gray-400 text-sm">
-                    Showing last 10 pours ({bottle.pours.length} total)
+                    Showing last 10 pours ({pours.length} total)
                   </div>
                 )}
+                
                 <div className="border-t border-gray-700 pt-3 mt-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Total poured:</span>
                     <span className="text-white">
-                      {bottle.pours.reduce((total, pour) => total + pour.amount, 0).toFixed(1)}oz
+                      {pours.reduce((total, pour) => total + pour.amount, 0).toFixed(1)}oz
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Total cost:</span>
                     <span className="text-copper font-medium">
-                      ${(bottle.pours.reduce((total, pour) => total + pour.amount, 0) * calculatePourCost(bottle)).toFixed(2)}
+                      ${pours.reduce((total, pour) => total + (pour.costPerPour || (calculatePourCost(bottle) * pour.amount)), 0).toFixed(2)}
                     </span>
                   </div>
+                  {bottle?.averageRating && (
+                    <div className="flex justify-between text-sm mt-1">
+                      <span className="text-gray-400">Average rating:</span>
+                      <span className="text-copper font-medium">{bottle.averageRating}/10</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -995,10 +1132,40 @@ export default function BottleDetailPage() {
                 <label className="block text-sm font-medium text-gray-400 mb-1">Quantity</label>
                 <p className="text-white">{bottle.quantity}</p>
               </div>
+              {bottle.vaultBarcode && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Vault ID</label>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white font-mono text-sm font-semibold">{bottle.vaultBarcode}</p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(bottle.vaultBarcode!);
+                        toast.success('Vault ID copied to clipboard');
+                      }}
+                      className="text-gray-400 hover:text-white transition-colors"
+                      title="Copy Vault ID"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
               {bottle.barcode && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Barcode</label>
-                  <p className="text-white font-mono text-sm">{bottle.barcode}</p>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Original Barcode</label>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white font-mono text-sm">{bottle.barcode}</p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(bottle.barcode!);
+                        toast.success('Barcode copied to clipboard');
+                      }}
+                      className="text-gray-400 hover:text-white transition-colors"
+                      title="Copy Barcode"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               )}
               {bottle.cellarTrackerId && (
@@ -1156,13 +1323,32 @@ export default function BottleDetailPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Rating (Optional)
+                    Rating (T8ke Scale) - {pourRating.toFixed(1)}/10
                   </label>
-                  <BarrelRating 
-                    value={pourRating} 
-                    onChange={setPourRating}
-                    max={10}
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value={pourRating}
+                      onChange={(e) => setPourRating(parseFloat(e.target.value))}
+                      className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>0</span>
+                      <span>2.5</span>
+                      <span>5</span>
+                      <span>7.5</span>
+                      <span>10</span>
+                    </div>
+                    <BarrelRating 
+                      value={pourRating} 
+                      onChange={setPourRating}
+                      max={10}
+                      readonly={false}
+                    />
+                  </div>
                 </div>
                 
                 <div>
@@ -1177,6 +1363,166 @@ export default function BottleDetailPage() {
                     placeholder="Tasting notes, occasion, etc."
                   />
                 </div>
+                
+                {/* Additional Details Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowPourDetails(!showPourDetails)}
+                  className="w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-between"
+                >
+                  <span className="text-sm font-medium text-gray-300">Additional Details</span>
+                  <svg className={`w-4 h-4 text-gray-400 transition-transform ${showPourDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {/* Additional Details Section */}
+                {showPourDetails && (
+                  <div className="space-y-4 pt-2">
+                    {/* Location */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <MapPin className="w-4 h-4 inline mr-1" />
+                        Location
+                      </label>
+                      <select
+                        value={pourLocation}
+                        onChange={(e) => setPourLocation(e.target.value)}
+                        className="w-full input-premium"
+                      >
+                        <option value="Home">Home</option>
+                        <option value="Bar">Bar</option>
+                        <option value="Restaurant">Restaurant</option>
+                        <option value="Tasting">Tasting</option>
+                        <option value="Friend's Place">Friend's Place</option>
+                        <option value="Event">Event</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    
+                    {/* Companions */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Users className="w-4 h-4 inline mr-1" />
+                        Drinking With
+                      </label>
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={companionInput}
+                          onChange={(e) => setCompanionInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (companionInput.trim() && !pourCompanions.includes(companionInput.trim())) {
+                                setPourCompanions([...pourCompanions, companionInput.trim()]);
+                                setCompanionInput('');
+                              }
+                            }
+                          }}
+                          placeholder="Add companion..."
+                          className="flex-1 input-premium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (companionInput.trim() && !pourCompanions.includes(companionInput.trim())) {
+                              setPourCompanions([...pourCompanions, companionInput.trim()]);
+                              setCompanionInput('');
+                            }
+                          }}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {pourCompanions.map((companion) => (
+                          <span
+                            key={companion}
+                            className="px-3 py-1 bg-gray-700 rounded-full text-sm flex items-center gap-1"
+                          >
+                            {companion}
+                            <button
+                              type="button"
+                              onClick={() => setPourCompanions(pourCompanions.filter(c => c !== companion))}
+                              className="text-gray-400 hover:text-white"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Tags */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <Tag className="w-4 h-4 inline mr-1" />
+                        Tags
+                      </label>
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const tag = tagInput.trim().toLowerCase();
+                              if (tag && !tag.startsWith('#')) {
+                                const formattedTag = `#${tag}`;
+                                if (!pourTags.includes(formattedTag)) {
+                                  setPourTags([...pourTags, formattedTag]);
+                                }
+                              } else if (tag && !pourTags.includes(tag)) {
+                                setPourTags([...pourTags, tag]);
+                              }
+                              setTagInput('');
+                            }
+                          }}
+                          placeholder="Add tag..."
+                          className="flex-1 input-premium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const tag = tagInput.trim().toLowerCase();
+                            if (tag && !tag.startsWith('#')) {
+                              const formattedTag = `#${tag}`;
+                              if (!pourTags.includes(formattedTag)) {
+                                setPourTags([...pourTags, formattedTag]);
+                              }
+                            } else if (tag && !pourTags.includes(tag)) {
+                              setPourTags([...pourTags, tag]);
+                            }
+                            setTagInput('');
+                          }}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {pourTags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-3 py-1 bg-copper/20 text-copper rounded-full text-sm flex items-center gap-1"
+                          >
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => setPourTags(pourTags.filter(t => t !== tag))}
+                              className="text-copper-light hover:text-copper"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
                   <div className="flex justify-between">
@@ -1212,6 +1558,26 @@ export default function BottleDetailPage() {
           </div>
         </div>
       )}
+      
+      <style jsx>{`
+        .slider-thumb::-webkit-slider-thumb {
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          background: #B87333;
+          cursor: pointer;
+          border-radius: 50%;
+        }
+        
+        .slider-thumb::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          background: #B87333;
+          cursor: pointer;
+          border-radius: 50%;
+          border: none;
+        }
+      `}</style>
     </div>
   );
 }

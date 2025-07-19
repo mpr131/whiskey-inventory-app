@@ -46,6 +46,7 @@ interface UserBottle {
   purchaseNote?: string;
   deliveryDate?: string;
   barcode?: string;
+  vaultBarcode?: string;
   cellarTrackerId?: string;
   storeId?: {
     _id: string;
@@ -523,9 +524,33 @@ export default function EditBottlePage() {
                   allowNew={true}
                 />
                 
+                {bottle?.vaultBarcode && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Vault ID
+                    </label>
+                    <div className="flex items-center gap-2 bg-gray-800/50 px-4 py-3 rounded-lg border border-gray-700">
+                      <span className="text-copper font-mono text-sm font-semibold">{bottle.vaultBarcode}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(bottle.vaultBarcode!);
+                          toast.success('Vault ID copied');
+                        }}
+                        className="ml-auto text-gray-400 hover:text-copper transition-colors"
+                        title="Copy Vault ID"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Barcode
+                    Original Barcode
                   </label>
                   <input
                     type="text"
@@ -533,7 +558,7 @@ export default function EditBottlePage() {
                     value={formData.barcode}
                     onChange={handleInputChange}
                     className="input-premium w-full"
-                    placeholder="Barcode or ID"
+                    placeholder="CellarTracker or other barcode"
                   />
                 </div>
                 

@@ -6,6 +6,7 @@ import UserBottle from '@/models/UserBottle';
 import MasterBottle from '@/models/MasterBottle';
 import UserStore from '@/models/UserStore';
 import MasterStore from '@/models/MasterStore';
+import User from '@/models/User';
 import mongoose from 'mongoose';
 import { extractAbvFromName } from '@/utils/extractAbv';
 import { findOrCreateStore } from '@/utils/storeHelpers';
@@ -117,6 +118,7 @@ export async function GET(req: NextRequest) {
                   { barcode: search },
                   { cellarTrackerId: search },
                   { wineBarcode: search },
+                  { vaultBarcode: search },
                 ]
               }
             ]
@@ -403,11 +405,46 @@ export async function POST(req: NextRequest) {
       storeId = storeResult.userStoreId;
     }
 
+    // Generate vault barcode
+    const user = await User.findById(session.user.id);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Assign barcode prefix if user doesn't have one
+    if (!user.barcodePrefix) {
+      // Find the next available prefix
+      let prefixNumber = 1;
+      let prefixAssigned = false;
+      
+      while (!prefixAssigned) {
+        const proposedPrefix = `WV${prefixNumber.toString().padStart(3, '0')}`;
+        const existingUser = await User.findOne({ barcodePrefix: proposedPrefix });
+        
+        if (!existingUser) {
+          user.barcodePrefix = proposedPrefix;
+          await user.save();
+          prefixAssigned = true;
+        } else {
+          prefixNumber++;
+        }
+      }
+    }
+
+    // Generate next vault barcode
+    const nextSequence = (user.lastBarcodeSequence || 0) + 1;
+    const vaultBarcode = `${user.barcodePrefix}-${nextSequence.toString().padStart(6, '0')}`;
+
+    // Update user's last sequence
+    user.lastBarcodeSequence = nextSequence;
+    await user.save();
+
     const userBottle = await UserBottle.create({
       ...body,
       userId: new mongoose.Types.ObjectId(session.user.id),
       masterBottleId: new mongoose.Types.ObjectId(masterBottleId),
       storeId: storeId,
+      vaultBarcode: vaultBarcode,
       photos: body.photos || [],
       pours: [],
     });

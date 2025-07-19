@@ -7,6 +7,8 @@ export interface IUser extends Document {
   name: string;
   isAdmin: boolean;
   inviteCodeUsed: string;
+  barcodePrefix?: string;
+  lastBarcodeSequence: number;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -41,6 +43,17 @@ const UserSchema = new Schema<IUser>(
     inviteCodeUsed: {
       type: String,
       required: [true, 'Invite code is required'],
+    },
+    barcodePrefix: {
+      type: String,
+      unique: true,
+      sparse: true,
+      match: [/^[A-Z]{2,3}\d{3}$/, 'Barcode prefix must be 2-3 uppercase letters followed by 3 digits (e.g., WV001)'],
+    },
+    lastBarcodeSequence: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {

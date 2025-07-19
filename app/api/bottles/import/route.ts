@@ -6,6 +6,7 @@ import MasterBottle from '@/models/MasterBottle';
 import UserBottle from '@/models/UserBottle';
 import MasterStore from '@/models/MasterStore';
 import UserStore from '@/models/UserStore';
+import User from '@/models/User';
 import mongoose from 'mongoose';
 import { extractAbvFromName } from '@/utils/extractAbv';
 
@@ -35,6 +36,34 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
     const { bottles, columnMapping, isCellarTracker = false } = data;
+    
+    // Get user for vault barcode generation
+    const user = await User.findById(session.user.id);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    // Assign barcode prefix if user doesn't have one
+    if (!user.barcodePrefix) {
+      let prefixNumber = 1;
+      let prefixAssigned = false;
+      
+      while (!prefixAssigned) {
+        const proposedPrefix = `WV${prefixNumber.toString().padStart(3, '0')}`;
+        const existingUser = await User.findOne({ barcodePrefix: proposedPrefix });
+        
+        if (!existingUser) {
+          user.barcodePrefix = proposedPrefix;
+          await user.save();
+          prefixAssigned = true;
+        } else {
+          prefixNumber++;
+        }
+      }
+    }
+    
+    // Track the current sequence for vault barcode generation
+    let currentSequence = user.lastBarcodeSequence || 0;
 
     if (!bottles || !Array.isArray(bottles)) {
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
@@ -390,6 +419,12 @@ export async function POST(request: NextRequest) {
             if (userBottleData.storeId) existingBottle.storeId = userBottleData.storeId;
             if (userBottleData.cellarTrackerId) existingBottle.cellarTrackerId = userBottleData.cellarTrackerId;
             
+            // Generate vault barcode if it doesn't have one
+            if (!existingBottle.vaultBarcode) {
+              currentSequence++;
+              existingBottle.vaultBarcode = `${user.barcodePrefix}-${currentSequence.toString().padStart(6, '0')}`;
+            }
+            
             await existingBottle.save();
             
             // Verify what was actually saved
@@ -404,8 +439,14 @@ export async function POST(request: NextRequest) {
             
             results.updated++;
           } else {
-            // Create new UserBottle
+            // Create new UserBottle with vault barcode
             console.log('Creating new UserBottle');
+            
+            // Generate vault barcode for new bottle
+            currentSequence++;
+            const vaultBarcode = `${user.barcodePrefix}-${currentSequence.toString().padStart(6, '0')}`;
+            userBottleData.vaultBarcode = vaultBarcode;
+            
             console.log('About to create with:', JSON.stringify(userBottleData, null, 2));
             
             // Try using new UserBottle() instead of create()
@@ -438,6 +479,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Update user's last barcode sequence
+    if (currentSequence > user.lastBarcodeSequence) {
+      user.lastBarcodeSequence = currentSequence;
+      await user.save();
+    }
+    
     return NextResponse.json({
       success: true,
       results,
