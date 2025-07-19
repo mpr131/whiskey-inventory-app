@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PhotoUpload from '@/components/PhotoUpload';
+import BarrelRating from '@/components/BarrelRating';
 
 interface MasterBottle {
   _id: string;
@@ -99,6 +100,7 @@ export default function BottleDetailPage() {
   const [fillLevel, setFillLevel] = useState(100);
   const [pourAmount, setPourAmount] = useState(1);
   const [pourNotes, setPourNotes] = useState('');
+  const [pourRating, setPourRating] = useState(0);
   const [isMasterView, setIsMasterView] = useState(false);
 
   useEffect(() => {
@@ -247,6 +249,7 @@ export default function BottleDetailPage() {
         body: JSON.stringify({
           amount: pourAmount,
           notes: pourNotes,
+          rating: pourRating,
         }),
       });
 
@@ -256,6 +259,7 @@ export default function BottleDetailPage() {
         setShowPourModal(false);
         setPourAmount(1);
         setPourNotes('');
+        setPourRating(0);
         toast.success(`Poured ${pourAmount}oz successfully!`);
       } else {
         toast.error('Failed to record pour');
@@ -864,6 +868,11 @@ export default function BottleDetailPage() {
                           {new Date(pour.date).toLocaleDateString()} at {new Date(pour.date).toLocaleTimeString()}
                         </span>
                       </div>
+                      {pour.rating && (
+                        <div className="mt-1">
+                          <BarrelRating value={pour.rating} onChange={() => {}} readonly size="sm" />
+                        </div>
+                      )}
                       {pour.notes && (
                         <p className="text-gray-400 text-sm mt-1">{pour.notes}</p>
                       )}
@@ -922,6 +931,12 @@ export default function BottleDetailPage() {
                 <label className="block text-sm font-medium text-gray-400 mb-1">Purchase Date</label>
                 <p className="text-white">{formatDate(bottle.purchaseDate)}</p>
               </div>
+              {bottle.storeId?.masterStoreId?.name && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Store</label>
+                  <p className="text-white">{bottle.storeId.masterStoreId.name}</p>
+                </div>
+              )}
               {bottle.deliveryDate && (
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Delivery Date</label>
@@ -978,12 +993,6 @@ export default function BottleDetailPage() {
                 <label className="block text-sm font-medium text-gray-400 mb-1">Quantity</label>
                 <p className="text-white">{bottle.quantity}</p>
               </div>
-              {bottle.storeId?.masterStoreId?.name && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Store</label>
-                  <p className="text-white">{bottle.storeId.masterStoreId.name}</p>
-                </div>
-              )}
               {bottle.barcode && (
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Barcode</label>
@@ -1141,6 +1150,17 @@ export default function BottleDetailPage() {
                     />
                     <span className="text-gray-400">oz</span>
                   </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Rating (Optional)
+                  </label>
+                  <BarrelRating 
+                    value={pourRating} 
+                    onChange={setPourRating}
+                    max={10}
+                  />
                 </div>
                 
                 <div>

@@ -1,0 +1,757 @@
+{
+  "approved": [
+    {
+      "_id": "687949272ac73425965a9383",
+      "currentName": "Rare Character Brook Hill 11 Year Old (Verde) Kentucky Straight Rye Whiskey, 64.75%",
+      "newName": "Brook Hill 11 Year Old (Verde) Kentucky Straight Rye Whiskey, 64.75%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a9387",
+      "currentName": "Rare Character Brook Hill 11 Year Old (Wont) Kentucky Straight Rye Whiskey, 66.96%",
+      "newName": "Brook Hill 11 Year Old (Wont) Kentucky Straight Rye Whiskey, 66.96%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a938b",
+      "currentName": "Rare Character Brook Hill 8 Year Old (Duro) Kentucky Straight Bourbon Whiskey, 69.51%",
+      "newName": "Brook Hill 8 Year Old (Duro) Kentucky Straight Bourbon Whiskey, 69.51%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a93ef",
+      "currentName": "Wild Turkey Russell's Reserve 13 Year Old (Batch 3 LL/KE) Kentucky Straight Bourbon Whiskey, 57.4%",
+      "newName": "Russell's Reserve 13 Year Old (Batch 3 LL/KE) Kentucky Straight Bourbon Whiskey, 57.4%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a93f3",
+      "currentName": "Wild Turkey Russell's Reserve 13 Year Old (Batch 5 LL/LE) Kentucky Straight Bourbon Whiskey, 57.4%",
+      "newName": "Russell's Reserve 13 Year Old (Batch 5 LL/LE) Kentucky Straight Bourbon Whiskey, 57.4%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a93f7",
+      "currentName": "Wild Turkey Russell's Reserve 15 Year Old Limited Release 2024 Kentucky Straight Bourbon Whiskey, 58.6%",
+      "newName": "Russell's Reserve 15 Year Old Limited Release 2024 Kentucky Straight Bourbon Whiskey, 58.6%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a93fb",
+      "currentName": "Wild Turkey Russell's Reserve Single Barrel \"RB Topflight\" Kentucky Straight Bourbon Whiskey, 55%",
+      "newName": "Russell's Reserve Single Barrel \"RB Topflight\" Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a93ff",
+      "currentName": "Wild Turkey Russell's Reserve Single Barrel (B-21) Kentucky Straight Bourbon Whiskey, 55%",
+      "newName": "Russell's Reserve Single Barrel (B-21) Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a9403",
+      "currentName": "Wild Turkey Russell's Reserve Single Barrel (El Cerrito) Nelsons Reserve W-B, 10yr. Kentucky Bourbon, 55%",
+      "newName": "Russell's Reserve Single Barrel (El Cerrito) Nelsons Reserve W-B, 10yr. Kentucky Bourbon, 55%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a9407",
+      "currentName": "Wild Turkey Russell's Reserve Single Barrel (LAX 2024) Kentucky Straight Bourbon Whiskey, 55%",
+      "newName": "Russell's Reserve Single Barrel (LAX 2024) Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a940b",
+      "currentName": "Wild Turkey Russell's Reserve Single Barrel (Liquid Assets) TY-Q F4, 8yr 9mo, Kentucky Straight Bourbon. 55%",
+      "newName": "Russell's Reserve Single Barrel (Liquid Assets) TY-Q F4, 8yr 9mo, Kentucky Straight Bourbon. 55%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a940f",
+      "currentName": "Wild Turkey Russell's Reserve Single Barrel (Mission W&S) TY-K F4 Kentucky Straight Bourbon Whiskey, 55%",
+      "newName": "Russell's Reserve Single Barrel (Mission W&S) TY-K F4 Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a9413",
+      "currentName": "Wild Turkey Russell's Reserve Single Barrel (MoCo) Kentucky Straight Bourbon Whiskey, 55%",
+      "newName": "Russell's Reserve Single Barrel (MoCo) Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a9417",
+      "currentName": "Wild Turkey Russell's Reserve Single Barrel Kentucky Straight Bourbon Whiskey, 55%",
+      "newName": "Russell's Reserve Single Barrel Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Wild Turkey"
+    }
+  ],
+  "skipped": [
+    {
+      "_id": "687949252ac73425965a8fdf",
+      "currentName": "Angel's Envy Finished in Port Wine Barrels Kentucky Straight Bourbon Whiskey, 43.3%",
+      "wouldBecome": "Finished in Port Wine Barrels Kentucky Straight Bourbon Whiskey, 43.3%",
+      "prefix": "Angel's Envy"
+    },
+    {
+      "_id": "687949252ac73425965a8fe3",
+      "currentName": "Angel's Envy Limited Edition Cask Strength Kentucky Straight Bourbon Whiskey, 62%",
+      "wouldBecome": "Limited Edition Cask Strength Kentucky Straight Bourbon Whiskey, 62%",
+      "prefix": "Angel's Envy"
+    },
+    {
+      "_id": "687949252ac73425965a8fe7",
+      "currentName": "Angel's Envy Single Barrel - Bourbon Enthusiast Private Brl Kentucky Straight Bourbon Whiskey 55%",
+      "wouldBecome": "Single Barrel - Bourbon Enthusiast Private Brl Kentucky Straight Bourbon Whiskey 55%",
+      "prefix": "Angel's Envy"
+    },
+    {
+      "_id": "687949252ac73425965a8feb",
+      "currentName": "Bardstown Bourbon Company Discovery Series #11 Kentucky Straight Bourbon Whiskey, 59.05%",
+      "wouldBecome": "Discovery Series #11 Kentucky Straight Bourbon Whiskey, 59.05%",
+      "prefix": "Bardstown Bourbon Company"
+    },
+    {
+      "_id": "687949252ac73425965a8fef",
+      "currentName": "Bardstown Bourbon Company Discovery Series #12 Kentucky Straight Bourbon Whiskey, 57.6%",
+      "wouldBecome": "Discovery Series #12 Kentucky Straight Bourbon Whiskey, 57.6%",
+      "prefix": "Bardstown Bourbon Company"
+    },
+    {
+      "_id": "687949252ac73425965a8ff3",
+      "currentName": "Bardstown Bourbon Company West Virginia Great Barrel Company Blended Rye Finished in Infrared Toasted Cherry Oak Barrels",
+      "wouldBecome": "West Virginia Great Barrel Company Blended Rye Finished in Infrared Toasted Cherry Oak Barrels",
+      "prefix": "Bardstown Bourbon Company"
+    },
+    {
+      "_id": "687949262ac73425965a9147",
+      "currentName": "Found North 15 Year Old Hell Diver 1st Flight Cask Strength Blended Canadian Whisky, 59.5%",
+      "wouldBecome": "15 Year Old Hell Diver 1st Flight Cask Strength Blended Canadian Whisky, 59.5%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a914b",
+      "currentName": "Found North 15 Year Old Hover Hawk 1st Flight Cask Strength Blended Canadian Whisky, 61.6%",
+      "wouldBecome": "15 Year Old Hover Hawk 1st Flight Cask Strength Blended Canadian Whisky, 61.6%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a914f",
+      "currentName": "Found North 17 Year Old Hell Diver 2025 Release Cask Strength Blended Canadian Whisky, 56.2%",
+      "wouldBecome": "17 Year Old Hell Diver 2025 Release Cask Strength Blended Canadian Whisky, 56.2%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a9153",
+      "currentName": "Found North 19 Year Old Batch 009 Cask Strength Blended Canadian Whisky, 62.3%",
+      "wouldBecome": "19 Year Old Batch 009 Cask Strength Blended Canadian Whisky, 62.3%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a9157",
+      "currentName": "Found North 20 Year Old Peregrine Cask Strength Blended Canadian Whisky, 63.1%",
+      "wouldBecome": "20 Year Old Peregrine Cask Strength Blended Canadian Whisky, 63.1%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a915b",
+      "currentName": "Found North 8 Year Old Batch 010 Cask Strength Blended Canadian Whisky, 61.9%",
+      "wouldBecome": "8 Year Old Batch 010 Cask Strength Blended Canadian Whisky, 61.9%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a915f",
+      "currentName": "Found North T8KE-01 (r/Bourbon) Blend 21 \"Smokeless\" Cask Strength Canadian Blended Whisky, 60.2%",
+      "wouldBecome": "T8KE-01 (r/Bourbon) Blend 21 \"Smokeless\" Cask Strength Canadian Blended Whisky, 60.2%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a9163",
+      "currentName": "Found North T8KE-03 (r/Bourbon) Season 003 \"Mixmaster\" Cask Strength Canadian Blended Whisky, 61.6%",
+      "wouldBecome": "T8KE-03 (r/Bourbon) Season 003 \"Mixmaster\" Cask Strength Canadian Blended Whisky, 61.6%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a9167",
+      "currentName": "Found North T8KE-05 (r/Bourbon) Season 5 \"EBITDADDY\" Cask Strength Canadian Blended Whisky, 55.60%",
+      "wouldBecome": "T8KE-05 (r/Bourbon) Season 5 \"EBITDADDY\" Cask Strength Canadian Blended Whisky, 55.60%",
+      "prefix": "Found North"
+    },
+    {
+      "_id": "687949262ac73425965a916b",
+      "currentName": "Four Roses Distillery Limited Edition Small Batch (2024) Barrel Strength Kentucky Straight Bourbon Whiskey, 54.1%",
+      "wouldBecome": "Limited Edition Small Batch (2024) Barrel Strength Kentucky Straight Bourbon Whiskey, 54.1%",
+      "prefix": "Four Roses Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a916f",
+      "currentName": "Four Roses Distillery Limited Edition Small Batch 135th Anniversary Kentucky Straight Bourbon Whiskey, 54.0%",
+      "wouldBecome": "Limited Edition Small Batch 135th Anniversary Kentucky Straight Bourbon Whiskey, 54.0%",
+      "prefix": "Four Roses Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a9173",
+      "currentName": "Four Roses Distillery Single Barrel (FWGS) JE66-4R B-S 10yr 10mo OESQ Kentucky Straight Bourbon Whiskey, 60.5%",
+      "wouldBecome": "Single Barrel (FWGS) JE66-4R B-S 10yr 10mo OESQ Kentucky Straight Bourbon Whiskey, 60.5%",
+      "prefix": "Four Roses Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a9177",
+      "currentName": "Four Roses Distillery Single Barrel (FWGS) RN64-5Q B-S 9yr 8 mo OESV Kentucky Straight Bourbon Whiskey, 60.5%",
+      "wouldBecome": "Single Barrel (FWGS) RN64-5Q B-S 9yr 8 mo OESV Kentucky Straight Bourbon Whiskey, 60.5%",
+      "prefix": "Four Roses Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a917b",
+      "currentName": "Four Roses Distillery Single Barrel (Jack Rose) #HE 49-2G 10 yr B-S OESO Kentucky Straight Bourbon Whiskey, 56.3%",
+      "wouldBecome": "Single Barrel (Jack Rose) #HE 49-2G 10 yr B-S OESO Kentucky Straight Bourbon Whiskey, 56.3%",
+      "prefix": "Four Roses Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a917f",
+      "currentName": "Four Roses Distillery Single Barrel (Liquor Bueno) #LW 61-10 10 yr B-S OESK Kentucky Straight Bourbon Whiskey, 54.2%",
+      "wouldBecome": "Single Barrel (Liquor Bueno) #LW 61-10 10 yr B-S OESK Kentucky Straight Bourbon Whiskey, 54.2%",
+      "prefix": "Four Roses Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a9183",
+      "currentName": "Four Roses Distillery Single Barrel (Maryland) #VW 8-1l 11 yr 5 mo B-S OBSF Kentucky Straight Bourbon Whiskey, 54.4%",
+      "wouldBecome": "Single Barrel (Maryland) #VW 8-1l 11 yr 5 mo B-S OBSF Kentucky Straight Bourbon Whiskey, 54.4%",
+      "prefix": "Four Roses Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a918f",
+      "currentName": "Garrison Brothers Distillery Balmorhea Texas Straight Bourbon Whiskey",
+      "wouldBecome": "Balmorhea Texas Straight Bourbon Whiskey",
+      "prefix": "Garrison Brothers Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a9193",
+      "currentName": "Garrison Brothers Distillery Cowboy Bourbon 6 Year Old Barrel Proof Texas Straight Bourbon Whiskey, 70.45%",
+      "wouldBecome": "Cowboy Bourbon 6 Year Old Barrel Proof Texas Straight Bourbon Whiskey, 70.45%",
+      "prefix": "Garrison Brothers Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a9197",
+      "currentName": "Garrison Brothers Distillery SiB (My First Balmorhea) Cask Strength Texas Straight Bourbon Whiskey, 64.85%",
+      "wouldBecome": "SiB (My First Balmorhea) Cask Strength Texas Straight Bourbon Whiskey, 64.85%",
+      "prefix": "Garrison Brothers Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a919b",
+      "currentName": "Garrison Brothers Distillery Single Barrel (Alamo City Liquor) Cask Strength Texas Straight Bourbon Whiskey, 63.9%",
+      "wouldBecome": "Single Barrel (Alamo City Liquor) Cask Strength Texas Straight Bourbon Whiskey, 63.9%",
+      "prefix": "Garrison Brothers Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a919f",
+      "currentName": "Garrison Brothers Distillery Single Barrel (Alamo City Liquor) Cask Strength Texas Straight Bourbon Whiskey, 65.8%",
+      "wouldBecome": "Single Barrel (Alamo City Liquor) Cask Strength Texas Straight Bourbon Whiskey, 65.8%",
+      "prefix": "Garrison Brothers Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a91a5",
+      "currentName": "Garrison Brothers Distillery Single Barrel (The X-Man) Cask Strength Texas Straight Bourbon Whiskey, 73.5%",
+      "wouldBecome": "Single Barrel (The X-Man) Cask Strength Texas Straight Bourbon Whiskey, 73.5%",
+      "prefix": "Garrison Brothers Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a91a9",
+      "currentName": "Garrison Brothers Distillery Single Barrel (Vintage W&S) Cask Strength Texas Straight Bourbon Whiskey, 65.6%",
+      "wouldBecome": "Single Barrel (Vintage W&S) Cask Strength Texas Straight Bourbon Whiskey, 65.6%",
+      "prefix": "Garrison Brothers Distillery"
+    },
+    {
+      "_id": "687949262ac73425965a91ad",
+      "currentName": "Garrison Brothers Guadalupe Texas Straight Bourbon Whiskey",
+      "wouldBecome": "Guadalupe Texas Straight Bourbon Whiskey",
+      "prefix": "Garrison Brothers"
+    },
+    {
+      "_id": "687949262ac73425965a91b3",
+      "currentName": "Garrison Brothers HoneyDew",
+      "wouldBecome": "HoneyDew",
+      "prefix": "Garrison Brothers"
+    },
+    {
+      "_id": "687949262ac73425965a91b7",
+      "currentName": "Garrison Brothers HoneyDew Cask Strength (Pure Honey) 64.5%",
+      "wouldBecome": "HoneyDew Cask Strength (Pure Honey) 64.5%",
+      "prefix": "Garrison Brothers"
+    },
+    {
+      "_id": "687949262ac73425965a91bb",
+      "currentName": "Garrison Brothers HoneyDew Cask Strength 64.5%",
+      "wouldBecome": "HoneyDew Cask Strength 64.5%",
+      "prefix": "Garrison Brothers"
+    },
+    {
+      "_id": "687949262ac73425965a91bf",
+      "currentName": "Garrison Brothers Lady Bird Hye Estate",
+      "wouldBecome": "Lady Bird Hye Estate",
+      "prefix": "Garrison Brothers"
+    },
+    {
+      "_id": "687949262ac73425965a91c5",
+      "currentName": "Garrison Brothers Texas Straight Bourbon Whiskey",
+      "wouldBecome": "Texas Straight Bourbon Whiskey",
+      "prefix": "Garrison Brothers"
+    },
+    {
+      "_id": "687949262ac73425965a91cd",
+      "currentName": "Hardin's Creek Boston Kentucky Straight Bourbon Whiskey, 55%",
+      "wouldBecome": "Boston Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Hardin's Creek"
+    },
+    {
+      "_id": "687949262ac73425965a91d1",
+      "currentName": "Hardin's Creek Clermont Kentucky Straight Bourbon Whiskey, 55%",
+      "wouldBecome": "Clermont Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Hardin's Creek"
+    },
+    {
+      "_id": "687949262ac73425965a91d5",
+      "currentName": "Hardin's Creek Frankfort Kentucky Straight Bourbon Whiskey, 55%",
+      "wouldBecome": "Frankfort Kentucky Straight Bourbon Whiskey, 55%",
+      "prefix": "Hardin's Creek"
+    },
+    {
+      "_id": "687949262ac73425965a91d9",
+      "currentName": "Hardin's Creek Jacob's Well 17 Year Old (211 Months Old) Kentucky Straight Bourbon Whiskey, 54.5%",
+      "wouldBecome": "Jacob's Well 17 Year Old (211 Months Old) Kentucky Straight Bourbon Whiskey, 54.5%",
+      "prefix": "Hardin's Creek"
+    },
+    {
+      "_id": "687949262ac73425965a9233",
+      "currentName": "High West A Midwinter Nights Dram (Act 10.4) Blended Straight Rye Whiskey, 49.3%",
+      "wouldBecome": "A Midwinter Nights Dram (Act 10.4) Blended Straight Rye Whiskey, 49.3%",
+      "prefix": "High West"
+    },
+    {
+      "_id": "687949262ac73425965a9237",
+      "currentName": "High West A Midwinter Nights Dram (Act 11.2) Blended Straight Rye Whiskey, 49.3%",
+      "wouldBecome": "A Midwinter Nights Dram (Act 11.2) Blended Straight Rye Whiskey, 49.3%",
+      "prefix": "High West"
+    },
+    {
+      "_id": "687949262ac73425965a923b",
+      "currentName": "High West American Prairie (Beach Liquors) Blended Straight Bourbon Whiskey, 51.7%",
+      "wouldBecome": "American Prairie (Beach Liquors) Blended Straight Bourbon Whiskey, 51.7%",
+      "prefix": "High West"
+    },
+    {
+      "_id": "687949262ac73425965a923f",
+      "currentName": "High West Cask Collection (Alamo City Liquors) Batch 23D20 Cabernet Finished Straight Bourbon Whiskey, 50%",
+      "wouldBecome": "Cask Collection (Alamo City Liquors) Batch 23D20 Cabernet Finished Straight Bourbon Whiskey, 50%",
+      "prefix": "High West"
+    },
+    {
+      "_id": "687949262ac73425965a9243",
+      "currentName": "High West The Prisoner's Share Blended Straight Whiskey, 51%",
+      "wouldBecome": "The Prisoner's Share Blended Straight Whiskey, 51%",
+      "prefix": "High West"
+    },
+    {
+      "_id": "687949262ac73425965a924b",
+      "currentName": "Jack Daniel's 10 Year Old Batch 02 Tennessee Whiskey, 48.5%",
+      "wouldBecome": "10 Year Old Batch 02 Tennessee Whiskey, 48.5%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a924f",
+      "currentName": "Jack Daniel's 10 Year Old Batch 03 Tennessee Whiskey, 48.5%",
+      "wouldBecome": "10 Year Old Batch 03 Tennessee Whiskey, 48.5%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a9253",
+      "currentName": "Jack Daniel's 10 Year Old Batch 04 Tennessee Whiskey, 48.5%",
+      "wouldBecome": "10 Year Old Batch 04 Tennessee Whiskey, 48.5%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a9257",
+      "currentName": "Jack Daniel's 12 Year Old Batch 01 Tennessee Whiskey, 53.5%",
+      "wouldBecome": "12 Year Old Batch 01 Tennessee Whiskey, 53.5%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a925b",
+      "currentName": "Jack Daniel's 12 Year Old Batch 02 Tennessee Whiskey, 53.5%",
+      "wouldBecome": "12 Year Old Batch 02 Tennessee Whiskey, 53.5%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a925f",
+      "currentName": "Jack Daniel's 12 Year Old Batch 03 Tennessee Whiskey, 53.5%",
+      "wouldBecome": "12 Year Old Batch 03 Tennessee Whiskey, 53.5%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a9263",
+      "currentName": "Jack Daniel's 14 Year Old Batch 01 Tennessee Whiskey, 63.15%",
+      "wouldBecome": "14 Year Old Batch 01 Tennessee Whiskey, 63.15%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a9267",
+      "currentName": "Jack Daniel's No. 27 Gold Maple Wood Finish Tennessee Whiskey, 40%",
+      "wouldBecome": "No. 27 Gold Maple Wood Finish Tennessee Whiskey, 40%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a926b",
+      "currentName": "Jack Daniel's Sinatra Select Tennessee Whiskey, 45%",
+      "wouldBecome": "Sinatra Select Tennessee Whiskey, 45%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a926f",
+      "currentName": "Jack Daniel's Single Barrel Barrel Proof #23-08231 Tennessee Rye Whiskey, 64.70%",
+      "wouldBecome": "Single Barrel Barrel Proof #23-08231 Tennessee Rye Whiskey, 64.70%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a9273",
+      "currentName": "Jack Daniel's Single Barrel Barrel Proof #23-09616 Tennessee Rye Whiskey, 66.70%",
+      "wouldBecome": "Single Barrel Barrel Proof #23-09616 Tennessee Rye Whiskey, 66.70%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a9277",
+      "currentName": "Jack Daniel's Single Barrel Barrel Proof #24-03536 Tennessee Rye Whiskey, 66.45%",
+      "wouldBecome": "Single Barrel Barrel Proof #24-03536 Tennessee Rye Whiskey, 66.45%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a927b",
+      "currentName": "Jack Daniel's Single Barrel Special Release 2024 Coy Hill Bhouse 8 High Proof Tennessee Whiskey, 61.2%",
+      "wouldBecome": "Single Barrel Special Release 2024 Coy Hill Bhouse 8 High Proof Tennessee Whiskey, 61.2%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a927f",
+      "currentName": "Jack Daniel's Single Barrel Special Release 2024 Coy Hill Bhouse 8 High Proof Tennessee Whiskey, 66.55%",
+      "wouldBecome": "Single Barrel Special Release 2024 Coy Hill Bhouse 8 High Proof Tennessee Whiskey, 66.55%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a9283",
+      "currentName": "Jack Daniel's Twice Barreled Special Release 2023 Heritage Barrel Tennessee Rye Whiskey, 50%",
+      "wouldBecome": "Twice Barreled Special Release 2023 Heritage Barrel Tennessee Rye Whiskey, 50%",
+      "prefix": "Jack Daniel's"
+    },
+    {
+      "_id": "687949262ac73425965a929f",
+      "currentName": "Knob Creek 12 Year Old Kentucky Straight Bourbon Whiskey, 50%",
+      "wouldBecome": "12 Year Old Kentucky Straight Bourbon Whiskey, 50%",
+      "prefix": "Knob Creek"
+    },
+    {
+      "_id": "687949262ac73425965a92a3",
+      "currentName": "Knob Creek 15 Year Old Limited Edition Kentucky Straight Bourbon Whiskey, 50%",
+      "wouldBecome": "15 Year Old Limited Edition Kentucky Straight Bourbon Whiskey, 50%",
+      "prefix": "Knob Creek"
+    },
+    {
+      "_id": "687949262ac73425965a92a7",
+      "currentName": "Knob Creek 18 Year Old Limited Edition Kentucky Straight Bourbon Whiskey, 50%",
+      "wouldBecome": "18 Year Old Limited Edition Kentucky Straight Bourbon Whiskey, 50%",
+      "prefix": "Knob Creek"
+    },
+    {
+      "_id": "687949262ac73425965a92ad",
+      "currentName": "Knob Creek 9 Year Old Single Barrel Reserve Kentucky Straight Bourbon Whiskey, 60%",
+      "wouldBecome": "9 Year Old Single Barrel Reserve Kentucky Straight Bourbon Whiskey, 60%",
+      "prefix": "Knob Creek"
+    },
+    {
+      "_id": "687949262ac73425965a92cd",
+      "currentName": "Maker's Mark 46 Cask Strength Batch 23-02 Kentucky Straight Bourbon Whisky, 55.05%",
+      "wouldBecome": "46 Cask Strength Batch 23-02 Kentucky Straight Bourbon Whisky, 55.05%",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92d1",
+      "currentName": "Maker's Mark Cask Strength Kentucky Straight Bourbon Whisky",
+      "wouldBecome": "Cask Strength Kentucky Straight Bourbon Whisky",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92d5",
+      "currentName": "Maker's Mark Cellar Aged Limited Edition 2023 Kentucky Straight Bourbon Whisky, 57.85%",
+      "wouldBecome": "Cellar Aged Limited Edition 2023 Kentucky Straight Bourbon Whisky, 57.85%",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92d9",
+      "currentName": "Maker's Mark Cellar Aged Limited Edition 2024 Kentucky Straight Bourbon Whisky, 59.65%",
+      "wouldBecome": "Cellar Aged Limited Edition 2024 Kentucky Straight Bourbon Whisky, 59.65%",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92dd",
+      "currentName": "Maker's Mark Private Selection (Beach Liquors) \"Shiny Barrel\" Kentucky Straight Bourbon Whisky, 54.5%",
+      "wouldBecome": "Private Selection (Beach Liquors) \"Shiny Barrel\" Kentucky Straight Bourbon Whisky, 54.5%",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92e1",
+      "currentName": "Maker's Mark Private Selection (Fine Wine & Good Spirits) Fall Edition 2022 Kentucky Straight Bourbon Whisky",
+      "wouldBecome": "Private Selection (Fine Wine & Good Spirits) Fall Edition 2022 Kentucky Straight Bourbon Whisky",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92e5",
+      "currentName": "Maker's Mark Wood Finishing Series 2021 Release FAE-01 Kentucky Straight Bourbon Whisky, 55.3%",
+      "wouldBecome": "Wood Finishing Series 2021 Release FAE-01 Kentucky Straight Bourbon Whisky, 55.3%",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92e9",
+      "currentName": "Maker's Mark Wood Finishing Series 2023 Release BEP Kentucky Straight Bourbon Whisky, 54.55%",
+      "wouldBecome": "Wood Finishing Series 2023 Release BEP Kentucky Straight Bourbon Whisky, 54.55%",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92ed",
+      "currentName": "Maker's Mark Wood Finishing Series 2024 The Heart Release Kentucky Straight Bourbon Whisky, 55.85%",
+      "wouldBecome": "Wood Finishing Series 2024 The Heart Release Kentucky Straight Bourbon Whisky, 55.85%",
+      "prefix": "Maker's Mark"
+    },
+    {
+      "_id": "687949262ac73425965a92f5",
+      "currentName": "Michter's 10 Year Old Single Barrel Kentucky Straight Bourbon Whiskey, 47.2%",
+      "wouldBecome": "10 Year Old Single Barrel Kentucky Straight Bourbon Whiskey, 47.2%",
+      "prefix": "Michter's"
+    },
+    {
+      "_id": "687949262ac73425965a92fb",
+      "currentName": "Michter's 10 Year Old Single Barrel Kentucky Straight Rye Whiskey, 46.4%",
+      "wouldBecome": "10 Year Old Single Barrel Kentucky Straight Rye Whiskey, 46.4%",
+      "prefix": "Michter's"
+    },
+    {
+      "_id": "687949262ac73425965a9301",
+      "currentName": "Michter's Barrel Strength Toasted Barrel Finish Kentucky Straight Rye Whiskey, 55.3%, 23G2705",
+      "wouldBecome": "Barrel Strength Toasted Barrel Finish Kentucky Straight Rye Whiskey, 55.3%, 23G2705",
+      "prefix": "Michter's"
+    },
+    {
+      "_id": "687949262ac73425965a9305",
+      "currentName": "Michter's Bomberger's Declaration Small Batch Kentucky Straight Bourbon Whiskey, 54%",
+      "wouldBecome": "Bomberger's Declaration Small Batch Kentucky Straight Bourbon Whiskey, 54%",
+      "prefix": "Michter's"
+    },
+    {
+      "_id": "687949262ac73425965a9309",
+      "currentName": "Michter's Limited Release US*1 Barrel Strength Kentucky Straight Rye Whiskey, 55.7%",
+      "wouldBecome": "Limited Release US*1 Barrel Strength Kentucky Straight Rye Whiskey, 55.7%",
+      "prefix": "Michter's"
+    },
+    {
+      "_id": "687949262ac73425965a930d",
+      "currentName": "Michter's Shenk's Homestead Small Batch Kentucky Sour Mash Whiskey, 45.6%",
+      "wouldBecome": "Shenk's Homestead Small Batch Kentucky Sour Mash Whiskey, 45.6%",
+      "prefix": "Michter's"
+    },
+    {
+      "_id": "687949262ac73425965a9313",
+      "currentName": "Michter's US*1 Small Batch Original Sour Mash Whiskey, 43%",
+      "wouldBecome": "US*1 Small Batch Original Sour Mash Whiskey, 43%",
+      "prefix": "Michter's"
+    },
+    {
+      "_id": "687949262ac73425965a9347",
+      "currentName": "Penelope 6 Year Old Tokaji Cask Finish (Alamo City Liquor) Straight Rye Whiskey, 53%",
+      "wouldBecome": "6 Year Old Tokaji Cask Finish (Alamo City Liquor) Straight Rye Whiskey, 53%",
+      "prefix": "Penelope"
+    },
+    {
+      "_id": "687949272ac73425965a934b",
+      "currentName": "Penelope Architect French Oak Staves Straight Bourbon Whiskey, 52%",
+      "wouldBecome": "Architect French Oak Staves Straight Bourbon Whiskey, 52%",
+      "prefix": "Penelope"
+    },
+    {
+      "_id": "687949272ac73425965a934f",
+      "currentName": "Penelope Barrel Strength Straight Bourbon Whiskey, 57.2%",
+      "wouldBecome": "Barrel Strength Straight Bourbon Whiskey, 57.2%",
+      "prefix": "Penelope"
+    },
+    {
+      "_id": "687949272ac73425965a9353",
+      "currentName": "Penelope Four Grain Barrel Strength Straight Bourbon Whiskey, 57.9%",
+      "wouldBecome": "Four Grain Barrel Strength Straight Bourbon Whiskey, 57.9%",
+      "prefix": "Penelope"
+    },
+    {
+      "_id": "687949272ac73425965a9357",
+      "currentName": "Penelope Rio - Double Finished Honey and Amburana Straight Bourbon Whiskey, 49%",
+      "wouldBecome": "Rio - Double Finished Honey and Amburana Straight Bourbon Whiskey, 49%",
+      "prefix": "Penelope"
+    },
+    {
+      "_id": "687949272ac73425965a9363",
+      "currentName": "Rare Character 6 Year 8 Mo. Old SiB #AMB-R-148 (r/bourbon) Amburana Cask Straight Rye Whiskey, 56.16%",
+      "wouldBecome": "6 Year 8 Mo. Old SiB #AMB-R-148 (r/bourbon) Amburana Cask Straight Rye Whiskey, 56.16%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a9367",
+      "currentName": "Rare Character 7 Year 5 Mo. Old Single Barrel Series APR-R-719 (RC Clubhouse) Straight Rye Whiskey, 59.85%",
+      "wouldBecome": "7 Year 5 Mo. Old Single Barrel Series APR-R-719 (RC Clubhouse) Straight Rye Whiskey, 59.85%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a936b",
+      "currentName": "Rare Character 7.2 Year Old Maple Cask Finished Barrel #MAP-R-473 Straight Rye Whiskey, 57.92%",
+      "wouldBecome": "7.2 Year Old Maple Cask Finished Barrel #MAP-R-473 Straight Rye Whiskey, 57.92%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a936f",
+      "currentName": "Rare Character 8 Year 4 Mo. Old Single Barrel Series TKO-037 (Bradley's Liquor) Straight Rye Whiskey, 65.02%",
+      "wouldBecome": "8 Year 4 Mo. Old Single Barrel Series TKO-037 (Bradley's Liquor) Straight Rye Whiskey, 65.02%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a9373",
+      "currentName": "Rare Character 8 Year 5 Mo. Old Single Barrel Series TKO-040 (Raley's O.N.E. Mkt.) Straight Rye Whiskey, 64.43%",
+      "wouldBecome": "8 Year 5 Mo. Old Single Barrel Series TKO-040 (Raley's O.N.E. Mkt.) Straight Rye Whiskey, 64.43%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a9377",
+      "currentName": "Rare Character 8 Year 6 Mo. Old Single Barrel Series TKO-045 (El Cerrito) Straight Rye Whiskey, 64.39%",
+      "wouldBecome": "8 Year 6 Mo. Old Single Barrel Series TKO-045 (El Cerrito) Straight Rye Whiskey, 64.39%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a937b",
+      "currentName": "Rare Character 8 Year 7 Mo. Old Single Barrel Series TKO-017 (El Cerrito) Straight Rye Whiskey, 67.08%",
+      "wouldBecome": "8 Year 7 Mo. Old Single Barrel Series TKO-017 (El Cerrito) Straight Rye Whiskey, 67.08%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a937f",
+      "currentName": "Rare Character 9 Year Old Single Barrel Series KOA-125 (Liquor Barn) Straight Bourbon Whiskey, 68.86%",
+      "wouldBecome": "9 Year Old Single Barrel Series KOA-125 (Liquor Barn) Straight Bourbon Whiskey, 68.86%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a938f",
+      "currentName": "Rare Character Exceptional Series 2013 Barrel E-M13-32 Kentucky Straight Malt Whiskey, 68.20%",
+      "wouldBecome": "Exceptional Series 2013 Barrel E-M13-32 Kentucky Straight Malt Whiskey, 68.20%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a9393",
+      "currentName": "Rare Character Exceptional Series 2014 Barrel E-M14-856 Kentucky Straight Malt Whiskey, 68.69%",
+      "wouldBecome": "Exceptional Series 2014 Barrel E-M14-856 Kentucky Straight Malt Whiskey, 68.69%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a9397",
+      "currentName": "Rare Character Limited Release Batch No. 01 (2024) Blended (KY/IN) Straight Rye Whiskey, 58.95%",
+      "wouldBecome": "Limited Release Batch No. 01 (2024) Blended (KY/IN) Straight Rye Whiskey, 58.95%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a939b",
+      "currentName": "Rare Character Limited Release Batch No. 01 (2024) Kentucky Straight Bourbon Whiskey, 56.5%",
+      "wouldBecome": "Limited Release Batch No. 01 (2024) Kentucky Straight Bourbon Whiskey, 56.5%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a939f",
+      "currentName": "Rare Character Limited Release Batch No. 01 (2025 - Desert) Kentucky Straight Rye Whiskey, 61.88%",
+      "wouldBecome": "Limited Release Batch No. 01 (2025 - Desert) Kentucky Straight Rye Whiskey, 61.88%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a93a3",
+      "currentName": "Rare Character Limited Release Batch No. 01 (2025) Kentucky Straight Bourbon Whiskey, 59.63%",
+      "wouldBecome": "Limited Release Batch No. 01 (2025) Kentucky Straight Bourbon Whiskey, 59.63%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a93a7",
+      "currentName": "Rare Character Limited Release Batch No. 03 (2024) Kentucky Straight Bourbon Whiskey, 62.84%",
+      "wouldBecome": "Limited Release Batch No. 03 (2024) Kentucky Straight Bourbon Whiskey, 62.84%",
+      "prefix": "Rare Character"
+    },
+    {
+      "_id": "687949272ac73425965a93e3",
+      "currentName": "Wild Turkey Jimmy Russell 70th Anniversary Release Aged 8 Yrs Kentucky Straight Bourbon Whiskey, 50.5%",
+      "wouldBecome": "Jimmy Russell 70th Anniversary Release Aged 8 Yrs Kentucky Straight Bourbon Whiskey, 50.5%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a93e7",
+      "currentName": "Wild Turkey Master's Keep Generations Kentucky Straight Bourbon Whiskey, 60.4%",
+      "wouldBecome": "Master's Keep Generations Kentucky Straight Bourbon Whiskey, 60.4%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a93eb",
+      "currentName": "Wild Turkey Master's Keep Voyage Kentucky Straight Bourbon Whiskey, 53%",
+      "wouldBecome": "Master's Keep Voyage Kentucky Straight Bourbon Whiskey, 53%",
+      "prefix": "Wild Turkey"
+    },
+    {
+      "_id": "687949272ac73425965a941b",
+      "currentName": "Woodford Reserve Distiller's Select Kentucky Straight Bourbon Whiskey, 43.2%",
+      "wouldBecome": "Distiller's Select Kentucky Straight Bourbon Whiskey, 43.2%",
+      "prefix": "Woodford Reserve"
+    },
+    {
+      "_id": "687949272ac73425965a941f",
+      "currentName": "Woodford Reserve Double Oaked Kentucky Straight Bourbon Whiskey, 45.2%",
+      "wouldBecome": "Double Oaked Kentucky Straight Bourbon Whiskey, 45.2%",
+      "prefix": "Woodford Reserve"
+    },
+    {
+      "_id": "687949272ac73425965a9423",
+      "currentName": "Woodford Reserve Double Oaked Single Barrel Kentucky Straight Bourbon Whiskey, 45.2%",
+      "wouldBecome": "Double Oaked Single Barrel Kentucky Straight Bourbon Whiskey, 45.2%",
+      "prefix": "Woodford Reserve"
+    },
+    {
+      "_id": "687949272ac73425965a9427",
+      "currentName": "Woodford Reserve Kentucky Derby 149 Kentucky Straight Bourbon Whiskey, 45.2%",
+      "wouldBecome": "Kentucky Derby 149 Kentucky Straight Bourbon Whiskey, 45.2%",
+      "prefix": "Woodford Reserve"
+    },
+    {
+      "_id": "687949272ac73425965a942b",
+      "currentName": "Woodford Reserve Kentucky Derby 150 Kentucky Straight Bourbon Whiskey, 45.2%",
+      "wouldBecome": "Kentucky Derby 150 Kentucky Straight Bourbon Whiskey, 45.2%",
+      "prefix": "Woodford Reserve"
+    },
+    {
+      "_id": "687949272ac73425965a942f",
+      "currentName": "Woodford Reserve Master's Collection Batch 123.2 Proof Kentucky Straight Bourbon Whiskey, 61.6%",
+      "wouldBecome": "Master's Collection Batch 123.2 Proof Kentucky Straight Bourbon Whiskey, 61.6%",
+      "prefix": "Woodford Reserve"
+    },
+    {
+      "_id": "687949272ac73425965a9433",
+      "currentName": "Woodford Reserve Master's Collection Batch 124.7 Proof Kentucky Straight Bourbon Whiskey, 62.35%",
+      "wouldBecome": "Master's Collection Batch 124.7 Proof Kentucky Straight Bourbon Whiskey, 62.35%",
+      "prefix": "Woodford Reserve"
+    },
+    {
+      "_id": "687949272ac73425965a9437",
+      "currentName": "Woodford Reserve Master's Collection Historic Barrel Entry Ser. 18 Kentucky Straight Bourbon Whiskey, 45.2%",
+      "wouldBecome": "Master's Collection Historic Barrel Entry Ser. 18 Kentucky Straight Bourbon Whiskey, 45.2%",
+      "prefix": "Woodford Reserve"
+    },
+    {
+      "_id": "687949272ac73425965a943b",
+      "currentName": "Woodford Reserve Master's Collection Sonoma Triple Finish 45.2%",
+      "wouldBecome": "Master's Collection Sonoma Triple Finish 45.2%",
+      "prefix": "Woodford Reserve"
+    }
+  ],
+  "timestamp": "2025-07-19T13:16:37.124Z"
+}

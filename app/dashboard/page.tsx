@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Search, ScanLine } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const BarcodeScanner = dynamic(() => import('@/components/BarcodeScanner'), {
+  ssr: false,
+});
 
 interface DashboardStats {
   totalBottles: number;
@@ -46,6 +52,8 @@ export default function DashboardPage() {
   const [topValuedBottles, setTopValuedBottles] = useState<TopValuedBottle[]>([]);
   const [lowStockBottles, setLowStockBottles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -72,6 +80,18 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (search.trim()) {
+      router.push(`/bottles?search=${encodeURIComponent(search.trim())}`);
+    }
+  };
+
+  const handleBarcodeScan = (barcode: string) => {
+    setShowScanner(false);
+    router.push(`/bottles?barcode=${encodeURIComponent(barcode)}`);
   };
 
   if (status === 'loading' || loading) {
@@ -105,6 +125,35 @@ export default function DashboardPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Search Section */}
+        <div className="mb-12">
+          <form onSubmit={handleSearch} className="flex items-center space-x-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search your collection..."
+                className="input-premium w-full pl-12 pr-4 py-3 text-lg"
+              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            </div>
+            <button
+              type="submit"
+              className="btn-primary px-6 py-3 text-lg font-medium"
+            >
+              Search
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              className="btn-secondary px-6 py-3 text-lg font-medium flex items-center space-x-2"
+            >
+              <ScanLine className="w-5 h-5" />
+              <span>Scan</span>
+            </button>
+          </form>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <Link href="/bottles" className="card-premium hover:border-copper/50 hover:bg-gray-800/50 transition-all duration-300 cursor-pointer group">
             <div className="flex items-center justify-between mb-4">
@@ -320,6 +369,32 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* Barcode Scanner Modal */}
+      {showScanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="relative bg-gray-900 rounded-lg p-6 max-w-lg w-full mx-4">
+            <button
+              onClick={() => setShowScanner(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <h2 className="text-xl font-bold text-white mb-4">Scan Barcode</h2>
+            
+            <BarcodeScanner
+              onScan={handleBarcodeScan}
+              onError={(error) => {
+                console.error('Scanner error:', error);
+                setShowScanner(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

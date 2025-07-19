@@ -471,12 +471,12 @@ export default function BottlesPage() {
                   <div key={bottle._id} className="card-premium group hover:border-copper/30 transition-all duration-300">
                     {/* Show thumbnail if any bottle has photos */}
                     {bottle.userBottles.some(b => b.photos && b.photos.length > 0) && (
-                      <div className="relative w-full h-48 mb-4 -m-6 mb-2">
+                      <div className="relative h-48 -mx-6 -mt-6 mb-4 overflow-hidden rounded-t-lg" style={{ width: 'calc(100% + 3rem)' }}>
                         <Image
                           src={bottle.userBottles.find(b => b.photos && b.photos.length > 0)?.photos[0] || ''}
                           alt={masterData.name}
                           fill
-                          className="object-cover rounded-t-lg"
+                          className="object-cover"
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                       </div>
@@ -543,8 +543,11 @@ export default function BottlesPage() {
                       {bottle.stores.length > 0 && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">Stores:</span>
-                          <span className="text-gray-300 text-xs">
-                            🏪 {bottle.stores.length} store{bottle.stores.length > 1 ? 's' : ''}
+                          <span 
+                            className="text-gray-300 text-xs cursor-help"
+                            title={bottle.stores.join(', ')}
+                          >
+                            🏪 {bottle.stores.length === 1 ? bottle.stores[0] : `${bottle.stores.length} stores`}
                           </span>
                         </div>
                       )}
@@ -567,7 +570,7 @@ export default function BottlesPage() {
                         href={`/bottles/${bottle._id}`}
                         className="flex-1 btn-secondary text-center text-sm py-2"
                       >
-                        View Details ({bottle.totalCount})
+                        View Bottles ({bottle.totalCount})
                       </Link>
                     </div>
                   </div>

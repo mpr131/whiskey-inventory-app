@@ -4,6 +4,7 @@ export interface IPour {
   date: Date;
   amount: number;
   notes?: string;
+  rating?: number;
 }
 
 export interface IUserBottle extends Document {
@@ -50,6 +51,11 @@ const PourSchema = new Schema<IPour>({
     min: 0,
   },
   notes: String,
+  rating: {
+    type: Number,
+    min: 0,
+    max: 10,
+  },
 });
 
 const UserBottleSchema = new Schema<IUserBottle>(

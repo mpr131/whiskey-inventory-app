@@ -81,6 +81,7 @@ export default function EditBottlePage() {
   
   // Autocomplete suggestions
   const [storeSuggestions, setStoreSuggestions] = useState<string[]>([]);
+  const [storePickStoreSuggestions, setStorePickStoreSuggestions] = useState<string[]>([]);
   const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
   const [binSuggestions, setBinSuggestions] = useState<string[]>([]);
   const [purchaseLocation, setPurchaseLocation] = useState('');
@@ -100,6 +101,14 @@ export default function EditBottlePage() {
     barcode: '',
     cellarTrackerId: '',
     storeId: '',
+  });
+  
+  // Store pick state
+  const [isStorePick, setIsStorePick] = useState(false);
+  const [storePickDetails, setStorePickDetails] = useState({
+    store: '',
+    pickDate: '',
+    barrel: '',
   });
 
   useEffect(() => {
@@ -153,6 +162,18 @@ export default function EditBottlePage() {
         if (data.storeId?.masterStoreId?.name) {
           setPurchaseLocation(data.storeId.masterStoreId.name);
         }
+        
+        // Set store pick details from master bottle
+        if (data.masterBottleId?.isStorePick) {
+          setIsStorePick(true);
+          if (data.masterBottleId.storePickDetails) {
+            setStorePickDetails({
+              store: data.masterBottleId.storePickDetails.store || '',
+              pickDate: data.masterBottleId.storePickDetails.pickDate ? new Date(data.masterBottleId.storePickDetails.pickDate).toISOString().split('T')[0] : '',
+              barrel: data.masterBottleId.storePickDetails.barrel || '',
+            });
+          }
+        }
       } else if (response.status === 404) {
         toast.error('Bottle not found');
         router.push('/bottles');
@@ -180,7 +201,7 @@ export default function EditBottlePage() {
     setSaving(true);
 
     try {
-      const updateData = {
+      const updateData: any = {
         purchaseDate: formData.purchaseDate ? new Date(formData.purchaseDate).toISOString() : undefined,
         purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined,
         marketValue: formData.marketValue ? parseFloat(formData.marketValue) : undefined,
@@ -197,6 +218,18 @@ export default function EditBottlePage() {
         cellarTrackerId: formData.cellarTrackerId,
         purchaseLocation: purchaseLocation || undefined,
       };
+      
+      // Include master bottle update data for store pick
+      if (isStorePick || storePickDetails.store || storePickDetails.barrel || storePickDetails.pickDate) {
+        updateData.masterBottleUpdate = {
+          isStorePick: isStorePick,
+          storePickDetails: isStorePick ? {
+            store: storePickDetails.store,
+            pickDate: storePickDetails.pickDate ? new Date(storePickDetails.pickDate).toISOString() : undefined,
+            barrel: storePickDetails.barrel || undefined,
+          } : undefined,
+        };
+      }
 
       const response = await fetch(`/api/bottles/${bottleId}`, {
         method: 'PUT',
@@ -298,6 +331,69 @@ export default function EditBottlePage() {
               {bottle.status}
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* Store Pick Information */}
+      <div className="card-premium mb-8">
+        <h2 className="text-xl font-semibold text-white mb-4">Store Pick Information</h2>
+        
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="isStorePick"
+              checked={isStorePick}
+              onChange={(e) => setIsStorePick(e.target.checked)}
+              className="w-4 h-4 text-copper bg-gray-800 border-gray-600 rounded focus:ring-copper focus:ring-2"
+            />
+            <label htmlFor="isStorePick" className="text-gray-300 font-medium">
+              This is a store pick
+            </label>
+          </div>
+          
+          {isStorePick && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <AutocompleteInput
+                label="Store Name"
+                value={storePickDetails.store}
+                onChange={(value) => setStorePickDetails({...storePickDetails, store: value})}
+                onSearch={async (query) => {
+                  const res = await fetch(`/api/stores/search?q=${encodeURIComponent(query)}`);
+                  const data = await res.json();
+                  setStorePickStoreSuggestions(data.stores || []);
+                }}
+                suggestions={storePickStoreSuggestions}
+                placeholder="Store name"
+                allowNew={true}
+              />
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Pick Date
+                </label>
+                <input
+                  type="date"
+                  value={storePickDetails.pickDate}
+                  onChange={(e) => setStorePickDetails({...storePickDetails, pickDate: e.target.value})}
+                  className="input-premium w-full"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Barrel Number
+                </label>
+                <input
+                  type="text"
+                  value={storePickDetails.barrel}
+                  onChange={(e) => setStorePickDetails({...storePickDetails, barrel: e.target.value})}
+                  className="input-premium w-full"
+                  placeholder="Barrel #"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

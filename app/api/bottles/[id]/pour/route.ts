@@ -15,7 +15,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { amount, notes } = await req.json();
+    const { amount, notes, rating } = await req.json();
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: 'Invalid pour amount' }, { status: 400 });
@@ -37,11 +37,17 @@ export async function POST(
     }
 
     // Add the pour
-    bottle.pours.push({
+    const pour: any = {
       date: new Date(),
       amount,
       notes: notes || '',
-    });
+    };
+    
+    if (rating !== undefined && rating >= 0 && rating <= 10) {
+      pour.rating = rating;
+    }
+    
+    bottle.pours.push(pour);
 
     // Update fill level (assuming 750ml bottle = ~25.4 oz)
     const totalOz = 25.4;

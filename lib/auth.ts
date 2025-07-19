@@ -15,14 +15,15 @@ export const authOptions: NextAuthOptions = {
         name: { label: 'Name', type: 'text' },
       },
       async authorize(credentials) {
-        console.log('🔐 Auth attempt with credentials:', {
-          email: credentials?.email,
-          hasPassword: !!credentials?.password,
-          hasName: !!credentials?.name,
-          hasInviteCode: !!credentials?.inviteCode,
-          inviteCode: credentials?.inviteCode,
-          name: credentials?.name,
-        });
+        // Remove sensitive logs in production
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔐 Auth attempt with credentials:', {
+            email: credentials?.email,
+            hasPassword: !!credentials?.password,
+            hasName: !!credentials?.name,
+            hasInviteCode: !!credentials?.inviteCode,
+          });
+        }
 
         // Clean up credentials - convert "undefined" strings to actual undefined
         if (credentials?.name === 'undefined') credentials.name = undefined;
@@ -36,22 +37,30 @@ export const authOptions: NextAuthOptions = {
 
         // Check if user exists
         const existingUser = await User.findOne({ email: credentials.email }).select('+password');
-        console.log('🔍 User lookup result:', {
-          email: credentials.email,
-          userFound: !!existingUser,
-          isAdmin: existingUser?.isAdmin,
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 User lookup result:', {
+            email: credentials.email,
+            userFound: !!existingUser,
+            isAdmin: existingUser?.isAdmin,
+          });
+        }
 
         if (existingUser) {
           // Login flow
-          console.log('✅ Existing user found, attempting login...');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Existing user found, attempting login...');
+          }
           const isValid = await existingUser.comparePassword(credentials.password);
           if (!isValid) {
-            console.log('❌ Invalid password for user:', credentials.email);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('❌ Invalid password for user:', credentials.email);
+            }
             throw new Error('Invalid email or password');
           }
 
-          console.log('✅ Login successful for:', credentials.email);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Login successful for:', credentials.email);
+          }
           return {
             id: existingUser._id.toString(),
             email: existingUser.email,
@@ -60,19 +69,25 @@ export const authOptions: NextAuthOptions = {
           };
         } else {
           // Registration flow - requires invite code
-          console.log('📝 No existing user, attempting registration...');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('📝 No existing user, attempting registration...');
+          }
           
           // Check if this is actually a failed login (no name/invite code provided)
           if (!credentials.name && !credentials.inviteCode) {
-            console.log('❌ Login failed - user not found:', credentials.email);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('❌ Login failed - user not found:', credentials.email);
+            }
             throw new Error('Invalid email or password');
           }
           
           if (!credentials.inviteCode || !credentials.name) {
-            console.log('❌ Missing registration data:', {
-              hasInviteCode: !!credentials.inviteCode,
-              hasName: !!credentials.name,
-            });
+            if (process.env.NODE_ENV === 'development') {
+              console.log('❌ Missing registration data:', {
+                hasInviteCode: !!credentials.inviteCode,
+                hasName: !!credentials.name,
+              });
+            }
             throw new Error('Invite code and name are required for registration');
           }
 

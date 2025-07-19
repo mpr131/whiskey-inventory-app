@@ -36,23 +36,30 @@ export default function SignInPage() {
         credentials.inviteCode = inviteCode;
       }
 
-      console.log('🚀 Signin attempt:', {
-        email,
-        isRegistering,
-        hasName: !!name,
-        hasInviteCode: !!inviteCode,
-        credentials,
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚀 Signin attempt:', {
+          email,
+          isRegistering,
+          hasName: !!name,
+          hasInviteCode: !!inviteCode,
+        });
+      }
 
       const result = await signIn('credentials', credentials);
 
-      console.log('📨 Signin result:', result);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📨 Signin result:', result);
+      }
 
       if (result?.error) {
-        console.error('❌ Signin error:', result.error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('❌ Signin error:', result.error);
+        }
         setError(result.error);
       } else {
-        console.log('✅ Signin successful, redirecting...');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Signin successful, redirecting...');
+        }
         router.push('/dashboard');
         router.refresh();
       }

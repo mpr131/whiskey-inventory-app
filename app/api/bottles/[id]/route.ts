@@ -147,6 +147,20 @@ export async function PUT(
       delete body.purchaseLocation;
     }
 
+    // Handle master bottle updates if provided
+    if (body.masterBottleUpdate) {
+      const { masterBottleUpdate } = body;
+      delete body.masterBottleUpdate;
+      
+      await MasterBottle.findByIdAndUpdate(
+        bottle.masterBottleId,
+        {
+          isStorePick: masterBottleUpdate.isStorePick,
+          storePickDetails: masterBottleUpdate.storePickDetails,
+        }
+      );
+    }
+
     // Update bottle with new data
     Object.assign(bottle, body);
     await bottle.save();
