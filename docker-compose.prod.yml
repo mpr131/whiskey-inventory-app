@@ -16,13 +16,13 @@ services:
         - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     ports:
       # Map to custom port if needed
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3005}:3005"
     volumes:
       # Volume for uploaded images
       - whiskey-uploads:/app/uploads
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=3005
       # MongoDB connection for production
       - MONGODB_URI=${MONGODB_URI}
       - NEXTAUTH_URL=${NEXTAUTH_URL}

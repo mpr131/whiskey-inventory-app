@@ -30,7 +30,7 @@ This guide explains how to run the Whiskey Vault application using Docker while 
    ```
 
 3. **Access the application:**
-   - Development: http://localhost:3000
+   - Development: http://localhost:3005
    - Production: Configure NEXTAUTH_URL and NEXT_PUBLIC_APP_URL in .env.production
 
 ## MongoDB Connection Configuration

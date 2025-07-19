@@ -57,14 +57,14 @@ RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 USER nextjs
 
 # Expose the application port
-EXPOSE 3000
+EXPOSE 3005
 
 # Set the port environment variable
-ENV PORT 3000
+ENV PORT 3005
 
 # Health check to ensure container is running properly
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
+  CMD node -e "require('http').get('http://localhost:3005/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
 
 # Start the Next.js application
 CMD ["node", "server.js"]
@@ -81,7 +81,7 @@ RUN npm ci
 COPY . .
 
 # Expose port for development
-EXPOSE 3000
+EXPOSE 3005
 
 # Start development server with hot reload
 CMD ["npm", "run", "dev"]
