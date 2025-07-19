@@ -7,8 +7,10 @@ services:
       context: .
       dockerfile: Dockerfile
       target: dev
+      args:
+        - PORT=${PORT:-3000}
     ports:
-      - "3005:3005"
+      - "${PORT:-3000}:${PORT:-3000}"
     volumes:
       # Mount source code for hot reload
       - .:/app
@@ -18,13 +20,13 @@ services:
       - whiskey-uploads:/app/uploads
     environment:
       - NODE_ENV=development
-      - PORT=3005
+      - PORT=${PORT:-3000}
       # MongoDB connection - use host.docker.internal for Mac/Windows
       # For Linux, you may need to use host network mode or actual IP
       - MONGODB_URI=${MONGODB_URI:-mongodb://host.docker.internal:27017/whiskey-vault?replicaSet=rs0}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3005}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:${PORT:-3000}}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3005}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:${PORT:-3000}}
       # Cloudinary environment variables (for future use)
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}

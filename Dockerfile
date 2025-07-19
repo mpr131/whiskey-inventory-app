@@ -1,6 +1,9 @@
 # Multi-stage Dockerfile for Next.js 14 application
 # Optimized for both development and production builds
 
+# Default port argument
+ARG PORT=3000
+
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
 # Add libc6-compat for Alpine compatibility with node packages
@@ -35,6 +38,9 @@ RUN npm run build
 FROM node:18-alpine AS runner
 WORKDIR /app
 
+# Accept port as build argument
+ARG PORT=3000
+
 # Set NODE_ENV to production
 ENV NODE_ENV production
 
@@ -56,15 +62,20 @@ RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 # Switch to non-root user
 USER nextjs
 
-# Expose the application port
-EXPOSE 3005
-
 # Set the port environment variable
-ENV PORT 3005
+ENV PORT=${PORT}
+
+# Expose the application port
+EXPOSE ${PORT}
+
+# Create a healthcheck script that uses the PORT environment variable
+RUN echo '#!/bin/sh' > /app/healthcheck.sh && \
+    echo 'node -e "require(\"http\").get(\"http://localhost:${PORT}/api/health\", (res) => process.exit(res.statusCode === 200 ? 0 : 1))"' >> /app/healthcheck.sh && \
+    chmod +x /app/healthcheck.sh
 
 # Health check to ensure container is running properly
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3005/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
+  CMD /app/healthcheck.sh
 
 # Start the Next.js application
 CMD ["node", "server.js"]
@@ -73,6 +84,9 @@ CMD ["node", "server.js"]
 FROM node:18-alpine AS dev
 WORKDIR /app
 
+# Accept port as build argument
+ARG PORT=3000
+
 # Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -80,8 +94,11 @@ RUN npm ci
 # Copy application files
 COPY . .
 
+# Set the port environment variable
+ENV PORT=${PORT}
+
 # Expose port for development
-EXPOSE 3005
+EXPOSE ${PORT}
 
 # Start development server with hot reload
 CMD ["npm", "run", "dev"]

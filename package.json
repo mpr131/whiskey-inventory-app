@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3003 --hostname 0.0.0.0",
+    "dev": "node scripts/dev.js",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/start.js",
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
     "clear-db": "node scripts/clear-database.js"
