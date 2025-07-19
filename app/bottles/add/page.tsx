@@ -135,6 +135,12 @@ export default function AddBottlePage() {
           age: masterData.age ? parseInt(masterData.age) : undefined,
           proof: masterData.proof ? parseFloat(masterData.proof) : undefined,
           msrp: masterData.msrp ? parseFloat(masterData.msrp) : undefined,
+          isStorePick: masterData.isStorePick,
+          storePickDetails: masterData.isStorePick ? {
+            store: masterData.storePickDetails.store || undefined,
+            pickDate: masterData.storePickDetails.pickDate || undefined,
+            barrel: masterData.storePickDetails.barrel || undefined,
+          } : undefined,
         };
         delete body.masterBottleId;
       }
@@ -365,6 +371,67 @@ export default function AddBottlePage() {
                   rows={3}
                   className="input-premium w-full"
                 />
+              </div>
+
+              {/* Store Pick Information */}
+              <div className="mt-6 space-y-4">
+                <h3 className="text-lg font-medium text-white">Store Pick Information</h3>
+                
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="isStorePick"
+                    checked={masterData.isStorePick}
+                    onChange={(e) => setMasterData({...masterData, isStorePick: e.target.checked})}
+                    className="w-4 h-4 text-copper bg-gray-800 border-gray-600 rounded focus:ring-copper focus:ring-2"
+                  />
+                  <label htmlFor="isStorePick" className="text-gray-300 font-medium">
+                    This is a store pick
+                  </label>
+                </div>
+                
+                {masterData.isStorePick && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <AutocompleteInput
+                      label="Store Name"
+                      value={masterData.storePickDetails.store}
+                      onChange={(value) => setMasterData({...masterData, storePickDetails: {...masterData.storePickDetails, store: value}})}
+                      onSearch={async (query) => {
+                        const res = await fetch(`/api/stores/search?q=${encodeURIComponent(query)}`);
+                        const data = await res.json();
+                        setStoreSuggestions(data.stores || []);
+                      }}
+                      suggestions={storeSuggestions}
+                      placeholder="Store name"
+                      allowNew={true}
+                    />
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Pick Date
+                      </label>
+                      <input
+                        type="date"
+                        value={masterData.storePickDetails.pickDate}
+                        onChange={(e) => setMasterData({...masterData, storePickDetails: {...masterData.storePickDetails, pickDate: e.target.value}})}
+                        className="input-premium w-full"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Barrel/Pick Details
+                      </label>
+                      <input
+                        type="text"
+                        value={masterData.storePickDetails.barrel}
+                        onChange={(e) => setMasterData({...masterData, storePickDetails: {...masterData.storePickDetails, barrel: e.target.value}})}
+                        placeholder="e.g., Barrel #123"
+                        className="input-premium w-full"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
