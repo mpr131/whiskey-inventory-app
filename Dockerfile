@@ -59,6 +59,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Create uploads directory for future Cloudinary integration
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 
+# Create a healthcheck script that uses the PORT environment variable
+RUN echo '#!/bin/sh' > /app/healthcheck.sh && \
+    echo 'node -e "require(\"http\").get(\"http://localhost:${PORT}/api/health\", (res) => process.exit(res.statusCode === 200 ? 0 : 1))"' >> /app/healthcheck.sh && \
+    chmod +x /app/healthcheck.sh && \
+    chown nextjs:nodejs /app/healthcheck.sh
+
 # Switch to non-root user
 USER nextjs
 
@@ -67,11 +73,6 @@ ENV PORT=${PORT}
 
 # Expose the application port
 EXPOSE ${PORT}
-
-# Create a healthcheck script that uses the PORT environment variable
-RUN echo '#!/bin/sh' > /app/healthcheck.sh && \
-    echo 'node -e "require(\"http\").get(\"http://localhost:${PORT}/api/health\", (res) => process.exit(res.statusCode === 200 ? 0 : 1))"' >> /app/healthcheck.sh && \
-    chmod +x /app/healthcheck.sh
 
 # Health check to ensure container is running properly
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
