@@ -52,7 +52,8 @@ export async function POST(
     // Update fill level (assuming 750ml bottle = ~25.4 oz)
     const totalOz = 25.4;
     const fillLevelDecrease = (amount / totalOz) * 100;
-    bottle.fillLevel = Math.max(0, bottle.fillLevel - fillLevelDecrease);
+    const currentFillLevel = bottle.fillLevel ?? 100; // Default to 100 if undefined
+    bottle.fillLevel = Math.max(0, currentFillLevel - fillLevelDecrease);
 
     // Update status if bottle is finished
     if (bottle.fillLevel <= 0) {
