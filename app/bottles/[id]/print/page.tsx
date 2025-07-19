@@ -271,9 +271,9 @@ export default function PrintLabelPage() {
         <h2 className="text-xl font-semibold text-white mb-4">Printing Instructions</h2>
         <div className="space-y-2 text-gray-300">
           <p>• Use the Print Label button above to print this label</p>
-          <p>• Large label format (4" x 3") is suitable for bottle fronts</p>
-          <p>• Small label format (2" x 1") is suitable for bottle necks or caps</p>
-          <p>• The QR code links directly to this bottle's detail page</p>
+          <p>• Large label format (4&quot; x 3&quot;) is suitable for bottle fronts</p>
+          <p>• Small label format (2&quot; x 1&quot;) is suitable for bottle necks or caps</p>
+          <p>• The QR code links directly to this bottle&apos;s detail page</p>
           <p>• The barcode is unique to this specific bottle</p>
         </div>
       </div>

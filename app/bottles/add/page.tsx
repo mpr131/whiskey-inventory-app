@@ -245,7 +245,7 @@ export default function AddBottlePage() {
               className="mt-4 text-sm text-copper hover:text-copper-light transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Can't find your whiskey? Create new entry
+              Can&apos;t find your whiskey? Create new entry
             </button>
           </div>
 

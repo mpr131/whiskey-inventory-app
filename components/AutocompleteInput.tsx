@@ -177,7 +177,7 @@ export default function AutocompleteInput({
                 }`}
               >
                 <Plus className="w-4 h-4" />
-                <span>Add new: "{inputValue}"</span>
+                <span>Add new: &quot;{inputValue}&quot;</span>
               </div>
             )}
           </div>

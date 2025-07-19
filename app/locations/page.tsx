@@ -111,7 +111,7 @@ export default function LocationsPage() {
             <MapPin className="w-24 h-24 text-copper/30 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-400 mb-2">No locations found</h3>
             <p className="text-gray-500 mb-6">
-              Your bottles don't have location information yet. 
+              Your bottles don&apos;t have location information yet. 
               You can add location data when importing bottles or editing existing ones.
             </p>
             <Link href="/bottles/import" className="btn-primary inline-flex items-center">

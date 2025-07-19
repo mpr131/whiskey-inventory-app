@@ -34,6 +34,7 @@ export default function PhotoUpload({ bottleId, photos, onPhotosUpdate }: PhotoU
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFiles(e.dataTransfer.files);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

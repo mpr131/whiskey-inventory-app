@@ -123,10 +123,12 @@ export default function BottlesPage() {
   useEffect(() => {
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when filters change
     fetchBottles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, categoryFilter, statusFilter, proofFilter, sortBy, viewMode]);
 
   useEffect(() => {
     fetchBottles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page]);
 
   const fetchBottles = async () => {

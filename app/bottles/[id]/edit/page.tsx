@@ -120,6 +120,7 @@ export default function EditBottlePage() {
 
     fetchBottleDetails();
     fetchStores();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router, bottleId]);
 
   const fetchStores = async () => {
