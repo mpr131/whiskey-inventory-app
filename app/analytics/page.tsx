@@ -122,6 +122,7 @@ export default function AnalyticsPage() {
     if (session?.user) {
       fetchAnalytics();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, timeRange]);
 
   const fetchAnalytics = async () => {
@@ -334,7 +335,7 @@ export default function AnalyticsPage() {
         <section className="bg-gray-800 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-6">
             <Clock className="w-6 h-6 text-copper" />
-            <h2 className="text-2xl font-bold">Tonight's Pour Timeline</h2>
+            <h2 className="text-2xl font-bold">Tonight&apos;s Pour Timeline</h2>
           </div>
 
           {analytics.tonightsPours?.pours?.length > 0 ? (

@@ -1394,7 +1394,7 @@ export default function BottleDetailPage() {
                         <option value="Bar">Bar</option>
                         <option value="Restaurant">Restaurant</option>
                         <option value="Tasting">Tasting</option>
-                        <option value="Friend's Place">Friend's Place</option>
+                        <option value="Friend's Place">Friend&apos;s Place</option>
                         <option value="Event">Event</option>
                         <option value="Other">Other</option>
                       </select>
