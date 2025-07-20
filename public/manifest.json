@@ -1,9 +1,9 @@
 {
   "name": "Whiskey Vault",
-  "short_name": "Whiskey Vault",
-  "description": "Premium Inventory Management for Whiskey Connoisseurs",
+  "short_name": "WhiskeyVault",
+  "description": "Premium whiskey inventory management",
   "theme_color": "#B87333",
-  "background_color": "#1a1a1a",
+  "background_color": "#0a0a0a",
   "display": "standalone",
   "orientation": "portrait",
   "scope": "/",
@@ -11,19 +11,33 @@
   "icons": [
     {
       "src": "/wv-favicon_256.png",
-      "sizes": "256x256",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/wv-favicon_256.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/wv-favicon_256.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/wv-favicon_256.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/wv-favicon_256.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
