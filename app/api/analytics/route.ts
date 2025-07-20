@@ -62,14 +62,30 @@ export async function GET(request: Request) {
         break;
     }
 
-    // Tonight's Pours (last 24 hours)
+    // Tonight's/Today's Pours based on session boundaries
     console.time('Tonight Pours Query');
-    const tonight = new Date();
-    tonight.setHours(tonight.getHours() - 24);
+    // now is already declared above
+    const currentHour = now.getHours();
+    
+    // Determine session start time based on current time
+    let sessionStart = new Date();
+    
+    if (currentHour >= 4 && currentHour < 18) {
+      // Daytime session: 4 AM today onwards
+      sessionStart.setHours(4, 0, 0, 0);
+    } else if (currentHour >= 18) {
+      // Evening session: 6 PM today onwards
+      sessionStart.setHours(18, 0, 0, 0);
+    } else {
+      // Late night (midnight-4am): Still part of previous evening's session
+      // Go back to 6 PM yesterday
+      sessionStart.setDate(sessionStart.getDate() - 1);
+      sessionStart.setHours(18, 0, 0, 0);
+    }
     
     const tonightsPours = await Pour.find({
       userId: session.user.id,
-      createdAt: { $gte: tonight }
+      createdAt: { $gte: sessionStart }
     })
     .populate({
       path: 'userBottleId',

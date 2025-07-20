@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Area, AreaChart, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
 import toast from 'react-hot-toast';
@@ -335,7 +335,9 @@ export default function AnalyticsPage() {
         <section className="bg-gray-800 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-6">
             <Clock className="w-6 h-6 text-copper" />
-            <h2 className="text-2xl font-bold">Tonight&apos;s Pour Timeline</h2>
+            <h2 className="text-2xl font-bold">
+              {new Date().getHours() < 18 ? "Today's" : "Tonight's"} Pour Timeline
+            </h2>
           </div>
 
           {analytics.tonightsPours?.pours?.length > 0 ? (
@@ -416,7 +418,7 @@ export default function AnalyticsPage() {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {analytics.collectionInsights.categoryBreakdown.map((entry, index) => (
+                    {analytics.collectionInsights.categoryBreakdown.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -428,18 +430,24 @@ export default function AnalyticsPage() {
             {/* Age Distribution */}
             <div className="bg-gray-700/30 rounded-lg p-4">
               <h3 className="text-lg font-semibold mb-4">Age Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={analytics.collectionInsights.ageDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="age" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                    labelStyle={{ color: '#9CA3AF' }}
-                  />
-                  <Bar dataKey="count" fill="#B87333" />
-                </BarChart>
-              </ResponsiveContainer>
+              {analytics.collectionInsights.ageDistribution && analytics.collectionInsights.ageDistribution.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={analytics.collectionInsights.ageDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="age" stroke="#9CA3AF" />
+                    <YAxis stroke="#9CA3AF" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
+                      labelStyle={{ color: '#9CA3AF' }}
+                    />
+                    <Bar dataKey="count" fill="#B87333" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-gray-500">
+                  <p>No age distribution data available</p>
+                </div>
+              )}
             </div>
 
             {/* Proof Distribution */}
@@ -497,10 +505,18 @@ export default function AnalyticsPage() {
             <div className="bg-gray-700/30 rounded-lg p-4">
               <h3 className="text-lg font-semibold mb-4">Most Poured Bottles</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={analytics.pourAnalytics.mostPoured} layout="horizontal">
+                <BarChart data={analytics.pourAnalytics.mostPoured} margin={{ left: 20, right: 20, top: 20, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis type="number" stroke="#9CA3AF" />
-                  <YAxis dataKey="name" type="category" stroke="#9CA3AF" width={100} />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#9CA3AF" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    interval={0}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis stroke="#9CA3AF" />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
                     labelStyle={{ color: '#9CA3AF' }}
@@ -524,13 +540,19 @@ export default function AnalyticsPage() {
                     fill="#8884d8"
                     paddingAngle={5}
                     dataKey="count"
+                    label={({ size, count }) => `${size}: ${count}`}
                   >
-                    {analytics.pourAnalytics.pourSizeDistribution.map((entry, index) => (
+                    {analytics.pourAnalytics.pourSizeDistribution.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
+                    formatter={(value, _, props) => [
+                      `${value} pours`,
+                      props.payload.size
+                    ]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -538,18 +560,36 @@ export default function AnalyticsPage() {
             {/* Ratings by Category */}
             <div className="bg-gray-700/30 rounded-lg p-4">
               <h3 className="text-lg font-semibold mb-4">Average Ratings by Category</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <RadarChart data={analytics.pourAnalytics.ratingsByCategory}>
-                  <PolarGrid stroke="#374151" />
-                  <PolarAngleAxis dataKey="category" stroke="#9CA3AF" />
-                  <PolarRadiusAxis angle={90} domain={[0, 10]} stroke="#9CA3AF" />
-                  <Radar name="Rating" dataKey="avgRating" stroke="#B87333" fill="#B87333" fillOpacity={0.6} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-                    labelStyle={{ color: '#9CA3AF' }}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
+              {analytics.pourAnalytics.ratingsByCategory && analytics.pourAnalytics.ratingsByCategory.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <RadarChart data={analytics.pourAnalytics.ratingsByCategory}>
+                    <PolarGrid stroke="#374151" />
+                    <PolarAngleAxis dataKey="category" stroke="#9CA3AF" tick={{ fontSize: 12 }} />
+                    <PolarRadiusAxis 
+                      angle={90} 
+                      domain={[0, 10]} 
+                      stroke="#9CA3AF" 
+                      tickCount={6}
+                    />
+                    <Radar 
+                      name="Average Rating" 
+                      dataKey="avgRating" 
+                      stroke="#B87333" 
+                      fill="#B87333" 
+                      fillOpacity={0.6} 
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
+                      labelStyle={{ color: '#9CA3AF' }}
+                      formatter={(value: number) => value.toFixed(1)}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-gray-500">
+                  <p>No ratings data available by category</p>
+                </div>
+              )}
             </div>
 
             {/* Cost Analysis */}
@@ -716,19 +756,24 @@ export default function AnalyticsPage() {
             <div className="bg-gray-700/30 rounded-lg p-4">
               <h3 className="text-lg font-semibold mb-4">Burn Rate Projection</h3>
               {analytics.killRate.burnRateData.length > 0 ? (
-                <div className="h-[300px] relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="space-y-4 w-full px-4">
-                      {analytics.killRate.burnRateData.slice(0, 5).map((bottle, index) => (
+                <div className="h-[300px] overflow-y-auto">
+                  <div className="space-y-4 px-4">
+                    {analytics.killRate.burnRateData.slice(0, 5).map((bottle, index) => {
+                      const currentFill = bottle.history[bottle.history.length - 1]?.fillLevel || 0;
+                      const projectedFill = bottle.projection.length > 0 
+                        ? bottle.projection[bottle.projection.length - 1]?.fillLevel || 0
+                        : currentFill;
+                      
+                      return (
                         <div key={bottle.bottleName} className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-300" style={{ color: COLORS[index % COLORS.length] }}>
+                            <span className="text-gray-300 truncate mr-2" style={{ color: COLORS[index % COLORS.length] }}>
                               {bottle.bottleName}
                             </span>
-                            <span className="text-gray-500">
-                              {bottle.history[bottle.history.length - 1]?.fillLevel.toFixed(0)}% → {
+                            <span className="text-gray-500 whitespace-nowrap">
+                              {currentFill.toFixed(0)}% → {
                                 bottle.projection.length > 0 
-                                  ? `${bottle.projection[bottle.projection.length - 1]?.fillLevel.toFixed(0)}%`
+                                  ? `${projectedFill.toFixed(0)}%`
                                   : 'N/A'
                               }
                             </span>
@@ -738,24 +783,25 @@ export default function AnalyticsPage() {
                             <div 
                               className="absolute left-0 top-0 h-full transition-all duration-500"
                               style={{ 
-                                width: `${bottle.history[bottle.history.length - 1]?.fillLevel || 0}%`,
+                                width: `${Math.min(100, Math.max(0, currentFill))}%`,
                                 backgroundColor: COLORS[index % COLORS.length]
                               }}
                             />
-                            {/* Projected depletion */}
-                            {bottle.projection.length > 0 && (
+                            {/* Projected depletion overlay */}
+                            {bottle.projection.length > 0 && projectedFill < currentFill && (
                               <div 
-                                className="absolute left-0 top-0 h-full opacity-30"
+                                className="absolute top-0 h-full opacity-30"
                                 style={{ 
-                                  width: `${bottle.history[bottle.history.length - 1]?.fillLevel || 0}%`,
+                                  left: `${Math.min(100, Math.max(0, projectedFill))}%`,
+                                  width: `${Math.min(100, Math.max(0, currentFill - projectedFill))}%`,
                                   backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 5px, ${COLORS[index % COLORS.length]} 5px, ${COLORS[index % COLORS.length]} 10px)`
                                 }}
                               />
                             )}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -950,7 +996,7 @@ function CalendarHeatMap({ data }: { data: Array<{ date: string; pours: number; 
   };
 
   // Month labels - only add when month changes
-  const monthLabels: { month: string; col: number }[] = [];
+  const monthLabels: { month: string; year: number; col: number }[] = [];
   let lastMonthYear = '';
   
   weeks.forEach((week, weekIndex) => {
@@ -962,6 +1008,7 @@ function CalendarHeatMap({ data }: { data: Array<{ date: string; pours: number; 
         lastMonthYear = monthYear;
         monthLabels.push({
           month: firstDateInWeek.toLocaleDateString('en-US', { month: 'short' }),
+          year: firstDateInWeek.getFullYear(),
           col: weekIndex
         });
       }
@@ -978,20 +1025,23 @@ function CalendarHeatMap({ data }: { data: Array<{ date: string; pours: number; 
   return (
     <div className="relative">
       {/* Month labels */}
-      <div className="flex gap-1 mb-2 ml-10">
-        {monthLabels.map((label, i) => (
-          <div
-            key={i}
-            className="text-xs text-gray-400"
-            style={{ 
-              position: 'absolute', 
-              left: `${40 + label.col * 14}px`,
-              top: 0
-            }}
-          >
-            {label.month}
-          </div>
-        ))}
+      <div className="relative h-5 mb-2 ml-10">
+        {monthLabels.map((label, i) => {
+          // Show year for January or when year changes
+          const showYear = label.month === 'Jan' || (i > 0 && monthLabels[i-1].year !== label.year);
+          return (
+            <div
+              key={`${label.month}-${label.year}-${i}`}
+              className="text-xs text-gray-400 absolute whitespace-nowrap"
+              style={{ 
+                left: `${label.col * 14}px`,
+                top: 0
+              }}
+            >
+              {label.month}{showYear && ` ${label.year}`}
+            </div>
+          );
+        })}
       </div>
 
       <div className="flex gap-4 mt-6">
