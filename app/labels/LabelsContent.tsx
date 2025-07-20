@@ -15,10 +15,12 @@ import {
   Settings,
   Package,
   AlertCircle,
-  Info
+  Info,
+  Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
+import { generateDymoLabelXml, generateDymoLabelXmlWithQR, DYMO_LABEL_INFO, type DymoLabelSize } from '@/lib/dymo-label-templates';
 
 // DYMO types
 declare global {
@@ -83,6 +85,9 @@ const LABEL_FORMATS: Record<LabelFormat, LabelDimensions> = {
 };
 
 export default function LabelsContent() {
+  console.log('=== BATCH LABEL SYSTEM v3.2 - PRINTER PARSING FIXED ===');
+  console.log('Fixed DYMO printer object parsing - direct printing enabled');
+  
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,6 +108,13 @@ export default function LabelsContent() {
   const [dymoReady, setDymoReady] = useState(false);
   const [dymoPrinters, setDymoPrinters] = useState<any[]>([]);
   const [selectedPrinter, setSelectedPrinter] = useState<string>('');
+  const [dymoLabelSize, setDymoLabelSize] = useState<DymoLabelSize>('30336'); // Default to most common size
+  const [optionalFields, setOptionalFields] = useState({
+    price: false,
+    store: false,
+    location: true  // Default on since it's useful for inventory
+  });
+  const [showPreview, setShowPreview] = useState(false);
 
   // Set mounted state for client-side rendering
   useEffect(() => {
@@ -111,70 +123,163 @@ export default function LabelsContent() {
 
   // Load DYMO framework from local domain (like CellarTracker)
   useEffect(() => {
+    // Prevent duplicate initialization
+    if ((window as any)._dymoInitialized) {
+      console.log('DYMO already initialized');
+      setDymoReady(true);
+      checkDymoPrinters();
+      return;
+    }
+
+    // Check if already loading
+    if ((window as any)._dymoLoading) {
+      console.log('DYMO already loading');
+      return;
+    }
+
+    (window as any)._dymoLoading = true;
+
     const script = document.createElement('script');
     script.src = '/libs/dymo/dymo.connect.framework.js';
-    script.onload = async () => {
+    script.onload = () => {
       if (window.dymo && window.dymo.label && window.dymo.label.framework) {
         console.log('DYMO framework loaded from local');
-        try {
-          // Initialize the framework
-          await window.dymo.label.framework.init();
+        
+        // Initialize with callback
+        window.dymo.label.framework.init(() => {
           console.log('DYMO framework initialized');
+          (window as any)._dymoInitialized = true;
+          (window as any)._dymoLoading = false;
           
-          // Check if DYMO Web Service is running
-          const isServiceAvailable = await window.dymo.label.framework.checkEnvironment();
-          console.log('DYMO Web Service available:', isServiceAvailable);
+          // Check environment
+          const env = window.dymo.label.framework.checkEnvironment();
+          console.log('DYMO Web Service available:', env);
           
-          if (isServiceAvailable.isWebServicePresent) {
+          if (env.isWebServicePresent) {
             setDymoReady(true);
-            checkDymoPrinters();
+            // Add a delay before checking printers
+            console.log('Waiting 1 second for DYMO service to be ready...');
+            setTimeout(() => {
+              checkDymoPrinters();
+            }, 1000);
           } else {
             console.error('DYMO Web Service not running');
           }
-        } catch (error) {
-          console.error('Failed to initialize DYMO:', error);
-        }
+        });
       }
     };
     script.onerror = () => {
       console.error('Failed to load DYMO framework');
+      (window as any)._dymoLoading = false;
     };
     document.head.appendChild(script);
   }, []);
 
-  // Check for DYMO printers
-  const checkDymoPrinters = async () => {
+  // Check for DYMO printers with retry
+  const checkDymoPrinters = async (retryCount = 0) => {
     try {
-      console.log('Checking for DYMO printers...');
-      const printers = await window.dymo.label.framework.getPrinters();
-      console.log('DYMO printers found:', printers);
+      console.log(`Checking for DYMO printers... (attempt ${retryCount + 1})`);
       
-      // Parse the XML response if it's a string
-      let printerList = [];
-      if (typeof printers === 'string') {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(printers, 'text/xml');
-        const printerNodes = doc.getElementsByTagName('LabelWriterPrinter');
-        
-        for (let i = 0; i < printerNodes.length; i++) {
-          const name = printerNodes[i].getElementsByTagName('Name')[0]?.textContent || '';
-          const modelName = printerNodes[i].getElementsByTagName('ModelName')[0]?.textContent || '';
-          printerList.push({ name, modelName, printerType: 'LabelWriterPrinter' });
-        }
-      } else if (Array.isArray(printers)) {
-        printerList = printers.filter((p: any) => 
-          p.printerType === 'LabelWriterPrinter'
-        );
+      // First verify the service is really ready
+      const env = window.dymo.label.framework.checkEnvironment();
+      console.log('Environment check:', env);
+      
+      if (!env.isWebServicePresent) {
+        console.error('DYMO Web Service not present!');
+        return;
       }
       
-      console.log('Parsed DYMO printers:', printerList);
-      setDymoPrinters(printerList);
-      if (printerList.length > 0) {
-        setSelectedPrinter(printerList[0].name);
-        console.log('Selected printer:', printerList[0].name);
+      // Try different methods to get printers
+      console.log('Available DYMO methods:', Object.keys(window.dymo.label.framework).filter(k => k.includes('print') || k.includes('Printer')));
+      
+      // Method 1: getPrinters (synchronous)
+      let printers = window.dymo.label.framework.getPrinters();
+      console.log('getPrinters() raw response:', printers);
+      console.log('getPrinters() response type:', typeof printers);
+      console.log('getPrinters() response length:', printers?.length);
+      
+      // Parse the response based on its type
+      if (printers) {
+        const printerList: any[] = [];
+        
+        // The framework returns an object with a byIndex property containing the printer array
+        if (printers.byIndex && Array.isArray(printers.byIndex)) {
+          console.log('Using byIndex array, length:', printers.byIndex.length);
+          
+          // Iterate through the byIndex array
+          for (let i = 0; i < printers.byIndex.length; i++) {
+            const printerInfo = printers.byIndex[i];
+            console.log(`Printer ${i}:`, printerInfo);
+            
+            if (printerInfo && printerInfo.printerType) {
+              printerList.push({
+                name: printerInfo.name || 'Unknown',
+                modelName: printerInfo.modelName || 'Unknown',
+                printerType: printerInfo.printerType || 'LabelWriterPrinter',
+                isConnected: printerInfo.isConnected !== false, // Default to true if not explicitly false
+                isLocal: printerInfo.isLocal || false,
+                printerInfo: printerInfo // Keep the full info object
+              });
+            }
+          }
+        }
+        // Fallback: if it's a string (XML), try parsing as XML
+        else if (typeof printers === 'string') {
+          console.log('Printers is a string, parsing as XML...');
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(printers, 'text/xml');
+          const labelWriters = doc.getElementsByTagName('LabelWriterPrinter');
+          
+          for (let i = 0; i < labelWriters.length; i++) {
+            const printer = labelWriters[i];
+            const name = printer.getElementsByTagName('Name')[0]?.textContent || '';
+            const modelName = printer.getElementsByTagName('ModelName')[0]?.textContent || '';
+            const isConnected = printer.getElementsByTagName('IsConnected')[0]?.textContent === 'True';
+            
+            if (name && isConnected) {
+              printerList.push({ 
+                name, 
+                modelName, 
+                printerType: 'LabelWriterPrinter',
+                isConnected 
+              });
+            }
+          }
+        }
+        
+        console.log('Parsed DYMO printers:', printerList);
+        
+        if (printerList.length > 0) {
+          setDymoPrinters(printerList);
+          setSelectedPrinter(printerList[0].name);
+          console.log('Selected printer:', printerList[0].name);
+        } else {
+          console.warn('No connected DYMO printers found');
+          
+          // Retry up to 3 times with delay
+          if (retryCount < 3) {
+            console.log(`No printers found, retrying in 2 seconds...`);
+            setTimeout(() => {
+              checkDymoPrinters(retryCount + 1);
+            }, 2000);
+          } else {
+            console.error('Failed to find DYMO printers after 3 attempts');
+          }
+        }
+      } else {
+        console.error('No printer response received');
+        if (retryCount < 3) {
+          setTimeout(() => checkDymoPrinters(retryCount + 1), 2000);
+        }
       }
     } catch (error) {
       console.error('Error checking DYMO printers:', error);
+      console.error('Error details:', error.message, error.stack);
+      
+      // Retry on error
+      if (retryCount < 3) {
+        setTimeout(() => checkDymoPrinters(retryCount + 1), 2000);
+      }
     }
   };
 
@@ -275,7 +380,7 @@ export default function LabelsContent() {
   };
 
   // DYMO direct batch printing (like CellarTracker)
-  const printDymoLabels = async () => {
+  const printDymoLabels = () => {
     if (!window.dymo) return;
 
     console.log('Starting DYMO batch print...');
@@ -291,66 +396,42 @@ export default function LabelsContent() {
         const bottle = bottles.find(b => b._id === bottleId);
         if (!bottle) continue;
         
-        // Create label XML for each bottle
-        const labelXml = `<?xml version="1.0" encoding="utf-8"?>
-<DieCutLabel Version="8.0" Units="twips">
-  <PaperOrientation>Landscape</PaperOrientation>
-  <Id>30252 Address</Id>
-  <IsOutlined>false</IsOutlined>
-  <ObjectInfo>
-    <TextObject>
-      <Name>Text</Name>
-      <ForeColor Alpha="255" Red="0" Green="0" Blue="0"></ForeColor>
-      <BackColor Alpha="0" Red="255" Green="255" Blue="255"></BackColor>
-      <LinkedObjectName></LinkedObjectName>
-      <Rotation>Rotation0</Rotation>
-      <IsMirrored>False</IsMirrored>
-      <IsVariable>False</IsVariable>
-      <GroupID>-1</GroupID>
-      <IsOutlined>False</IsOutlined>
-      <HorizontalAlignment>Left</HorizontalAlignment>
-      <VerticalAlignment>Middle</VerticalAlignment>
-      <TextFitMode>ShrinkToFit</TextFitMode>
-      <UseFullFontHeight>True</UseFullFontHeight>
-      <Verticalized>False</Verticalized>
-      <StyledText>
-        <Element>
-          <String xml:space="preserve">${bottle.masterBottleId.name}
-${bottle.masterBottleId.distillery}
-${bottle.masterBottleId.proof ? bottle.masterBottleId.proof + '° proof' : ''}
-${bottle.location ? bottle.location.area + (bottle.location.bin ? '-' + bottle.location.bin : '') : ''}
-${bottle.vaultBarcode || 'WV' + bottle._id}</String>
-          <Attributes>
-            <Font Family="Arial" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False"></Font>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"></ForeColor>
-          </Attributes>
-        </Element>
-      </StyledText>
-    </TextObject>
-  </ObjectInfo>
-  <Bounds X="330" Y="150" Width="4455" Height="1260"></Bounds>
-</DieCutLabel>`;
-
-        // Print each label
-        await window.dymo.label.framework.printLabel(
-          selectedPrinter,
-          null,
-          labelXml,
-          ''
-        );
+        // Prepare label data with optional fields
+        const labelData = {
+          name: bottle.masterBottleId.name,
+          distillery: bottle.masterBottleId.distillery || (bottle.masterBottleId as any).brand,
+          age: (bottle.masterBottleId as any).age,
+          proof: bottle.masterBottleId.proof,
+          barcode: bottle.vaultBarcode || `WV${bottle._id}`,
+          rating: bottle.t8keRating,
+          // Optional fields
+          price: optionalFields.price ? (bottle as any).purchasePrice : undefined,
+          store: optionalFields.store ? (bottle as any).purchaseStore : undefined,
+          location: optionalFields.location ? bottle.location : undefined
+        };
+        
+        // Generate properly formatted label XML using template with QR code
+        const labelXml = generateDymoLabelXmlWithQR(dymoLabelSize, labelData);
+        
+        // Create label from XML and print directly
+        const label = window.dymo.label.framework.openLabelXml(labelXml);
+        label.print(selectedPrinter);
         
         successCount++;
       }
       
       // Update print status
-      await updatePrintStatus();
+      updatePrintStatus().then(() => {
+        console.log('Print status updated');
+      });
       
-      toast.success(`${successCount} labels printed to DYMO printer!`);
+      toast.success(`${successCount} labels sent directly to DYMO printer!`);
       setIsPrinting(false);
     } catch (error) {
       console.error('DYMO print error:', error);
-      toast.error('Failed to print DYMO labels');
-      setIsPrinting(false);
+      toast.error('Failed to print DYMO labels - falling back to browser print');
+      // Fall back to browser print
+      printLabels();
     }
   };
   
@@ -723,24 +804,79 @@ ${bottle.vaultBarcode || 'WV' + bottle._id}</String>
               </div>
 
               {format === 'dymo' && (
-                <div>
+                <div className="space-y-4">
                   {dymoReady && dymoPrinters.length > 0 ? (
                     <>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        DYMO Printer
-                      </label>
-                      <select
-                        value={selectedPrinter}
-                        onChange={(e) => setSelectedPrinter(e.target.value)}
-                        className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
-                      >
-                        {dymoPrinters.map((printer: any) => (
-                          <option key={printer.name} value={printer.name}>
-                            {printer.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-green-400 mt-1">✓ DYMO printer connected - direct printing enabled</p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          DYMO Printer
+                        </label>
+                        <select
+                          value={selectedPrinter}
+                          onChange={(e) => setSelectedPrinter(e.target.value)}
+                          className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
+                        >
+                          {dymoPrinters.map((printer: any) => (
+                            <option key={printer.name} value={printer.name}>
+                              {printer.name} {printer.modelName && `(${printer.modelName})`}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-green-400 mt-1">✓ DYMO printer connected - direct printing enabled</p>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Label Size
+                        </label>
+                        <select
+                          value={dymoLabelSize}
+                          onChange={(e) => setDymoLabelSize(e.target.value as DymoLabelSize)}
+                          className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
+                        >
+                          {Object.entries(DYMO_LABEL_INFO).map(([key, value]) => (
+                            <option key={key} value={key}>
+                              {value.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Optional Label Fields
+                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center space-x-2">
+                            <input 
+                              type="checkbox" 
+                              checked={optionalFields.price} 
+                              onChange={(e) => setOptionalFields({...optionalFields, price: e.target.checked})}
+                              className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
+                            />
+                            <span className="text-sm text-gray-300">Purchase Price</span>
+                          </label>
+                          <label className="flex items-center space-x-2">
+                            <input 
+                              type="checkbox" 
+                              checked={optionalFields.store} 
+                              onChange={(e) => setOptionalFields({...optionalFields, store: e.target.checked})}
+                              className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
+                            />
+                            <span className="text-sm text-gray-300">Store Name</span>
+                          </label>
+                          <label className="flex items-center space-x-2">
+                            <input 
+                              type="checkbox" 
+                              checked={optionalFields.location} 
+                              onChange={(e) => setOptionalFields({...optionalFields, location: e.target.checked})}
+                              className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
+                            />
+                            <span className="text-sm text-gray-300">Storage Location</span>
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">Note: More fields = smaller text size</p>
+                      </div>
                     </>
                   ) : (
                     <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
