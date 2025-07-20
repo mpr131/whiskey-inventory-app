@@ -86,6 +86,9 @@ export default function LocationsPage() {
                 <Link href="/locations" className="text-copper-light">
                   Locations
                 </Link>
+                <Link href="/labels" className="text-gray-300 hover:text-white transition-colors">
+                  Print Labels
+                </Link>
               </div>
             </div>
             <div className="flex items-center space-x-4">

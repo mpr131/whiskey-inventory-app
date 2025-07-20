@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Wine } from 'lucide-react';
+import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Wine, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import dynamicImport from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
+import { usePrintQueue } from '@/contexts/PrintQueueContext';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
   ssr: false,
@@ -71,6 +72,7 @@ export default function BottlesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { addToQueue, isInQueue } = usePrintQueue();
   const [bottles, setBottles] = useState<(UserBottle | MasterBottle | GroupedBottle)[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -248,6 +250,9 @@ export default function BottlesPage() {
                 </Link>
                 <Link href="/locations" className="text-gray-300 hover:text-white transition-colors">
                   Locations
+                </Link>
+                <Link href="/labels" className="text-gray-300 hover:text-white transition-colors">
+                  Print Labels
                 </Link>
               </div>
             </div>
@@ -690,14 +695,33 @@ export default function BottlesPage() {
                         View Details
                       </Link>
                       {isUser && (
-                        <button
-                          onClick={() => handleDelete(bottle._id)}
-                          className="glass border-red-500/30 text-red-400 px-3 py-2 rounded-lg hover:bg-red-500/10 hover:border-red-500/50 transition-all duration-300"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        <>
+                          <button
+                            onClick={() => addToQueue({
+                              _id: bottle._id,
+                              name: masterData.name,
+                              distillery: masterData.distillery,
+                              vaultBarcode: bottle.vaultBarcode
+                            })}
+                            disabled={isInQueue(bottle._id)}
+                            className={`glass px-3 py-2 rounded-lg transition-all duration-300 ${
+                              isInQueue(bottle._id)
+                                ? 'border-gray-600 text-gray-500 cursor-not-allowed'
+                                : 'border-copper/30 text-copper hover:bg-copper/10 hover:border-copper/50'
+                            }`}
+                            title={isInQueue(bottle._id) ? 'Already in queue' : 'Add to print queue'}
+                          >
+                            <Tag className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(bottle._id)}
+                            className="glass border-red-500/30 text-red-400 px-3 py-2 rounded-lg hover:bg-red-500/10 hover:border-red-500/50 transition-all duration-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>

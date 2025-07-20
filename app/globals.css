@@ -198,3 +198,136 @@ body {
 .delay-1000 {
   animation-delay: 1s;
 }
+
+/* Label printing styles */
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  /* First hide everything */
+  * {
+    visibility: hidden !important;
+  }
+
+  /* Then show only print content and its children */
+  .print-content,
+  .print-content * {
+    visibility: visible !important;
+  }
+  
+  /* Hide body background */
+  body {
+    background: none !important;
+  }
+  
+  /* Show print content */
+  .print-content {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+  }
+  
+  /* Hide elements marked for print hiding */
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print\\:block {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Label specific styles */
+  #label-print-content,
+  #batch-print-content {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Ensure label content is visible */
+  .print-label,
+  .label-item {
+    display: block !important;
+    visibility: visible !important;
+    background: white !important;
+    color: black !important;
+    page-break-inside: avoid;
+    border: 1px solid black !important;
+  }
+
+  /* Ensure all label children are visible */
+  .print-label *,
+  .label-item * {
+    visibility: visible !important;
+    color: black !important;
+  }
+
+  /* QR code specific */
+  .print-label svg,
+  .label-item svg {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Label text styles */
+  .label-title {
+    font-weight: bold !important;
+  }
+  
+  .label-content {
+    padding: 8px !important;
+  }
+
+  /* Avery 5160 - 1" x 2.625" - 30 per sheet (3 columns x 10 rows) */
+  @page avery5160 {
+    size: 8.5in 11in;
+    margin: 0.5in 0.1875in;
+  }
+
+  /* Avery 5163 - 2" x 4" - 10 per sheet (2 columns x 5 rows) */
+  @page avery5163 {
+    size: 8.5in 11in;
+    margin: 0.5in 0.125in;
+  }
+
+  /* Dymo LabelWriter */
+  @page dymo {
+    size: 2.25in 1.125in;
+    margin: 0;
+  }
+
+  /* Prevent page breaks inside labels */
+  .label-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Ensure proper spacing for sheet labels */
+  .label-grid {
+    display: grid !important;
+    gap: 0;
+    align-content: start;
+  }
+
+  .label-grid.avery5160 {
+    grid-template-columns: repeat(3, 2.625in);
+    grid-template-rows: repeat(10, 1in);
+  }
+
+  .label-grid.avery5163 {
+    grid-template-columns: repeat(2, 4in);
+    grid-template-rows: repeat(5, 2in);
+  }
+}
+
+/* QR Code styling */
+.qr-code-container {
+  background: white;
+  padding: 4px;
+  display: inline-block;
+}

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine, Copy, CheckCircle, Users, Tag, ChevronRight, Plus, Sliders } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine, Copy, CheckCircle, Users, Tag, ChevronRight, Plus, Sliders, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PhotoUpload from '@/components/PhotoUpload';
 import BarrelRating from '@/components/BarrelRating';
@@ -777,6 +777,14 @@ export default function BottleDetailPage() {
         </div>
         
         <div className="flex items-center space-x-2">
+          <Link
+            href={`/bottles/${bottleId}/label`}
+            className="p-2 text-gray-400 hover:text-copper hover:bg-copper/10 rounded-lg transition-all"
+            title="Print label"
+          >
+            <Printer className="w-5 h-5" />
+          </Link>
+          
           <Link
             href={`/bottles/${bottleId}/edit`}
             className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"

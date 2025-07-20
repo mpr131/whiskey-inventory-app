@@ -9,6 +9,14 @@ export interface IUser extends Document {
   inviteCodeUsed: string;
   barcodePrefix?: string;
   lastBarcodeSequence: number;
+  lastPrintSessionDate?: Date;
+  labelPrintPreferences?: {
+    defaultFormat?: 'dymo' | 'avery5160' | 'avery5163' | 'custom';
+    customSize?: {
+      width: string;
+      height: string;
+    };
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -54,6 +62,18 @@ const UserSchema = new Schema<IUser>(
       type: Number,
       default: 0,
       min: 0,
+    },
+    lastPrintSessionDate: Date,
+    labelPrintPreferences: {
+      defaultFormat: {
+        type: String,
+        enum: ['dymo', 'avery5160', 'avery5163', 'custom'],
+        default: 'dymo',
+      },
+      customSize: {
+        width: String,
+        height: String,
+      },
     },
   },
   {

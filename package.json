@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev.js",
+    "dev": "next dev --experimental-https",
+    "dev:http": "node scripts/dev.js",
     "build": "next build",
     "start": "node scripts/start.js",
     "lint": "next lint",
@@ -31,6 +32,7 @@
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.3.8",
     "react-hot-toast": "^2.5.2",
+    "react-qr-code": "^2.0.18",
     "react-zxing": "^2.1.0",
     "recharts": "^3.1.0",
     "tailwindcss": "^3.4.1",

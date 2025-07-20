@@ -41,6 +41,8 @@ export interface IUserBottle extends Document {
   averageRating?: number;
   totalPours?: number;
   lastPourDate?: Date;
+  lastLabelPrintedAt?: Date;
+  t8keRating?: number;
   createdAt: Date;
   updatedAt: Date;
   
@@ -196,6 +198,12 @@ const UserBottleSchema = new Schema<IUserBottle>(
       min: 0,
     },
     lastPourDate: Date,
+    lastLabelPrintedAt: Date,
+    t8keRating: {
+      type: Number,
+      min: 0,
+      max: 10,
+    },
   },
   {
     timestamps: true,
