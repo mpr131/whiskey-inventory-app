@@ -154,10 +154,21 @@ export async function POST(request: NextRequest) {
         
         // If not found by iWine, try standard lookup
         if (!masterBottle) {
+          // Check if this is a store pick
+          const storePickValue = firstBottle[columnMapping.isStorePick];
+          const storePickStore = firstBottle[columnMapping.store];
+          const barrelNumber = firstBottle[columnMapping.barrelNumber];
+          const warehouse = firstBottle[columnMapping.warehouse];
+          const floor = firstBottle[columnMapping.floor];
+          const pickDate = firstBottle[columnMapping.pickDate];
+          
+          const isStorePick = (storePickValue && storePickValue.toLowerCase() === 'yes') ||
+                            !!(storePickStore || barrelNumber || warehouse || floor || pickDate);
+          
           masterBottle = await MasterBottle.findOne({
             name: { $regex: new RegExp(`^${wine.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
             distillery: { $regex: new RegExp(`^${producer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-            isStorePick: false,
+            isStorePick: isStorePick,
           });
           
           if (masterBottle) {
@@ -187,10 +198,48 @@ export async function POST(request: NextRequest) {
 
           // Extract ABV/proof from wine name
           const abvData = extractAbvFromName(wine);
+          
+          // Override with imported values if provided
+          const importedProof = firstBottle[columnMapping.proof];
+          const importedAbv = firstBottle[columnMapping.abv];
+          
+          if (importedProof && typeof importedProof === 'string') {
+            const proof = parseFloat(importedProof);
+            if (!isNaN(proof) && proof > 0 && proof <= 200) {
+              abvData.proof = proof;
+              abvData.statedProof = proof.toString();
+              if (!importedAbv) {
+                abvData.abv = proof / 2;
+              }
+            }
+          }
+          
+          if (importedAbv && typeof importedAbv === 'string') {
+            const abv = parseFloat(importedAbv);
+            if (!isNaN(abv) && abv > 0 && abv <= 100) {
+              abvData.abv = abv;
+              if (!importedProof) {
+                abvData.proof = abv * 2;
+                abvData.statedProof = (abv * 2).toString();
+              }
+            }
+          }
+
+          // Check if this is a store pick from the first bottle data
+          const storePickValue = firstBottle[columnMapping.isStorePick];
+          const storePickStore = firstBottle[columnMapping.store];
+          const barrelNumber = firstBottle[columnMapping.barrelNumber];
+          const warehouse = firstBottle[columnMapping.warehouse];
+          const floor = firstBottle[columnMapping.floor];
+          const pickDate = firstBottle[columnMapping.pickDate];
+          
+          // Auto-detect store pick
+          const isStorePick = (storePickValue && storePickValue.toLowerCase() === 'yes') ||
+                            !!(storePickStore || barrelNumber || warehouse || floor || pickDate);
 
           // Create new MasterBottle
           try {
-            masterBottle = await MasterBottle.create({
+            const masterBottleData: any = {
               name: wine,
               brand: producer,
               distillery: producer,
@@ -201,8 +250,20 @@ export async function POST(request: NextRequest) {
               abv: abvData.abv || undefined,
               proof: abvData.proof || undefined,
               statedProof: abvData.statedProof || undefined,
+              isStorePick: isStorePick,
               createdBy: new mongoose.Types.ObjectId(session.user.id),
-            });
+            };
+
+            // Add store pick details if present
+            if (isStorePick) {
+              masterBottleData.storePickDetails = {
+                store: storePickStore || '',
+                pickDate: pickDate ? new Date(pickDate) : undefined,
+                barrel: barrelNumber || '',
+              };
+            }
+
+            masterBottle = await MasterBottle.create(masterBottleData);
             results.masterBottlesCreated++;
           } catch (createError: any) {
             if (createError.code === 11000) {
@@ -210,7 +271,7 @@ export async function POST(request: NextRequest) {
               masterBottle = await MasterBottle.findOne({
                 name: { $regex: new RegExp(`^${wine.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
                 distillery: { $regex: new RegExp(`^${producer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-                isStorePick: false,
+                isStorePick: isStorePick,
               });
               if (masterBottle) {
                 results.masterBottlesFound++;
@@ -337,6 +398,69 @@ export async function POST(request: NextRequest) {
           const size = bottle[columnMapping.size];
           if (size && size !== '750ml' && size !== '750ML') {
             userBottleData.notes = `${size} bottle. ${userBottleData.notes}`.trim();
+          }
+
+          // Handle proof and ABV calculations
+          const proofValue = bottle[columnMapping.proof];
+          const abvValue = bottle[columnMapping.abv];
+          
+          if (proofValue || abvValue) {
+            // If proof is provided, use it
+            if (proofValue && typeof proofValue === 'string') {
+              const proof = parseFloat(proofValue);
+              if (!isNaN(proof) && proof > 0 && proof <= 200) {
+                userBottleData.actualProof = proof;
+                // Calculate ABV if not provided
+                if (!abvValue) {
+                  userBottleData.actualAbv = proof / 2;
+                }
+              }
+            }
+            
+            // If ABV is provided, use it
+            if (abvValue && typeof abvValue === 'string') {
+              const abv = parseFloat(abvValue);
+              if (!isNaN(abv) && abv > 0 && abv <= 100) {
+                userBottleData.actualAbv = abv;
+                // Calculate proof if not provided
+                if (!proofValue) {
+                  userBottleData.actualProof = abv * 2;
+                }
+              }
+            }
+          }
+
+          // Handle store pick fields
+          const storePickValue = bottle[columnMapping.isStorePick];
+          const storePickStore = bottle[columnMapping.store];
+          const barrelNumber = bottle[columnMapping.barrelNumber];
+          const warehouse = bottle[columnMapping.warehouse];
+          const floor = bottle[columnMapping.floor];
+          const pickDate = bottle[columnMapping.pickDate];
+          
+          // Auto-detect store pick if any store pick field has data
+          const isStorePick = (storePickValue && storePickValue.toLowerCase() === 'yes') ||
+                            !!(storePickStore || barrelNumber || warehouse || floor || pickDate);
+          
+          if (isStorePick || barrelNumber) {
+            // Add barrel number to bottle-specific fields
+            if (barrelNumber) {
+              userBottleData.barrelNumber = barrelNumber;
+            }
+            
+            // Add store pick details to notes if present
+            const storePickDetails = [];
+            if (storePickStore) storePickDetails.push(`Store Pick: ${storePickStore}`);
+            if (warehouse) storePickDetails.push(`Warehouse: ${warehouse}`);
+            if (floor) storePickDetails.push(`Floor: ${floor}`);
+            if (pickDate) storePickDetails.push(`Pick Date: ${pickDate}`);
+            
+            if (storePickDetails.length > 0) {
+              const storePickNote = storePickDetails.join(', ');
+              userBottleData.notes = userBottleData.notes 
+                ? `${userBottleData.notes}\n${storePickNote}`
+                : storePickNote;
+            }
           }
 
           // Handle store creation/lookup

@@ -69,12 +69,45 @@ export default function InviteCodesPage() {
 
   const copyToClipboard = async (code: string) => {
     try {
-      await navigator.clipboard.writeText(code);
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        // Fallback for mobile and non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+        } catch (err) {
+          console.error('Fallback copy failed:', err);
+          throw new Error('Copy failed');
+        } finally {
+          textArea.remove();
+        }
+      }
+      
       setCopiedCode(code);
       toast.success('Code copied to clipboard!');
       setTimeout(() => setCopiedCode(null), 2000);
     } catch (error) {
-      toast.error('Failed to copy code');
+      console.error('Copy to clipboard failed:', error);
+      // Show a modal or alert with the code for manual copying
+      toast.error(
+        <div>
+          <p className="mb-2">Unable to copy automatically. Code:</p>
+          <code className="bg-gray-800 px-2 py-1 rounded text-copper font-mono select-all">
+            {code}
+          </code>
+        </div>,
+        { duration: 5000 }
+      );
     }
   };
 
@@ -183,12 +216,16 @@ export default function InviteCodesPage() {
                   <tr key={code._id} className="hover:bg-gray-700/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <code className="text-copper font-mono text-lg">
+                        <code 
+                          className="text-copper font-mono text-lg select-all cursor-pointer"
+                          onClick={() => copyToClipboard(code.code)}
+                          title="Click to copy"
+                        >
                           {code.code}
                         </code>
                         <button
                           onClick={() => copyToClipboard(code.code)}
-                          className="text-gray-400 hover:text-white transition-colors"
+                          className="text-gray-400 hover:text-white transition-colors p-1 -m-1"
                           title="Copy to clipboard"
                         >
                           {copiedCode === code.code ? (

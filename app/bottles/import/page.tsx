@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, Info, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface CSVPreview {
@@ -38,6 +38,14 @@ interface ColumnMapping {
   value: string;
   varietal: string;
   region: string;
+  proof: string;
+  abv: string;
+  isStorePick: string;
+  store: string;
+  barrelNumber: string;
+  warehouse: string;
+  floor: string;
+  pickDate: string;
 }
 
 const defaultMapping: ColumnMapping = {
@@ -61,6 +69,14 @@ const defaultMapping: ColumnMapping = {
   value: '',
   varietal: '',
   region: '',
+  proof: '',
+  abv: '',
+  isStorePick: '',
+  store: '',
+  barrelNumber: '',
+  warehouse: '',
+  floor: '',
+  pickDate: '',
 };
 
 const fieldLabels: Record<keyof ColumnMapping, string> = {
@@ -84,6 +100,14 @@ const fieldLabels: Record<keyof ColumnMapping, string> = {
   value: 'Market Value',
   varietal: 'Varietal/Category',
   region: 'Region',
+  proof: 'Proof',
+  abv: 'ABV %',
+  isStorePick: 'Store Pick (Yes/No)',
+  store: 'Store Pick - Store Name',
+  barrelNumber: 'Barrel Number',
+  warehouse: 'Warehouse/Rickhouse',
+  floor: 'Floor',
+  pickDate: 'Pick Date',
 };
 
 export default function ImportBottlesPage() {
@@ -257,6 +281,160 @@ export default function ImportBottlesPage() {
     return result;
   };
 
+  // Function to download CSV template
+  const downloadTemplate = () => {
+    const headers = [
+      'Wine Name',
+      'Producer/Distillery',
+      'Vintage/Year',
+      'Bottle Size',
+      'Purchase Price',
+      'Quantity',
+      'Location/Area',
+      'Bin/Position',
+      'Tasting Notes',
+      'Personal Notes',
+      'Purchase Notes',
+      'Purchase Date',
+      'Store Name',
+      'Delivery Date',
+      'Barcode',
+      'Wine Barcode',
+      'CellarTracker ID',
+      'Market Value',
+      'Varietal/Category',
+      'Region',
+      'Proof',
+      'ABV %',
+      'Store Pick (Yes/No)',
+      'Store Pick - Store Name',
+      'Barrel Number',
+      'Warehouse/Rickhouse',
+      'Floor',
+      'Pick Date'
+    ];
+
+    const sampleData = [
+      [
+        'Blanton\'s Single Barrel',
+        'Buffalo Trace',
+        '2023',
+        '750ml',
+        '89.99',
+        '1',
+        'Cabinet A',
+        'Shelf 3',
+        'Rich caramel and vanilla notes with a hint of orange peel',
+        'Birthday gift from John',
+        'Found at local store',
+        '2023-12-15',
+        'ABC Fine Wine & Spirits',
+        '2023-12-16',
+        '123456789012',
+        '987654321098',
+        '',
+        '125.00',
+        'Bourbon',
+        'Kentucky',
+        '93',
+        '46.5',
+        'No',
+        '',
+        '',
+        '',
+        '',
+        ''
+      ],
+      [
+        'Eagle Rare 10 Year Store Pick',
+        'Buffalo Trace',
+        '2023',
+        '750ml',
+        '45.99',
+        '2',
+        'Cabinet B',
+        'Shelf 1',
+        'Oak, toffee, and hints of orange',
+        'Store pick from Total Wine',
+        'Limited release',
+        '2023-11-20',
+        'Total Wine & More',
+        '2023-11-21',
+        '234567890123',
+        '',
+        '',
+        '89.99',
+        'Bourbon',
+        'Kentucky',
+        '90',
+        '45',
+        'Yes',
+        'Total Wine & More',
+        '23-4567',
+        'Warehouse H',
+        '5',
+        '2023-10-15'
+      ],
+      [
+        'Weller Special Reserve',
+        'Buffalo Trace',
+        '2024',
+        '750ml',
+        '29.99',
+        '1',
+        'Cabinet A',
+        'Shelf 2',
+        'Smooth wheat notes with honey and butterscotch',
+        'Daily sipper',
+        'MSRP find!',
+        '2024-01-05',
+        'Kroger',
+        '2024-01-05',
+        '',
+        '',
+        '',
+        '75.00',
+        'Wheated Bourbon',
+        'Kentucky',
+        '90',
+        '',
+        'No',
+        '',
+        '',
+        '',
+        '',
+        ''
+      ]
+    ];
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...sampleData.map(row => 
+        row.map(cell => 
+          cell.includes(',') || cell.includes('"') || cell.includes('\n') 
+            ? `"${cell.replace(/"/g, '""')}"` 
+            : cell
+        ).join(',')
+      )
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'whiskey_vault_import_template.csv');
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Template downloaded! Check your downloads folder.');
+  };
+
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-8">
@@ -278,18 +456,31 @@ export default function ImportBottlesPage() {
       </div>
 
       {!preview && (
-        <div
-          {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-            isDragActive ? 'border-amber-500 bg-amber-500/10' : 'border-gray-700 hover:border-amber-500'
-          }`}
-        >
-          <input {...getInputProps()} />
-          <Upload className="w-16 h-16 mx-auto mb-4 text-gray-500" />
-          <p className="text-lg mb-2">
-            {isDragActive ? 'Drop the CSV file here' : 'Drag & drop a CSV file here'}
-          </p>
-          <p className="text-sm text-gray-500">or click to select a file</p>
+        <div className="space-y-4">
+          <div
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
+              isDragActive ? 'border-amber-500 bg-amber-500/10' : 'border-gray-700 hover:border-amber-500'
+            }`}
+          >
+            <input {...getInputProps()} />
+            <Upload className="w-16 h-16 mx-auto mb-4 text-gray-500" />
+            <p className="text-lg mb-2">
+              {isDragActive ? 'Drop the CSV file here' : 'Drag & drop a CSV file here'}
+            </p>
+            <p className="text-sm text-gray-500">or click to select a file</p>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-sm text-gray-400 mb-2">Need a template?</p>
+            <button
+              onClick={downloadTemplate}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download CSV Template
+            </button>
+          </div>
         </div>
       )}
 
