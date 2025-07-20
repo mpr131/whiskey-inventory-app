@@ -106,8 +106,8 @@ PourSessionSchema.methods.updateStats = async function() {
   const allTags = new Set<string>();
   
   pours.forEach(pour => {
-    pour.companions?.forEach(c => allCompanions.add(c));
-    pour.tags?.forEach(t => allTags.add(t));
+    pour.companions?.forEach((c: string) => allCompanions.add(c));
+    pour.tags?.forEach((t: string) => allTags.add(t));
   });
   
   this.companions = Array.from(allCompanions);

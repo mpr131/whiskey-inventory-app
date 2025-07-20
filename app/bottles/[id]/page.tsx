@@ -70,6 +70,9 @@ interface UserBottle {
   }>;
   fillLevel: number;
   openDate?: string;
+  averageRating?: number;
+  totalPours?: number;
+  lastPourDate?: string;
   createdAt: string;
   updatedAt: string;
 }
