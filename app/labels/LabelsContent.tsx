@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
-import { generateDymoLabelXml, generateDymoLabelXmlWithQR, DYMO_LABEL_INFO, type DymoLabelSize } from '@/lib/dymo-label-templates';
+import { generateDymoLabelXmlWithQR, DYMO_LABEL_INFO, type DymoLabelSize } from '@/lib/dymo-label-templates';
 
 // DYMO types
 declare global {
@@ -49,6 +49,8 @@ interface UserBottle {
   lastLabelPrintedAt?: string;
   createdAt: string;
   t8keRating?: number;
+  purchasePrice?: number;
+  purchaseStore?: string;
 }
 
 type FilterType = 'new' | 'never' | 'missing' | 'dateRange' | 'all';
@@ -173,7 +175,7 @@ export default function LabelsContent() {
       (window as any)._dymoLoading = false;
     };
     document.head.appendChild(script);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for DYMO printers with retry
   const checkDymoPrinters = async (retryCount = 0) => {
@@ -274,7 +276,7 @@ export default function LabelsContent() {
       }
     } catch (error) {
       console.error('Error checking DYMO printers:', error);
-      console.error('Error details:', error.message, error.stack);
+      console.error('Error details:', (error as any).message, (error as any).stack);
       
       // Retry on error
       if (retryCount < 3) {
@@ -376,6 +378,45 @@ export default function LabelsContent() {
       await printDymoLabels();
     } else {
       await printLabels();
+    }
+  };
+  
+  const handleTestPrint = async () => {
+    if (!dymoReady || dymoPrinters.length === 0) {
+      toast.error('DYMO printer not available');
+      return;
+    }
+    
+    setIsPrinting(true);
+    
+    try {
+      // Create test label data
+      const testLabelData = {
+        name: 'Found North Batch 011',
+        distillery: 'Found North',
+        age: '18',
+        proof: 129.8,
+        barcode: 'WV002-000464',
+        rating: 8,
+        // Optional fields based on settings
+        price: optionalFields.price ? '199' : undefined,
+        store: optionalFields.store ? 'Total Wine' : undefined,
+        location: optionalFields.location ? { area: 'A1', bin: 'B2' } : undefined
+      };
+      
+      // Generate label XML
+      const labelXml = generateDymoLabelXmlWithQR(dymoLabelSize, testLabelData);
+      
+      // Create label from XML and print directly
+      const label = window.dymo.label.framework.openLabelXml(labelXml);
+      label.print(selectedPrinter);
+      
+      toast.success('Test label sent to DYMO printer!');
+    } catch (error) {
+      console.error('Test print error:', error);
+      toast.error('Failed to print test label');
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -637,6 +678,19 @@ export default function LabelsContent() {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString();
   };
+  
+  // Calculate preview font size based on selected fields
+  const getPreviewFontSize = () => {
+    const fieldCount = 4 + // core fields (name, distillery, age, proof)
+      (optionalFields.price ? 1 : 0) +
+      (optionalFields.store ? 1 : 0) +
+      (optionalFields.location ? 1 : 0);
+    
+    if (fieldCount <= 4) return '10px';
+    if (fieldCount <= 5) return '9px';
+    if (fieldCount <= 6) return '8px';
+    return '7px';
+  };
 
   const getDimensions = () => {
     if (format === 'custom') {
@@ -784,145 +838,195 @@ export default function LabelsContent() {
               <h2 className="text-lg font-semibold text-white">Label Settings</h2>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Label Format
-                </label>
-                <select
-                  value={format}
-                  onChange={(e) => setFormat(e.target.value as LabelFormat)}
-                  className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
-                >
-                  {Object.entries(LABEL_FORMATS).map(([key, value]) => (
-                    <option key={key} value={key}>
-                      {value.name}
-                      {value.perSheet && ` (${value.perSheet} per sheet)`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {format === 'dymo' && (
-                <div className="space-y-4">
-                  {dymoReady && dymoPrinters.length > 0 ? (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          DYMO Printer
-                        </label>
-                        <select
-                          value={selectedPrinter}
-                          onChange={(e) => setSelectedPrinter(e.target.value)}
-                          className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
-                        >
-                          {dymoPrinters.map((printer: any) => (
-                            <option key={printer.name} value={printer.name}>
-                              {printer.name} {printer.modelName && `(${printer.modelName})`}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-green-400 mt-1">✓ DYMO printer connected - direct printing enabled</p>
+            {format === 'dymo' && dymoReady && dymoPrinters.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column - Preview */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Label Preview
+                  </label>
+                  <div className="bg-white rounded-lg p-4 flex items-center justify-center" style={{ minHeight: '120px' }}>
+                    <div className="flex items-center gap-2" style={{ 
+                      width: DYMO_LABEL_INFO[dymoLabelSize].width / 1440 * 100 + 'px',
+                      height: DYMO_LABEL_INFO[dymoLabelSize].height / 1440 * 100 + 'px',
+                      border: '1px dashed #ccc',
+                      padding: '4px',
+                      backgroundColor: 'white',
+                      fontSize: getPreviewFontSize()
+                    }}>
+                      {/* Text Section */}
+                      <div className="flex-1 text-black overflow-hidden">
+                        <div className="truncate">Found North Batch 011</div>
+                        <div className="truncate">Found North</div>
+                        <div className="truncate">18 Year</div>
+                        <div className="truncate">129.8° proof</div>
+                        {optionalFields.price && <div className="truncate">$199</div>}
+                        {optionalFields.store && <div className="truncate">Total Wine</div>}
+                        {optionalFields.location && <div className="truncate">A1-B2</div>}
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Label Size
-                        </label>
-                        <select
-                          value={dymoLabelSize}
-                          onChange={(e) => setDymoLabelSize(e.target.value as DymoLabelSize)}
-                          className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
-                        >
-                          {Object.entries(DYMO_LABEL_INFO).map(([key, value]) => (
-                            <option key={key} value={key}>
-                              {value.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Optional Label Fields
-                        </label>
-                        <div className="space-y-2">
-                          <label className="flex items-center space-x-2">
-                            <input 
-                              type="checkbox" 
-                              checked={optionalFields.price} 
-                              onChange={(e) => setOptionalFields({...optionalFields, price: e.target.checked})}
-                              className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
-                            />
-                            <span className="text-sm text-gray-300">Purchase Price</span>
-                          </label>
-                          <label className="flex items-center space-x-2">
-                            <input 
-                              type="checkbox" 
-                              checked={optionalFields.store} 
-                              onChange={(e) => setOptionalFields({...optionalFields, store: e.target.checked})}
-                              className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
-                            />
-                            <span className="text-sm text-gray-300">Store Name</span>
-                          </label>
-                          <label className="flex items-center space-x-2">
-                            <input 
-                              type="checkbox" 
-                              checked={optionalFields.location} 
-                              onChange={(e) => setOptionalFields({...optionalFields, location: e.target.checked})}
-                              className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
-                            />
-                            <span className="text-sm text-gray-300">Storage Location</span>
-                          </label>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2">Note: More fields = smaller text size</p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                      <div className="flex items-start space-x-2">
-                        <Info className="w-4 h-4 text-blue-400 mt-0.5" />
-                        <div className="text-sm">
-                          <p className="text-blue-400">DYMO Connect not detected</p>
-                          <p className="text-blue-400/80 text-xs mt-1">
-                            Install DYMO Connect for direct printing, or use browser print dialog
-                          </p>
-                        </div>
+                      {/* QR Code */}
+                      <div className="flex-shrink-0">
+                        <QRCode 
+                          value="WV002-000464" 
+                          size={dymoLabelSize === '30336' ? 45 : 55} 
+                          level="L"
+                        />
                       </div>
                     </div>
-                  )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Actual size preview for {DYMO_LABEL_INFO[dymoLabelSize].name}</p>
                 </div>
-              )}
 
-              {format === 'custom' && (
-                <>
+                {/* Right Column - Settings */}
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Width
+                      DYMO Printer
                     </label>
-                    <input
-                      type="text"
-                      value={customSize.width}
-                      onChange={(e) => setCustomSize({ ...customSize, width: e.target.value })}
+                    <select
+                      value={selectedPrinter}
+                      onChange={(e) => setSelectedPrinter(e.target.value)}
                       className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
-                      placeholder="3in"
-                    />
+                    >
+                      {dymoPrinters.map((printer: any) => (
+                        <option key={printer.name} value={printer.name}>
+                          {printer.name} {printer.modelName && `(${printer.modelName})`}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-green-400 mt-1">✓ DYMO printer connected - direct printing enabled</p>
                   </div>
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Height
+                      Label Size
                     </label>
-                    <input
-                      type="text"
-                      value={customSize.height}
-                      onChange={(e) => setCustomSize({ ...customSize, height: e.target.value })}
+                    <select
+                      value={dymoLabelSize}
+                      onChange={(e) => setDymoLabelSize(e.target.value as DymoLabelSize)}
                       className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
-                      placeholder="2in"
-                    />
+                    >
+                      {Object.entries(DYMO_LABEL_INFO).map(([key, value]) => (
+                        <option key={key} value={key}>
+                          {value.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </>
-              )}
-            </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Optional Label Fields
+                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input 
+                          type="checkbox" 
+                          checked={optionalFields.price} 
+                          onChange={(e) => setOptionalFields({...optionalFields, price: e.target.checked})}
+                          className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
+                        />
+                        <span className="text-sm text-gray-300">Purchase Price</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input 
+                          type="checkbox" 
+                          checked={optionalFields.store} 
+                          onChange={(e) => setOptionalFields({...optionalFields, store: e.target.checked})}
+                          className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
+                        />
+                        <span className="text-sm text-gray-300">Store Name</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input 
+                          type="checkbox" 
+                          checked={optionalFields.location} 
+                          onChange={(e) => setOptionalFields({...optionalFields, location: e.target.checked})}
+                          className="rounded border-gray-600 bg-white/5 text-copper focus:ring-copper"
+                        />
+                        <span className="text-sm text-gray-300">Storage Location</span>
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">Note: More fields = smaller text size</p>
+                  </div>
+                  
+                  {/* Test Print Button */}
+                  <div>
+                    <button
+                      onClick={handleTestPrint}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-copper/10 hover:bg-copper/20 text-copper rounded-lg transition-colors"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Test Print Single Label</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Non-DYMO format selection */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Label Format
+                  </label>
+                  <select
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value as LabelFormat)}
+                    className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
+                  >
+                    {Object.entries(LABEL_FORMATS).map(([key, value]) => (
+                      <option key={key} value={key}>
+                        {value.name}
+                        {value.perSheet && ` (${value.perSheet} per sheet)`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {format === 'dymo' && !dymoReady && (
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <Info className="w-4 h-4 text-blue-400 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="text-blue-400">DYMO Connect not detected</p>
+                        <p className="text-blue-400/80 text-xs mt-1">
+                          Install DYMO Connect for direct printing, or use browser print dialog
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {format === 'custom' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Width
+                      </label>
+                      <input
+                        type="text"
+                        value={customSize.width}
+                        onChange={(e) => setCustomSize({ ...customSize, width: e.target.value })}
+                        className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
+                        placeholder="3in"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Height
+                      </label>
+                      <input
+                        type="text"
+                        value={customSize.height}
+                        onChange={(e) => setCustomSize({ ...customSize, height: e.target.value })}
+                        className="w-full bg-white/5 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-copper focus:outline-none"
+                        placeholder="2in"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {dimensions.perSheet && (
               <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">

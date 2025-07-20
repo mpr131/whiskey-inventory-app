@@ -44,6 +44,8 @@ interface UserBottle {
   fillLevel: number;
   lastLabelPrintedAt?: string;
   t8keRating?: number;
+  purchasePrice?: number;
+  purchaseStore?: string;
 }
 
 type LabelFormat = 'dymo' | 'avery5160' | 'avery5163' | 'custom';
@@ -145,7 +147,7 @@ export default function BottleLabelPage() {
       (window as any)._dymoLoading = false;
     };
     document.head.appendChild(script);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for DYMO printers with retry
   const checkDymoPrinters = async (retryCount = 0) => {
@@ -265,7 +267,7 @@ export default function BottleLabelPage() {
       }
     } catch (error) {
       console.error('Error checking DYMO printers:', error);
-      console.error('Error details:', error.message, error.stack);
+      console.error('Error details:', (error as any).message, (error as any).stack);
       
       // Retry on error
       if (retryCount < 3) {
