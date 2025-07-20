@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine, Copy, CheckCircle, Users, Tag, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine, Copy, CheckCircle, Users, Tag, ChevronRight, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PhotoUpload from '@/components/PhotoUpload';
 import BarrelRating from '@/components/BarrelRating';
@@ -530,10 +530,21 @@ export default function BottleDetailPage() {
 
             {/* Your Bottles Section */}
             <div className="card-premium">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                <Package className="w-5 h-5 mr-2" />
-                Your Bottles ({masterBottleView.totalCount})
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white flex items-center">
+                  <Package className="w-5 h-5 mr-2" />
+                  Your Bottles ({masterBottleView.totalCount})
+                </h2>
+                {masterBottleView?.masterBottle?._id && (
+                  <Link
+                    href={`/bottles/add?masterBottleId=${masterBottleView.masterBottle._id}`}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-copper hover:bg-copper-dark text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Another
+                  </Link>
+                )}
+              </div>
               
               {masterBottleView.groupedBottles.map((group, groupIndex) => (
                 <div key={groupIndex} className="mb-6 last:mb-0">

@@ -16,8 +16,21 @@ export async function GET(req: NextRequest) {
 
     const searchParams = req.nextUrl.searchParams;
     const query = searchParams.get('q') || '';
+    const id = searchParams.get('id');
     const limit = parseInt(searchParams.get('limit') || '10');
 
+    // If searching by ID
+    if (id) {
+      try {
+        const bottle = await MasterBottle.findById(id);
+        return NextResponse.json({ bottles: bottle ? [bottle] : [] });
+      } catch (error) {
+        console.error('Error finding bottle by ID:', error);
+        return NextResponse.json({ bottles: [] });
+      }
+    }
+
+    // Regular search by query
     if (!query || query.length < 2) {
       return NextResponse.json({ bottles: [] });
     }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -22,6 +22,7 @@ interface MasterBottle {
 
 export default function AddBottlePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MasterBottle[]>([]);
@@ -29,6 +30,7 @@ export default function AddBottlePage() {
   const [selectedMaster, setSelectedMaster] = useState<MasterBottle | null>(null);
   const [createNew, setCreateNew] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMasterBottle, setLoadingMasterBottle] = useState(false);
   
   // Autocomplete suggestions
   const [storeSuggestions, setStoreSuggestions] = useState<string[]>([]);
@@ -90,6 +92,14 @@ export default function AddBottlePage() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
+  // Handle masterBottleId from query params
+  useEffect(() => {
+    const masterBottleId = searchParams.get('masterBottleId');
+    if (masterBottleId) {
+      fetchMasterBottle(masterBottleId);
+    }
+  }, [searchParams]);
+
   const searchMasterBottles = async () => {
     setSearching(true);
     try {
@@ -103,6 +113,28 @@ export default function AddBottlePage() {
       console.error('Search error:', error);
     } finally {
       setSearching(false);
+    }
+  };
+
+  const fetchMasterBottle = async (masterBottleId: string) => {
+    setLoadingMasterBottle(true);
+    try {
+      const response = await fetch(`/api/master-bottles/search?id=${masterBottleId}`);
+      const data = await response.json();
+      
+      if (response.ok && data.bottles && data.bottles.length > 0) {
+        const masterBottle = data.bottles[0];
+        setSelectedMaster(masterBottle);
+        setSearchQuery(masterBottle.name);
+        toast.success(`Pre-selected: ${masterBottle.name}`);
+      } else {
+        toast.error('Master bottle not found');
+      }
+    } catch (error) {
+      console.error('Error fetching master bottle:', error);
+      toast.error('Failed to load master bottle');
+    } finally {
+      setLoadingMasterBottle(false);
     }
   };
 
@@ -207,8 +239,9 @@ export default function AddBottlePage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for a whiskey..."
+                placeholder={loadingMasterBottle ? "Loading..." : "Search for a whiskey..."}
                 className="input-premium w-full"
+                disabled={loadingMasterBottle}
               />
               
               {searchResults.length > 0 && (
