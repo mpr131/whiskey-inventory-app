@@ -21,6 +21,7 @@ interface PourSession {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  isVirtual?: boolean;
 }
 
 export default function PourSessionsPage() {
@@ -125,8 +126,8 @@ export default function PourSessionsPage() {
             {sessions.map((session) => (
               <Link
                 key={session._id}
-                href={`/pour/session/${session._id}`}
-                className="block bg-gray-800 hover:bg-gray-750 rounded-xl p-6 transition-all"
+                href={session.isVirtual ? '/pour/quick' : `/pour/session/${session._id}`}
+                className={`block ${session.isVirtual ? 'bg-amber-900/20 border border-amber-800/50' : 'bg-gray-800'} hover:bg-gray-750 rounded-xl p-6 transition-all`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>

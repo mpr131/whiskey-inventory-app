@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     let totalBottles = 0;
     let totalValue = 0;
     let openBottles = 0;
-    const uniqueLocations = new Set<string>();
+    const uniqueLocationAreas = new Set<string>();
     const uniqueMasterBottles = new Set<string>();
 
     for (const bottle of userBottles) {
@@ -40,10 +40,9 @@ export async function GET(req: NextRequest) {
         openBottles += bottle.quantity || 1;
       }
 
-      // Track unique locations
-      if (bottle.location) {
-        const locationKey = `${bottle.location.area || 'Unknown'}${bottle.location.bin ? ` - ${bottle.location.bin}` : ''}`;
-        uniqueLocations.add(locationKey);
+      // Track unique location areas
+      if (bottle.location?.area) {
+        uniqueLocationAreas.add(bottle.location.area);
       }
 
       // Track unique master bottles
@@ -90,7 +89,7 @@ export async function GET(req: NextRequest) {
         totalValue,
         openBottles,
         uniqueBottles: uniqueMasterBottles.size,
-        locations: uniqueLocations.size,
+        locations: uniqueLocationAreas.size,
         lowStockBottles: lowStockBottles.length,
       },
       recentBottles: recentBottles.map(bottle => ({

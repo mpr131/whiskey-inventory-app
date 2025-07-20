@@ -57,18 +57,39 @@ export default function PourSessionPage() {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        // Fetch session details
-        const sessionResponse = await fetch(`/api/pour-sessions/${id}`);
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          setPourSession(sessionData.session);
-        }
+        // Handle orphaned pours virtual session
+        if (id === 'orphaned-pours') {
+          const orphanedResponse = await fetch('/api/pours/orphaned');
+          if (orphanedResponse.ok) {
+            const orphanedData = await orphanedResponse.json();
+            
+            // Create virtual session object
+            setPourSession({
+              _id: 'orphaned-pours',
+              sessionName: 'Ungrouped Pours (Last 24h)',
+              date: new Date().toISOString(),
+              totalPours: orphanedData.stats.totalPours,
+              averageRating: orphanedData.stats.averageRating,
+              totalAmount: orphanedData.stats.totalAmount,
+              totalCost: orphanedData.stats.totalCost,
+            });
+            
+            setPours(orphanedData.pours);
+          }
+        } else {
+          // Fetch regular session details
+          const sessionResponse = await fetch(`/api/pour-sessions/${id}`);
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            setPourSession(sessionData.session);
+          }
 
-        // Fetch pours in this session
-        const poursResponse = await fetch(`/api/pours?sessionId=${id}`);
-        if (poursResponse.ok) {
-          const poursData = await poursResponse.json();
-          setPours(poursData.pours);
+          // Fetch pours in this session
+          const poursResponse = await fetch(`/api/pours?sessionId=${id}`);
+          if (poursResponse.ok) {
+            const poursData = await poursResponse.json();
+            setPours(poursData.pours);
+          }
         }
       } catch (error) {
         console.error('Error fetching session:', error);

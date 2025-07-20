@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Search, Wine } from 'lucide-react';
+import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Wine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import dynamicImport from 'next/dynamic';
+import MasterBottleSearch from '@/components/MasterBottleSearch';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
   ssr: false,
@@ -72,8 +73,6 @@ export default function BottlesPage() {
   const searchParams = useSearchParams();
   const [bottles, setBottles] = useState<(UserBottle | MasterBottle | GroupedBottle)[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [proofFilter, setProofFilter] = useState('');
@@ -91,28 +90,15 @@ export default function BottlesPage() {
     pages: 0,
   });
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search]);
 
   // Initialize filters from URL parameters
   useEffect(() => {
     const statusParam = searchParams.get('status');
     const sortParam = searchParams.get('sort');
-    const searchParam = searchParams.get('search');
     const categoryParam = searchParams.get('category');
     
     if (statusParam) setStatusFilter(statusParam);
     if (sortParam) setSortBy(sortParam);
-    if (searchParam) {
-      setSearch(searchParam);
-      setDebouncedSearch(searchParam);
-    }
     if (categoryParam) setCategoryFilter(categoryParam);
   }, [searchParams]);
 
@@ -126,7 +112,7 @@ export default function BottlesPage() {
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when filters change
     fetchBottles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, categoryFilter, statusFilter, proofFilter, sortBy, viewMode]);
+  }, [categoryFilter, statusFilter, proofFilter, sortBy, viewMode, searchParams]);
 
   useEffect(() => {
     fetchBottles();
@@ -136,7 +122,8 @@ export default function BottlesPage() {
   const fetchBottles = async () => {
     try {
       const params = new URLSearchParams();
-      if (debouncedSearch) params.append('search', debouncedSearch);
+      const searchParam = searchParams.get('search');
+      if (searchParam) params.append('search', searchParam);
       if (categoryFilter) params.append('category', categoryFilter);
       if (statusFilter) params.append('status', statusFilter);
       if (proofFilter) params.append('proof', proofFilter);
@@ -167,10 +154,8 @@ export default function BottlesPage() {
 
   const handleBarcodeScanned = (barcode: string) => {
     setShowScanner(false);
-    // Search by barcode - clear other filters for focused search
-    setSearch('');
-    setDebouncedSearch(barcode);
-    // The search will trigger automatically via the useEffect
+    // Navigate to bottles page with barcode search
+    router.push(`/bottles?search=${encodeURIComponent(barcode)}`);
     toast.success(`Searching for barcode: ${barcode}`);
   };
 
@@ -301,24 +286,21 @@ export default function BottlesPage() {
             </h1>
             
             {/* Centered Search Bar */}
-            <div className="flex-1 md:max-w-xl md:mx-8">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
+            <div className="flex-1 md:max-w-xl md:mx-8 flex items-center gap-2">
+              <div className="flex-1 relative">
+                <MasterBottleSearch 
                   placeholder="Search bottles..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-12 pr-12 py-4 md:py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-copper transition-all text-lg md:text-sm min-h-[56px] md:min-h-0"
+                  redirectToBottle={true}
+                  className="w-full"
                 />
-                <button
-                  onClick={() => setShowScanner(true)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-3 md:p-2 hover:bg-gray-700 rounded-lg transition-all"
-                  title="Scan barcode"
-                >
-                  <ScanLine className="w-5 h-5 text-gray-400 hover:text-copper" />
-                </button>
               </div>
+              <button
+                onClick={() => setShowScanner(true)}
+                className="p-3 md:p-2 hover:bg-gray-700 rounded-lg transition-all bg-gray-800/50 border border-gray-700"
+                title="Scan barcode"
+              >
+                <ScanLine className="w-5 h-5 text-gray-400 hover:text-copper" />
+              </button>
             </div>
             
             {/* Placeholder for balance - hidden on mobile */}

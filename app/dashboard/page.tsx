@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, ScanLine } from 'lucide-react';
+import { ScanLine } from 'lucide-react';
 import dynamicImport from 'next/dynamic';
+import MasterBottleSearch from '@/components/MasterBottleSearch';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
   ssr: false,
@@ -53,7 +54,6 @@ export default function DashboardPage() {
   const [topValuedBottles, setTopValuedBottles] = useState<TopValuedBottle[]>([]);
   const [lowStockBottles, setLowStockBottles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
@@ -83,12 +83,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (search.trim()) {
-      router.push(`/bottles?search=${encodeURIComponent(search.trim())}`);
-    }
-  };
 
   const handleBarcodeScan = (barcode: string) => {
     setShowScanner(false);
@@ -128,23 +122,13 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Search Section */}
         <div className="mb-12">
-          <form onSubmit={handleSearch} className="flex items-center space-x-4">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+          <div className="flex items-center space-x-4">
+            <div className="flex-1">
+              <MasterBottleSearch 
                 placeholder="Search your collection..."
-                className="input-premium w-full pl-12 pr-4 py-3 text-lg"
+                className="w-full"
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             </div>
-            <button
-              type="submit"
-              className="btn-primary px-6 py-3 text-lg font-medium"
-            >
-              Search
-            </button>
             <button
               type="button"
               onClick={() => setShowScanner(true)}
@@ -153,7 +137,7 @@ export default function DashboardPage() {
               <ScanLine className="w-5 h-5" />
               <span>Scan</span>
             </button>
-          </form>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <Link href="/bottles" className="card-premium hover:border-copper/50 hover:bg-gray-800/50 transition-all duration-300 cursor-pointer group">

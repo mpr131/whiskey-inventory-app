@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine, Copy, CheckCircle, Users, Tag, ChevronRight, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Package, Star, Eye, Camera, Skull, Wine, Copy, CheckCircle, Users, Tag, ChevronRight, Plus, Sliders } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PhotoUpload from '@/components/PhotoUpload';
 import BarrelRating from '@/components/BarrelRating';
@@ -119,7 +119,11 @@ export default function BottleDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showPourModal, setShowPourModal] = useState(false);
+  const [showFillLevelModal, setShowFillLevelModal] = useState(false);
   const [fillLevel, setFillLevel] = useState(100);
+  const [adjustedFillLevel, setAdjustedFillLevel] = useState(100);
+  const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [adjustmentNotes, setAdjustmentNotes] = useState('');
   const [pourAmount, setPourAmount] = useState(1);
   const [pourNotes, setPourNotes] = useState('');
   const [pourRating, setPourRating] = useState(0);
@@ -277,6 +281,40 @@ export default function BottleDetailPage() {
     if (!bottle) return;
 
     try {
+      // First, get or create current session
+      let sessionId: string | undefined;
+      
+      try {
+        // Check for existing session today
+        const sessionResponse = await fetch('/api/pour-sessions/current');
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          
+          if (!sessionData.session) {
+            // Create new session if none exists
+            const createSessionResponse = await fetch('/api/pour-sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionName: `Session ${new Date().toLocaleString()}`,
+                location: pourLocation,
+                tags: pourTags,
+              }),
+            });
+            
+            if (createSessionResponse.ok) {
+              const newSessionData = await createSessionResponse.json();
+              sessionId = newSessionData.session._id;
+            }
+          } else {
+            sessionId = sessionData.session._id;
+          }
+        }
+      } catch (error) {
+        console.error('Error managing session:', error);
+        // Continue without session if there's an error
+      }
+
       const response = await fetch(`/api/bottles/${bottleId}/pour`, {
         method: 'POST',
         headers: {
@@ -298,6 +336,7 @@ export default function BottleDetailPage() {
           },
           body: JSON.stringify({
             userBottleId: bottle._id,
+            sessionId, // Include session ID
             amount: pourAmount,
             rating: pourRating > 0 ? pourRating : undefined,
             notes: pourNotes || undefined,
@@ -815,9 +854,21 @@ export default function BottleDetailPage() {
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-gray-400">Fill Level</span>
-                      <span className="text-sm text-white">
-                        {Math.round(bottle.fillLevel)}% ({calculateRemainingOz(bottle.fillLevel)}oz remaining)
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-white">
+                          {Math.round(bottle.fillLevel)}% ({calculateRemainingOz(bottle.fillLevel)}oz remaining)
+                        </span>
+                        <button
+                          onClick={() => {
+                            setAdjustedFillLevel(bottle.fillLevel || 100);
+                            setShowFillLevelModal(true);
+                          }}
+                          className="p-1 rounded bg-gray-700 hover:bg-gray-600 transition-colors"
+                          title="Adjust fill level"
+                        >
+                          <Sliders className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
                       <div
@@ -1566,6 +1617,142 @@ export default function BottleDetailPage() {
                   className="flex-1 btn-primary"
                 >
                   Record Pour
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fill Level Adjustment Modal */}
+      {showFillLevelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-12">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setShowFillLevelModal(false)} />
+          
+          <div className="relative z-10 w-full max-w-md">
+            <div className="card-premium">
+              <h2 className="text-2xl font-bold text-white mb-6">Adjust Fill Level</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Current Fill Level: {bottle.fillLevel}%
+                  </label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    New Fill Level: {adjustedFillLevel}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={adjustedFillLevel}
+                    onChange={(e) => setAdjustedFillLevel(parseInt(e.target.value))}
+                    className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>0%</span>
+                    <span>25%</span>
+                    <span>50%</span>
+                    <span>75%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Reason for Adjustment
+                  </label>
+                  <select
+                    value={adjustmentReason}
+                    onChange={(e) => setAdjustmentReason(e.target.value)}
+                    className="w-full input-premium"
+                    required
+                  >
+                    <option value="">Select a reason...</option>
+                    <option value="evaporation">Evaporation (Angel&apos;s Share)</option>
+                    <option value="shared">Shared off-site</option>
+                    <option value="correction">Correction</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    value={adjustmentNotes}
+                    onChange={(e) => setAdjustmentNotes(e.target.value)}
+                    className="w-full input-premium resize-none"
+                    rows={3}
+                    placeholder="Additional details about this adjustment..."
+                  />
+                </div>
+
+                <div className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
+                  <div className="flex justify-between">
+                    <span>Change:</span>
+                    <span className={`font-medium ${adjustedFillLevel < bottle.fillLevel ? 'text-red-400' : 'text-green-400'}`}>
+                      {adjustedFillLevel - bottle.fillLevel}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span>Estimated volume:</span>
+                    <span className="text-white">
+                      {calculateRemainingOz(adjustedFillLevel)}oz
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-6">
+                <button
+                  onClick={() => {
+                    setShowFillLevelModal(false);
+                    setAdjustmentReason('');
+                    setAdjustmentNotes('');
+                  }}
+                  className="flex-1 btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!adjustmentReason) {
+                      toast.error('Please select a reason for adjustment');
+                      return;
+                    }
+
+                    try {
+                      const response = await fetch(`/api/user-bottles/${bottle._id}/fill-level`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          fillLevel: adjustedFillLevel,
+                          reason: adjustmentReason,
+                          notes: adjustmentNotes,
+                        }),
+                      });
+
+                      if (response.ok) {
+                        toast.success('Fill level updated');
+                        setShowFillLevelModal(false);
+                        setAdjustmentReason('');
+                        setAdjustmentNotes('');
+                        fetchBottleDetails(); // Refresh bottle data
+                      } else {
+                        const error = await response.json();
+                        toast.error(error.error || 'Failed to update fill level');
+                      }
+                    } catch (error) {
+                      toast.error('Failed to update fill level');
+                    }
+                  }}
+                  disabled={!adjustmentReason}
+                  className="flex-1 btn-primary disabled:bg-gray-700 disabled:cursor-not-allowed"
+                >
+                  Update Fill Level
                 </button>
               </div>
             </div>
