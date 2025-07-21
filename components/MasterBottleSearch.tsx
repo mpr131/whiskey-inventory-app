@@ -75,7 +75,8 @@ export default function MasterBottleSearch({
         // For user bottles, extract the master bottle data
         const userMasterBottles = userBottles.map((ub: any) => ({
           ...ub.masterBottleId,
-          _id: ub._id, // Use user bottle ID for navigation
+          _id: redirectToBottle ? ub._id : ub.masterBottleId._id, // Use user bottle ID for navigation, master bottle ID for selection
+          userBottleId: ub._id, // Keep reference to user bottle
           isUserBottle: true,
           fillLevel: ub.fillLevel,
           status: ub.status

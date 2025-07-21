@@ -56,6 +56,7 @@ export default function AdminUpcPage() {
   const [pendingSubmissions, setPendingSubmissions] = useState<UpcSubmission[]>([]);
   const [recentUpcBottles, setRecentUpcBottles] = useState<MasterBottle[]>([]);
   const [showScanner, setShowScanner] = useState(false);
+  const [addedCount, setAddedCount] = useState(0);
 
   // Check if user is admin
   useEffect(() => {
@@ -116,8 +117,16 @@ export default function AdminUpcPage() {
 
       toast.success('UPC added successfully!');
       setUpcCode('');
-      setSelectedBottle(null);
+      // Keep the selected bottle for multiple UPC entries
+      // setSelectedBottle(null);
+      setAddedCount(prev => prev + 1);
       fetchRecentData();
+      
+      // Focus back on the UPC input for quick entry
+      const upcInput = document.querySelector('input[placeholder="Enter UPC code..."]') as HTMLInputElement;
+      if (upcInput) {
+        upcInput.focus();
+      }
     } catch (error) {
       console.error('Error adding UPC:', error);
       toast.error('Failed to add UPC');
@@ -245,6 +254,15 @@ export default function AdminUpcPage() {
     setShowScanner(false);
     setUpcCode(barcode);
     toast.success(`Scanned UPC: ${barcode}`);
+    
+    // Focus on the UPC input to show the value
+    setTimeout(() => {
+      const upcInput = document.querySelector('input[placeholder="Enter UPC code..."]') as HTMLInputElement;
+      if (upcInput) {
+        upcInput.focus();
+        upcInput.select();
+      }
+    }, 100);
   };
 
   if (status === 'loading') {
@@ -314,13 +332,24 @@ export default function AdminUpcPage() {
                   <MasterBottleSearch
                     onSelect={(bottle) => setSelectedBottle(bottle)}
                     placeholder="Search for a bottle..."
+                    redirectToBottle={false}
                   />
                   {selectedBottle && (
-                    <div className="mt-2 p-3 bg-gray-800/50 rounded">
-                      <p className="text-white font-medium">{selectedBottle.name}</p>
-                      <p className="text-sm text-gray-400">
-                        {selectedBottle.brand} • {selectedBottle.distillery}
-                      </p>
+                    <div className="mt-2 p-3 bg-gray-800/50 rounded flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium">{selectedBottle.name}</p>
+                        <p className="text-sm text-gray-400">
+                          {selectedBottle.brand} • {selectedBottle.distillery}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBottle(null)}
+                        className="p-1 text-gray-400 hover:text-white transition-colors"
+                        title="Clear selection"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -335,7 +364,7 @@ export default function AdminUpcPage() {
                       value={upcCode}
                       onChange={(e) => setUpcCode(e.target.value)}
                       placeholder="Enter UPC code..."
-                      className="input flex-1"
+                      className="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-copper/50 focus:border-copper transition-all"
                     />
                     <button
                       onClick={() => setShowScanner(true)}
@@ -356,7 +385,12 @@ export default function AdminUpcPage() {
                   {processing ? (
                     <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                   ) : (
-                    'Add UPC'
+                    <>
+                      Add UPC
+                      {addedCount > 0 && (
+                        <span className="ml-2 text-sm opacity-75">({addedCount} added this session)</span>
+                      )}
+                    </>
                   )}
                 </button>
               </div>
@@ -407,7 +441,7 @@ export default function AdminUpcPage() {
               placeholder="Jack Daniel's Single Barrel, 084279007991
 Buffalo Trace, 080244009167
 ..."
-              className="input w-full h-64 font-mono text-sm"
+              className="w-full h-64 font-mono text-sm bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 p-4 focus:outline-none focus:ring-2 focus:ring-copper/50 focus:border-copper transition-all"
             />
 
             <button
@@ -472,7 +506,7 @@ Buffalo Trace, 080244009167
                   onChange={(e) => setSearchUpc(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearchUpc()}
                   placeholder="Enter UPC to search..."
-                  className="input flex-1"
+                  className="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-copper/50 focus:border-copper transition-all"
                 />
                 <button
                   onClick={handleSearchUpc}
