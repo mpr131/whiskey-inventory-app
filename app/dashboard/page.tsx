@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ScanLine } from 'lucide-react';
 import dynamicImport from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
+import NotificationCenter from '@/components/NotificationCenter';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
   ssr: false,
@@ -110,6 +111,7 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-bold text-gradient">Whiskey Vault</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <NotificationCenter userId={session.user.id} />
               <span className="text-gray-300">Welcome, {session.user.name}</span>
               <Link href="/api/auth/signout" className="btn-secondary text-sm px-4 py-2">
                 Sign Out

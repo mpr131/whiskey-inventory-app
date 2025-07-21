@@ -4,12 +4,15 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Wine, Tag } from 'lucide-react';
+import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Wine, Tag, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import dynamicImport from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
 import { usePrintQueue } from '@/contexts/PrintQueueContext';
+import SwipeableBottleCard from '@/components/SwipeableBottleCard';
+import { haptic } from '@/utils/haptics';
+import NotificationCenter from '@/components/NotificationCenter';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
   ssr: false,
@@ -85,6 +88,8 @@ export default function BottlesPage() {
   const [clearing, setClearing] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [quickPourBottle, setQuickPourBottle] = useState<UserBottle | null>(null);
+  const [quickRateBottle, setQuickRateBottle] = useState<UserBottle | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 24,
@@ -257,6 +262,7 @@ export default function BottlesPage() {
               </div>
             </div>
             <div className="flex items-center space-x-6">
+              <NotificationCenter userId={session?.user?.id || ''} />
               <Link href="/bottles/import" className="text-gray-400 hover:text-white transition-colors text-sm">
                 <Upload className="w-4 h-4 inline mr-1" />
                 Import
@@ -281,6 +287,7 @@ export default function BottlesPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+        
         {/* Clean Header Section */}
         <div className="mb-8">
           {/* Top Row - Title and Search */}
@@ -462,19 +469,20 @@ export default function BottlesPage() {
               if (isGrouped) {
                 // Grouped bottle view
                 return (
-                  <div key={bottle._id} className="card-premium group hover:border-copper/30 transition-all duration-300">
-                    {/* Show thumbnail if any bottle has photos */}
-                    {bottle.userBottles.some(b => b.photos && b.photos.length > 0) && (
-                      <div className="relative h-48 -mx-6 -mt-6 mb-4 overflow-hidden rounded-t-lg" style={{ width: 'calc(100% + 3rem)' }}>
-                        <Image
-                          src={bottle.userBottles.find(b => b.photos && b.photos.length > 0)?.photos[0] || ''}
-                          alt={masterData.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                      </div>
-                    )}
+                  <Link key={bottle._id} href={`/bottles/${bottle._id}`} className="block">
+                    <div className="card-premium group hover:border-copper/30 hover:shadow-lg cursor-pointer transition-all duration-300">
+                      {/* Show thumbnail if any bottle has photos */}
+                      {bottle.userBottles.some(b => b.photos && b.photos.length > 0) && (
+                        <div className="relative h-48 -mx-6 -mt-6 mb-4 overflow-hidden rounded-t-lg" style={{ width: 'calc(100% + 3rem)' }}>
+                          <Image
+                            src={bottle.userBottles.find(b => b.photos && b.photos.length > 0)?.photos[0] || ''}
+                            alt={masterData.name}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          />
+                        </div>
+                      )}
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white group-hover:text-copper-light transition-colors">
@@ -567,21 +575,27 @@ export default function BottlesPage() {
                         </div>
                       )}
                     </div>
-
-                    <div className="flex gap-2 mt-6">
-                      <Link
-                        href={`/bottles/${bottle._id}`}
-                        className="flex-1 btn-secondary text-center text-sm py-2"
-                      >
-                        View Bottles ({bottle.totalCount})
-                      </Link>
                     </div>
-                  </div>
+                  </Link>
                 );
               } else {
                 // Individual bottle view (for community view)
                 return (
-                  <div key={bottle._id} className="card-premium group hover:border-copper/30 transition-all duration-300">
+                  <SwipeableBottleCard
+                    key={bottle._id}
+                    bottleId={bottle._id}
+                    onQuickPour={isUser ? () => {
+                      haptic.medium();
+                      setQuickPourBottle(bottle as UserBottle);
+                    } : undefined}
+                    onQuickRate={isUser ? () => {
+                      haptic.medium();
+                      setQuickRateBottle(bottle as UserBottle);
+                    } : undefined}
+                    className="relative group"
+                  >
+                    <Link href={`/bottles/${bottle._id}`} className="block">
+                      <div className="card-premium hover:border-copper/30 hover:shadow-lg cursor-pointer transition-all duration-300">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white group-hover:text-copper-light transition-colors">
@@ -686,23 +700,26 @@ export default function BottlesPage() {
                         </div>
                       </div>
                     )}
-
-                    <div className="flex gap-2 mt-6">
-                      <Link
-                        href={`/bottles/${bottle._id}`}
-                        className="flex-1 btn-secondary text-center text-sm py-2"
-                      >
-                        View Details
-                      </Link>
+                    
+                    {/* Add padding at the bottom when action buttons are present */}
+                    {isUser && <div className="h-12" />}
+                      </div>
+                    </Link>
+                    
+                    {/* Action buttons positioned absolutely */}
                       {isUser && (
-                        <>
+                        <div className="absolute bottom-4 right-4 flex gap-2 z-20" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => addToQueue({
-                              _id: bottle._id,
-                              name: masterData.name,
-                              distillery: masterData.distillery,
-                              vaultBarcode: bottle.vaultBarcode
-                            })}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              addToQueue({
+                                _id: bottle._id,
+                                name: masterData.name,
+                                distillery: masterData.distillery,
+                                vaultBarcode: bottle.vaultBarcode
+                              });
+                            }}
                             disabled={isInQueue(bottle._id)}
                             className={`glass px-3 py-2 rounded-lg transition-all duration-300 ${
                               isInQueue(bottle._id)
@@ -714,17 +731,20 @@ export default function BottlesPage() {
                             <Tag className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(bottle._id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDelete(bottle._id);
+                            }}
                             className="glass border-red-500/30 text-red-400 px-3 py-2 rounded-lg hover:bg-red-500/10 hover:border-red-500/50 transition-all duration-300"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
-                        </>
+                        </div>
                       )}
-                    </div>
-                  </div>
+                  </SwipeableBottleCard>
                 );
               }
             })}
@@ -797,7 +817,7 @@ export default function BottlesPage() {
       </main>
 
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-8 right-8 flex flex-col gap-4">
+      <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 flex flex-col gap-4 pb-safe">
         {/* Quick Pour Button */}
         <Link
           href="/pour/quick"
@@ -829,6 +849,111 @@ export default function BottlesPage() {
           onScan={handleBarcodeScanned}
           onClose={() => setShowScanner(false)}
         />
+      )}
+      
+      {/* Quick Pour Modal */}
+      {quickPourBottle && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="card-premium max-w-md w-full">
+            <h2 className="text-xl font-bold text-white mb-4">Quick Pour</h2>
+            <p className="text-gray-300 mb-2">{quickPourBottle.masterBottleId.name}</p>
+            <p className="text-gray-400 text-sm mb-6">{quickPourBottle.masterBottleId.distillery}</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Pour Size</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[0.5, 1, 1.5, 2].map((size) => (
+                    <button
+                      key={size}
+                      onClick={async () => {
+                        haptic.light();
+                        try {
+                          const response = await fetch(`/api/bottles/${quickPourBottle._id}/pour`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ amount: size })
+                          });
+                          
+                          if (response.ok) {
+                            haptic.success();
+                            toast.success(`${size}oz pour recorded!`);
+                            setQuickPourBottle(null);
+                            fetchBottles(); // Refresh the list
+                          } else {
+                            haptic.error();
+                            toast.error('Failed to record pour');
+                          }
+                        } catch (error) {
+                          toast.error('Error recording pour');
+                        }
+                      }}
+                      className="btn-secondary py-3 text-lg font-semibold"
+                    >
+                      {size}oz
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  haptic.light();
+                  setQuickPourBottle(null);
+                }}
+                className="w-full btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Quick Rate Modal */}
+      {quickRateBottle && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="card-premium max-w-md w-full">
+            <h2 className="text-xl font-bold text-white mb-4">Quick Rate</h2>
+            <p className="text-gray-300 mb-2">{quickRateBottle.masterBottleId.name}</p>
+            <p className="text-gray-400 text-sm mb-6">{quickRateBottle.masterBottleId.distillery}</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">Rating</label>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((rating) => (
+                    <button
+                      key={rating}
+                      onClick={async () => {
+                        try {
+                          // For now, just show a toast since we need a pour to rate
+                          toast.success(`Would rate ${rating}/10! (Requires a pour session)`);
+                          setQuickRateBottle(null);
+                        } catch (error) {
+                          toast.error('Error recording rating');
+                        }
+                      }}
+                      className="w-10 h-10 rounded-full bg-gray-800 hover:bg-amber-600 text-white hover:text-black transition-all flex items-center justify-center font-semibold"
+                    >
+                      {rating}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  haptic.light();
+                  setQuickRateBottle(null);
+                }}
+                className="w-full btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

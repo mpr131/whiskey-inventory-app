@@ -7,6 +7,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Search, Plus } from 'lucide-react';
 import AutocompleteInput from '@/components/AutocompleteInput';
+import { haptic } from '@/utils/haptics';
 
 interface MasterBottle {
   _id: string;
@@ -139,6 +140,7 @@ export default function AddBottlePage() {
   };
 
   const handleSelectMaster = (master: MasterBottle) => {
+    haptic.selection();
     setSelectedMaster(master);
     setSearchQuery(master.name);
     setSearchResults([]);
@@ -152,6 +154,7 @@ export default function AddBottlePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    haptic.medium();
     setLoading(true);
 
     try {
@@ -189,10 +192,12 @@ export default function AddBottlePage() {
       });
 
       if (response.ok) {
+        haptic.success();
         toast.success('Bottle added successfully!');
         router.push('/bottles');
       } else {
         const error = await response.json();
+        haptic.error();
         toast.error(error.error || 'Failed to add bottle');
       }
     } catch (error) {

@@ -61,7 +61,7 @@ export default function PWAInstallPrompt() {
   if (!showPrompt) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-5">
+    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 pb-safe">
       <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/40 backdrop-blur-xl">
         <div className="absolute inset-0 bg-gradient-to-r from-amber-600/10 to-transparent" />
         <div className="relative flex items-center justify-between p-4">
