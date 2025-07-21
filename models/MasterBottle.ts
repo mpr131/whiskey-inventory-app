@@ -142,12 +142,6 @@ MasterBottleSchema.statics.findSimilar = async function(name: string, distillery
   }).limit(10);
 };
 
-let MasterBottle: mongoose.Model<IMasterBottle>;
-
-try {
-  MasterBottle = mongoose.model<IMasterBottle>('MasterBottle');
-} catch {
-  MasterBottle = mongoose.model<IMasterBottle>('MasterBottle', MasterBottleSchema);
-}
+const MasterBottle = mongoose.models.MasterBottle || mongoose.model<IMasterBottle>('MasterBottle', MasterBottleSchema);
 
 export default MasterBottle;
