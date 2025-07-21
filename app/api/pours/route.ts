@@ -136,6 +136,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Note: Community ratings are now calculated nightly for better performance
+    // Personal ratings are still calculated in real-time when viewing bottles
+
     // Return populated pour
     const populatedPour = await Pour.findById(pour._id)
       .populate('userBottleId')

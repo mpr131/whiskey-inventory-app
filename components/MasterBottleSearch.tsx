@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { Search, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface MasterBottle {
@@ -18,6 +18,8 @@ interface MasterBottle {
   isUserBottle?: boolean;
   fillLevel?: number;
   status?: string;
+  communityRating?: number;
+  communityRatingCount?: number;
 }
 
 interface MasterBottleSearchProps {
@@ -210,11 +212,20 @@ export default function MasterBottleSearch({
                 )}
               </div>
               <div className="text-sm text-gray-400">
-                {bottle.distillery} • {bottle.category}
-                {bottle.age && ` • ${bottle.age} Year`}
-                {bottle.proof && ` • ${bottle.proof} Proof`}
-                {bottle.isUserBottle && bottle.fillLevel !== undefined && bottle.status === 'opened' && (
-                  <span className="ml-2">• {bottle.fillLevel.toFixed(2)}% Full</span>
+                <div>
+                  {bottle.distillery} • {bottle.category}
+                  {bottle.age && ` • ${bottle.age} Year`}
+                  {bottle.proof && ` • ${bottle.proof} Proof`}
+                  {bottle.isUserBottle && bottle.fillLevel !== undefined && bottle.status === 'opened' && (
+                    <span className="ml-2">• {bottle.fillLevel.toFixed(2)}% Full</span>
+                  )}
+                </div>
+                {bottle.communityRating !== undefined && bottle.communityRating !== null && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Star className="w-3 h-3 text-copper fill-copper" />
+                    <span className="text-copper font-medium">{bottle.communityRating.toFixed(1)}</span>
+                    <span className="text-xs text-gray-500">({bottle.communityRatingCount} pour{bottle.communityRatingCount !== 1 ? 's' : ''})</span>
+                  </div>
                 )}
               </div>
             </button>

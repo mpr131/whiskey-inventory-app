@@ -28,6 +28,8 @@ interface MasterBottle {
     pickDate?: string;
     barrel?: string;
   };
+  communityRating?: number;
+  communityRatingCount?: number;
 }
 
 interface UserBottle {
@@ -134,6 +136,7 @@ export default function BottleDetailPage() {
   const [tagInput, setTagInput] = useState('');
   const [showPourDetails, setShowPourDetails] = useState(false);
   const [isMasterView, setIsMasterView] = useState(false);
+  const [personalRating, setPersonalRating] = useState<{ personalRating: number; pourCount: number } | null>(null);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -168,6 +171,15 @@ export default function BottleDetailPage() {
           const data = await response.json();
           setMasterBottleView(data);
           setIsMasterView(true);
+          
+          // Fetch personal rating for this master bottle
+          if (session?.user?.id) {
+            const ratingResponse = await fetch(`/api/bottles/${bottleId}/rating`);
+            if (ratingResponse.ok) {
+              const { rating } = await ratingResponse.json();
+              setPersonalRating(rating);
+            }
+          }
         } else {
           toast.error('Bottle not found');
           router.push('/bottles');
@@ -222,7 +234,7 @@ export default function BottleDetailPage() {
     if (!bottle) return;
 
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${bottle.masterBottleId.name}"? This action cannot be undone.`
+      `Are you sure you want to delete "${bottle?.masterBottleId?.name}"? This action cannot be undone.`
     );
 
     if (!confirmed) return;
@@ -444,7 +456,7 @@ export default function BottleDetailPage() {
   }
   
   // Master bottle view
-  if (isMasterView && masterBottleView) {
+  if (isMasterView && masterBottleView?.masterBottle) {
     return (
       <div className="max-w-7xl mx-auto py-8 px-4">
         {/* Header */}
@@ -468,14 +480,14 @@ export default function BottleDetailPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold text-white mb-2">
-                    {masterBottleView.masterBottle.name}
+                    {masterBottleView?.masterBottle?.name}
                   </h1>
                   <div className="flex items-center space-x-4 text-gray-400 mb-4">
-                    <span className="text-lg">{masterBottleView.masterBottle.distillery}</span>
-                    {masterBottleView.masterBottle.region && (
+                    <span className="text-lg">{masterBottleView?.masterBottle?.distillery}</span>
+                    {masterBottleView?.masterBottle?.region && (
                       <span className="text-sm">• {masterBottleView.masterBottle.region}</span>
                     )}
-                    <span className="text-sm">• {masterBottleView.masterBottle.category}</span>
+                    <span className="text-sm">• {masterBottleView?.masterBottle?.category}</span>
                   </div>
                   
                   <div className="flex items-center space-x-4 text-sm">
@@ -487,18 +499,52 @@ export default function BottleDetailPage() {
                     {masterBottleView.finishedCount > 0 && (
                       <span className="text-gray-400">{masterBottleView.finishedCount} finished</span>
                     )}
-                    {masterBottleView.masterBottle.age && (
+                    {masterBottleView?.masterBottle?.age && (
                       <span className="text-gray-400">{masterBottleView.masterBottle.age} Years</span>
                     )}
-                    {masterBottleView.masterBottle.proof && (
+                    {masterBottleView?.masterBottle?.proof && (
                       <span className="text-gray-400">{masterBottleView.masterBottle.proof}° Proof</span>
                     )}
-                    {masterBottleView.masterBottle.abv && (
+                    {masterBottleView?.masterBottle?.abv && (
                       <span className="text-gray-400">{masterBottleView.masterBottle.abv}% ABV</span>
                     )}
                   </div>
                 </div>
               </div>
+              
+              {/* Prominent Ratings Section */}
+              {(personalRating || masterBottleView?.masterBottle?.communityRating) && (
+                <div className="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                  <div className="flex items-center justify-around">
+                    {personalRating && (
+                      <div className="text-center">
+                        <div className="text-sm text-gray-400 mb-1">My Rating</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-3xl font-bold text-copper">{personalRating.personalRating.toFixed(1)}</span>
+                          <Star className="w-8 h-8 text-copper fill-copper" />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">from {personalRating.pourCount} pour{personalRating.pourCount !== 1 ? 's' : ''}</div>
+                      </div>
+                    )}
+                    
+                    {personalRating && masterBottleView?.masterBottle?.communityRating && (
+                      <div className="w-px h-16 bg-gray-600"></div>
+                    )}
+                    
+                    {masterBottleView?.masterBottle?.communityRating && (
+                      <div className="text-center">
+                        <div className="text-sm text-gray-400 mb-1">Community</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-3xl font-bold text-copper">{masterBottleView?.masterBottle?.communityRating?.toFixed(1)}</span>
+                          <Star className="w-8 h-8 text-copper fill-copper" />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">from {masterBottleView?.masterBottle?.communityRatingCount} pour{masterBottleView?.masterBottle?.communityRatingCount !== 1 ? 's' : ''}</div>
+                        <div className="text-xs text-gray-600 mt-1">Updated daily</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Master Bottle Details */}
@@ -507,59 +553,59 @@ export default function BottleDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Brand</label>
-                  <p className="text-white">{masterBottleView.masterBottle.brand}</p>
+                  <p className="text-white">{masterBottleView?.masterBottle?.brand}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Distillery</label>
-                  <p className="text-white">{masterBottleView.masterBottle.distillery}</p>
+                  <p className="text-white">{masterBottleView?.masterBottle?.distillery}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Category</label>
-                  <p className="text-white">{masterBottleView.masterBottle.category}</p>
+                  <p className="text-white">{masterBottleView?.masterBottle?.category}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Type</label>
-                  <p className="text-white">{masterBottleView.masterBottle.type || 'Not specified'}</p>
+                  <p className="text-white">{masterBottleView?.masterBottle?.type || 'Not specified'}</p>
                 </div>
-                {masterBottleView.masterBottle.region && (
+                {masterBottleView?.masterBottle?.region && (
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">Region</label>
-                    <p className="text-white">{masterBottleView.masterBottle.region}</p>
+                    <p className="text-white">{masterBottleView?.masterBottle?.region}</p>
                   </div>
                 )}
-                {masterBottleView.masterBottle.msrp && (
+                {masterBottleView?.masterBottle?.msrp && (
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">MSRP</label>
-                    <p className="text-white">{formatCurrency(masterBottleView.masterBottle.msrp)}</p>
+                    <p className="text-white">{formatCurrency(masterBottleView?.masterBottle?.msrp)}</p>
                   </div>
                 )}
               </div>
               
-              {masterBottleView.masterBottle.description && (
+              {masterBottleView?.masterBottle?.description && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
-                  <p className="text-white">{masterBottleView.masterBottle.description}</p>
+                  <p className="text-white">{masterBottleView?.masterBottle?.description}</p>
                 </div>
               )}
               
-              {masterBottleView.masterBottle.isStorePick && masterBottleView.masterBottle.storePickDetails && (
+              {masterBottleView?.masterBottle?.isStorePick && masterBottleView?.masterBottle?.storePickDetails && (
                 <div className="mt-4 p-4 bg-copper/10 rounded-lg border border-copper/20">
                   <h3 className="text-copper font-semibold mb-2">Store Pick Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-gray-400">Store:</span>
-                      <span className="text-white ml-2">{masterBottleView.masterBottle.storePickDetails.store}</span>
+                      <span className="text-white ml-2">{masterBottleView?.masterBottle?.storePickDetails?.store}</span>
                     </div>
-                    {masterBottleView.masterBottle.storePickDetails.barrel && (
+                    {masterBottleView?.masterBottle?.storePickDetails?.barrel && (
                       <div>
                         <span className="text-gray-400">Barrel:</span>
-                        <span className="text-white ml-2">{masterBottleView.masterBottle.storePickDetails.barrel}</span>
+                        <span className="text-white ml-2">{masterBottleView?.masterBottle?.storePickDetails?.barrel}</span>
                       </div>
                     )}
-                    {masterBottleView.masterBottle.storePickDetails.pickDate && (
+                    {masterBottleView?.masterBottle?.storePickDetails?.pickDate && (
                       <div>
                         <span className="text-gray-400">Pick Date:</span>
-                        <span className="text-white ml-2">{formatDate(masterBottleView.masterBottle.storePickDetails.pickDate)}</span>
+                        <span className="text-white ml-2">{formatDate(masterBottleView?.masterBottle?.storePickDetails?.pickDate)}</span>
                       </div>
                     )}
                   </div>
@@ -576,7 +622,7 @@ export default function BottleDetailPage() {
                 </h2>
                 {masterBottleView?.masterBottle?._id && (
                   <Link
-                    href={`/bottles/add?masterBottleId=${masterBottleView.masterBottle._id}`}
+                    href={`/bottles/add?masterBottleId=${masterBottleView?.masterBottle?._id}`}
                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-copper hover:bg-copper-dark text-white text-sm font-medium rounded-lg transition-colors"
                   >
                     <Plus className="w-4 h-4" />
@@ -813,7 +859,7 @@ export default function BottleDetailPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-4 mb-2">
                   <h1 className="text-3xl font-bold text-white">
-                    {bottle.masterBottleId.name}
+                    {bottle?.masterBottleId?.name}
                   </h1>
                   {bottle.vaultBarcode && (
                     <div className="flex items-center gap-2 bg-copper/10 px-3 py-1 rounded-lg">
@@ -832,11 +878,11 @@ export default function BottleDetailPage() {
                   )}
                 </div>
                 <div className="flex items-center space-x-4 text-gray-400 mb-4">
-                  <span className="text-lg">{bottle.masterBottleId.distillery}</span>
-                  {bottle.masterBottleId.region && (
+                  <span className="text-lg">{bottle?.masterBottleId?.distillery}</span>
+                  {bottle?.masterBottleId?.region && (
                     <span className="text-sm">• {bottle.masterBottleId.region}</span>
                   )}
-                  <span className="text-sm">• {bottle.masterBottleId.category}</span>
+                  <span className="text-sm">• {bottle?.masterBottleId?.category}</span>
                 </div>
                 
                 <div className="flex items-center space-x-4 text-sm">
@@ -844,10 +890,10 @@ export default function BottleDetailPage() {
                     {bottle.status}
                   </span>
                   <span className="text-gray-400">Quantity: {bottle.quantity}</span>
-                  {bottle.masterBottleId.age && (
+                  {bottle?.masterBottleId?.age && (
                     <span className="text-gray-400">{bottle.masterBottleId.age} Years</span>
                   )}
-                  {bottle.masterBottleId.proof && (
+                  {bottle?.masterBottleId?.proof && (
                     <span className="text-gray-400">{bottle.masterBottleId.proof}° Proof</span>
                   )}
                   {bottle.fillLevel < 20 && (
@@ -929,59 +975,59 @@ export default function BottleDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Brand</label>
-                <p className="text-white">{bottle.masterBottleId.brand}</p>
+                <p className="text-white">{bottle?.masterBottleId?.brand}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Distillery</label>
-                <p className="text-white">{bottle.masterBottleId.distillery}</p>
+                <p className="text-white">{bottle?.masterBottleId?.distillery}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Category</label>
-                <p className="text-white">{bottle.masterBottleId.category}</p>
+                <p className="text-white">{bottle?.masterBottleId?.category}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Type</label>
-                <p className="text-white">{bottle.masterBottleId.type || 'Not specified'}</p>
+                <p className="text-white">{bottle?.masterBottleId?.type || 'Not specified'}</p>
               </div>
-              {bottle.masterBottleId.region && (
+              {bottle?.masterBottleId?.region && (
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Region</label>
-                  <p className="text-white">{bottle.masterBottleId.region}</p>
+                  <p className="text-white">{bottle?.masterBottleId?.region}</p>
                 </div>
               )}
-              {bottle.masterBottleId.msrp && (
+              {bottle?.masterBottleId?.msrp && (
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">MSRP</label>
-                  <p className="text-white">{formatCurrency(bottle.masterBottleId.msrp)}</p>
+                  <p className="text-white">{formatCurrency(bottle?.masterBottleId?.msrp)}</p>
                 </div>
               )}
             </div>
             
-            {bottle.masterBottleId.description && (
+            {bottle?.masterBottleId?.description && (
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
-                <p className="text-white">{bottle.masterBottleId.description}</p>
+                <p className="text-white">{bottle?.masterBottleId?.description}</p>
               </div>
             )}
             
-            {bottle.masterBottleId.isStorePick && bottle.masterBottleId.storePickDetails && (
+            {bottle?.masterBottleId?.isStorePick && bottle?.masterBottleId?.storePickDetails && (
               <div className="mt-4 p-4 bg-copper/10 rounded-lg border border-copper/20">
                 <h3 className="text-copper font-semibold mb-2">Store Pick Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-gray-400">Store:</span>
-                    <span className="text-white ml-2">{bottle.masterBottleId.storePickDetails.store}</span>
+                    <span className="text-white ml-2">{bottle?.masterBottleId?.storePickDetails?.store}</span>
                   </div>
-                  {bottle.masterBottleId.storePickDetails.barrel && (
+                  {bottle?.masterBottleId?.storePickDetails?.barrel && (
                     <div>
                       <span className="text-gray-400">Barrel:</span>
-                      <span className="text-white ml-2">{bottle.masterBottleId.storePickDetails.barrel}</span>
+                      <span className="text-white ml-2">{bottle?.masterBottleId?.storePickDetails?.barrel}</span>
                     </div>
                   )}
-                  {bottle.masterBottleId.storePickDetails.pickDate && (
+                  {bottle?.masterBottleId?.storePickDetails?.pickDate && (
                     <div>
                       <span className="text-gray-400">Pick Date:</span>
-                      <span className="text-white ml-2">{formatDate(bottle.masterBottleId.storePickDetails.pickDate)}</span>
+                      <span className="text-white ml-2">{formatDate(bottle?.masterBottleId?.storePickDetails?.pickDate)}</span>
                     </div>
                   )}
                 </div>
@@ -1108,9 +1154,25 @@ export default function BottleDetailPage() {
                   </div>
                   {bottle?.averageRating && (
                     <div className="flex justify-between text-sm mt-1">
-                      <span className="text-gray-400">Average rating:</span>
-                      <span className="text-copper font-medium">{bottle.averageRating}/10</span>
+                      <span className="text-gray-400">My average rating:</span>
+                      <span className="text-copper font-medium">{bottle.averageRating.toFixed(1)}/10</span>
                     </div>
+                  )}
+                  {bottle?.masterBottleId?.communityRating && (
+                    <>
+                      <div className="flex justify-between text-sm mt-1">
+                        <span className="text-gray-400">Community rating:</span>
+                        <span className="text-copper font-medium">
+                          {bottle?.masterBottleId?.communityRating?.toFixed(1)}/10
+                          <span className="text-xs text-gray-500 ml-1">
+                            ({bottle?.masterBottleId?.communityRatingCount} pour{bottle?.masterBottleId?.communityRatingCount !== 1 ? 's' : ''})
+                          </span>
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-gray-600">Updated daily</span>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -1185,6 +1247,45 @@ export default function BottleDetailPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Bin</label>
                   <p className="text-white">{bottle.location.bin || 'Not specified'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rating History */}
+          {pours && pours.filter(p => p.rating !== undefined && p.rating !== null).length > 0 && (
+            <div className="card-premium">
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                <Star className="w-5 h-5 mr-2" />
+                Rating History
+              </h2>
+              <div className="space-y-2">
+                {pours
+                  .filter(p => p.rating !== undefined && p.rating !== null)
+                  .map((pour) => (
+                    <div key={pour._id} className="flex items-center justify-between py-2 border-b border-gray-700 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <span className="text-copper font-semibold">{pour.rating?.toFixed(1)}</span>
+                          <Star className="w-4 h-4 text-copper fill-copper" />
+                        </div>
+                        <span className="text-sm text-gray-400">{formatDate(pour.date)}</span>
+                      </div>
+                      {pour.notes && (
+                        <span className="text-xs text-gray-500 truncate max-w-[150px]" title={pour.notes}>
+                          {pour.notes}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                <div className="mt-3 pt-3 border-t border-gray-700">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Average:</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-copper font-bold">{bottle?.averageRating?.toFixed(1) || '0.0'}</span>
+                      <Star className="w-4 h-4 text-copper fill-copper" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1398,6 +1499,32 @@ export default function BottleDetailPage() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Rating (T8ke Scale) - {pourRating.toFixed(1)}/10
                   </label>
+                  
+                  {/* Display current ratings for reference */}
+                  {(bottle?.averageRating || bottle?.masterBottleId?.communityRating) && (
+                    <div className="mb-3 p-3 bg-gray-800/50 rounded-lg text-sm">
+                      {bottle?.averageRating && (
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-gray-400">Your average:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-copper font-medium">{bottle.averageRating.toFixed(1)}</span>
+                            <Star className="w-3 h-3 text-copper fill-copper" />
+                          </div>
+                        </div>
+                      )}
+                      {bottle?.masterBottleId?.communityRating && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Community:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-copper font-medium">{bottle?.masterBottleId?.communityRating?.toFixed(1)}</span>
+                            <Star className="w-3 h-3 text-copper fill-copper" />
+                            <span className="text-xs text-gray-500">({bottle?.masterBottleId?.communityRatingCount})</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     <input
                       type="range"

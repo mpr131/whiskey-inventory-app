@@ -13,6 +13,8 @@ import { usePrintQueue } from '@/contexts/PrintQueueContext';
 import SwipeableBottleCard from '@/components/SwipeableBottleCard';
 import { haptic } from '@/utils/haptics';
 import NotificationCenter from '@/components/NotificationCenter';
+import BarrelRating from '@/components/BarrelRating';
+import { getUserBottleRating } from '@/utils/ratingCalculations';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
   ssr: false,
@@ -32,6 +34,8 @@ interface MasterBottle {
   msrp?: number;
   description?: string;
   isStorePick: boolean;
+  communityRating?: number;
+  communityRatingCount?: number;
 }
 
 interface UserBottle {
@@ -52,6 +56,7 @@ interface UserBottle {
   fillLevel?: number;
   barcode?: string;
   vaultBarcode?: string;
+  averageRating?: number;
 }
 
 interface GroupedBottle {
@@ -575,6 +580,23 @@ export default function BottlesPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Rating Display for Grouped Bottles */}
+                    {masterData.communityRating !== undefined && masterData.communityRating !== null && (
+                      <div className="mt-4 pt-4 border-t border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-400">Community Rating:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-copper">{masterData.communityRating.toFixed(1)}</span>
+                            <Star className="w-4 h-4 text-copper fill-copper" />
+                            <span className="text-xs text-gray-500">({masterData.communityRatingCount} pour{masterData.communityRatingCount !== 1 ? 's' : ''})</span>
+                          </div>
+                        </div>
+                        <div className="text-right mt-1">
+                          <span className="text-xs text-gray-600">Updated daily</span>
+                        </div>
+                      </div>
+                    )}
                     </div>
                   </Link>
                 );
@@ -681,6 +703,39 @@ export default function BottlesPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Rating Display */}
+                    {(isUser && bottle.averageRating !== undefined && bottle.averageRating !== null) || 
+                     (masterData.communityRating !== undefined && masterData.communityRating !== null) ? (
+                      <div className="mt-4 space-y-2">
+                        {isUser && bottle.averageRating !== undefined && bottle.averageRating !== null && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-400">My Rating:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-copper">{bottle.averageRating.toFixed(1)}</span>
+                              <Star className="w-4 h-4 text-copper fill-copper" />
+                            </div>
+                          </div>
+                        )}
+                        {masterData.communityRating !== undefined && masterData.communityRating !== null && (
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-400">Community:</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-copper">{masterData.communityRating.toFixed(1)}</span>
+                                <Star className="w-4 h-4 text-copper fill-copper" />
+                                <span className="text-xs text-gray-500">({masterData.communityRatingCount} pour{masterData.communityRatingCount !== 1 ? 's' : ''})</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-gray-600">Updated daily</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      isUser && <div className="mt-4 text-center text-sm text-gray-500">No ratings yet</div>
+                    )}
 
                     {/* Fill Level Indicator */}
                     {isUser && bottle.status === 'opened' && bottle.fillLevel !== undefined && (

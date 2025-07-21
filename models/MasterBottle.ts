@@ -19,6 +19,9 @@ export interface IMasterBottle extends Document {
     pickDate?: Date;
     barrel?: string;
   };
+  communityRating?: number;
+  communityRatingCount?: number;
+  lastCalculated?: Date;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -93,6 +96,21 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
       pickDate: Date,
       barrel: String,
     },
+    communityRating: {
+      type: Number,
+      min: 0,
+      max: 10,
+      default: undefined,
+    },
+    communityRatingCount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    lastCalculated: {
+      type: Date,
+      default: undefined,
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -120,6 +138,12 @@ MasterBottleSchema.statics.findSimilar = async function(name: string, distillery
   }).limit(10);
 };
 
-const MasterBottle = mongoose.models.MasterBottle || mongoose.model<IMasterBottle>('MasterBottle', MasterBottleSchema);
+let MasterBottle: mongoose.Model<IMasterBottle>;
+
+try {
+  MasterBottle = mongoose.model<IMasterBottle>('MasterBottle');
+} catch {
+  MasterBottle = mongoose.model<IMasterBottle>('MasterBottle', MasterBottleSchema);
+}
 
 export default MasterBottle;

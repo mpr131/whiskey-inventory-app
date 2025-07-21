@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import toast from 'react-hot-toast';
-import { ScanLine, Search, X, ChevronLeft, Wine, Users, MapPin, Tag, Camera } from 'lucide-react';
+import { ScanLine, Search, X, ChevronLeft, Wine, Users, MapPin, Tag, Camera, Star } from 'lucide-react';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
   ssr: false,
@@ -19,12 +19,15 @@ interface UserBottle {
     brand: string;
     distillery: string;
     proof?: number;
+    communityRating?: number;
+    communityRatingCount?: number;
   };
   purchasePrice?: number;
   barcode?: string;
   vaultBarcode?: string;
   fillLevel?: number;
   status: string;
+  averageRating?: number;
 }
 
 interface PourSession {
@@ -451,6 +454,31 @@ export default function QuickPourPage() {
                 Rating (T8ke Scale)
                 {rating !== null && <span className="ml-2 text-copper">{rating}/10</span>}
               </label>
+              
+              {/* Display current ratings for reference */}
+              {selectedBottle && (selectedBottle.averageRating || selectedBottle.masterBottleId.communityRating) && (
+                <div className="mb-3 p-3 bg-gray-800/50 rounded-lg text-sm">
+                  {selectedBottle.averageRating && (
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-gray-400">Your average:</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-copper font-medium">{selectedBottle.averageRating.toFixed(1)}</span>
+                        <Star className="w-3 h-3 text-copper fill-copper" />
+                      </div>
+                    </div>
+                  )}
+                  {selectedBottle.masterBottleId.communityRating && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Community:</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-copper font-medium">{selectedBottle.masterBottleId.communityRating.toFixed(1)}</span>
+                        <Star className="w-3 h-3 text-copper fill-copper" />
+                        <span className="text-xs text-gray-500">({selectedBottle.masterBottleId.communityRatingCount})</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <input
                 type="range"
                 min="0"

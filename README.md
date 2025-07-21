@@ -116,6 +116,64 @@ whiskey-inventory-app/
 - Temperature and humidity tracking
 - Capacity management
 
+### Rating System
+- **Personal Ratings**: Real-time calculation of your average rating per bottle
+- **Community Ratings**: Nightly calculation of average ratings across all users
+- T8ke scale (0-10) with one decimal precision
+- Ratings displayed on bottle cards, detail pages, and search results
+- "Updated daily" indicator for community ratings
+
+## Scheduled Tasks (Cron Jobs)
+
+### Setting up Cron Jobs (macOS)
+
+The application includes two optional cron jobs for enhanced functionality:
+
+1. **Notification Checks** (hourly) - Sends notifications for low stock bottles
+2. **Rating Calculations** (nightly at 2 AM) - Updates community ratings
+
+To set up both cron jobs:
+
+```bash
+# Run the setup script
+./scripts/setup-notifications-cron.sh
+
+# When prompted, choose 'y' to also set up rating calculations
+```
+
+Or set them up individually:
+
+```bash
+# Notifications only
+./scripts/setup-notifications-cron.sh
+
+# Ratings only
+./scripts/setup-ratings-cron.sh
+```
+
+### Manual Triggers
+
+You can manually trigger the cron endpoints:
+
+```bash
+# Trigger notifications
+curl -X GET -H "Authorization: Bearer $CRON_SECRET" http://localhost:3005/api/cron/notifications
+
+# Trigger rating calculations
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3005/api/cron/calculate-ratings
+```
+
+### Monitoring Cron Jobs
+
+```bash
+# Check if jobs are running
+launchctl list | grep whiskeyvault
+
+# View logs
+tail -f /tmp/whiskeyvault-notifications.log
+tail -f /tmp/whiskeyvault-ratings.log
+```
+
 ## Development
 
 ### Running Tests
