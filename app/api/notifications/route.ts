@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
 
     // Transform MongoDB documents
-    const transformedNotifications = notifications.map(n => ({
+    const transformedNotifications = notifications.map((n: any) => ({
       id: n._id.toString(),
       userId: n.userId,
       type: n.type,

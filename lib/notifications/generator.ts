@@ -41,16 +41,17 @@ export async function createNotification(params: CreateNotificationParams) {
 }
 
 export async function checkPourReminders() {
-  await dbConnect();
-  
-  // Get pours that haven't been rated and are older than the reminder delay
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  
-  const unratedPours = await Pour.find({
-    rating: null,
-    notes: null,
-    createdAt: { $lt: oneDayAgo }
-  }).populate('userBottleId');
+  try {
+    await dbConnect();
+    
+    // Get pours that haven't been rated and are older than the reminder delay
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const unratedPours = await Pour.find({
+      rating: null,
+      notes: null,
+      createdAt: { $lt: oneDayAgo }
+    }).populate('userBottleId');
 
   for (const pour of unratedPours) {
     if (!pour.userBottleId || typeof pour.userBottleId === 'string') continue;
@@ -88,13 +89,18 @@ export async function checkPourReminders() {
       }
     }
   }
+  } catch (error) {
+    console.error('Error checking pour reminders:', error);
+    throw error;
+  }
 }
 
 export async function checkLowStock() {
-  await dbConnect();
-  
-  // Get all unique user IDs who have bottles
-  const users = await Bottle.distinct('owner');
+  try {
+    await dbConnect();
+    
+    // Get all unique user IDs who have bottles
+    const users = await Bottle.distinct('owner');
   
   for (const userId of users) {
     // Check user preferences
@@ -132,6 +138,10 @@ export async function checkLowStock() {
         });
       }
     }
+  }
+  } catch (error) {
+    console.error('Error checking low stock:', error);
+    throw error;
   }
 }
 

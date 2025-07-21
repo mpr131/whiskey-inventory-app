@@ -26,7 +26,6 @@ export default function SwipeableBottleCard({
 
   const handlers = useSwipeable({
     onSwiping: (eventData) => {
-      console.log('Swiping:', eventData);
       const { deltaX, absX } = eventData;
       
       // Limit swipe distance
@@ -44,9 +43,7 @@ export default function SwipeableBottleCard({
       }
     },
     onSwipedLeft: (eventData) => {
-      console.log('Swiped left!', eventData);
       if (eventData.absX > 75 && onQuickRate) {
-        console.log('Triggering quick rate');
         onQuickRate();
       }
       // Reset
@@ -55,9 +52,7 @@ export default function SwipeableBottleCard({
       setIsSwipingRight(false);
     },
     onSwipedRight: (eventData) => {
-      console.log('Swiped right!', eventData);
       if (eventData.absX > 75 && onQuickPour) {
-        console.log('Triggering quick pour');
         onQuickPour();
       }
       // Reset
@@ -66,7 +61,6 @@ export default function SwipeableBottleCard({
       setIsSwipingRight(false);
     },
     onTap: () => {
-      console.log('Tapped');
       // Reset on tap
       setSwipeOffset(0);
       setIsSwipingLeft(false);
