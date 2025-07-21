@@ -39,5 +39,26 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "permissions": [
+    "camera"
+  ],
+  "prefer_related_applications": false,
+  "categories": ["lifestyle", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Scan Barcode",
+      "short_name": "Scan",
+      "description": "Scan a bottle barcode",
+      "url": "/scan",
+      "icons": [{ "src": "/wv-favicon_256.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Add Bottle",
+      "short_name": "Add",
+      "description": "Add a new bottle",
+      "url": "/bottles/add",
+      "icons": [{ "src": "/wv-favicon_256.png", "sizes": "96x96" }]
+    }
   ]
 }

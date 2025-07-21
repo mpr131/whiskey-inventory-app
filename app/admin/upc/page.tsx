@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
 
-const BarcodeScanner = dynamic(() => import('@/components/BarcodeScanner'), {
+const EnhancedBarcodeScanner = dynamic(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
 });
 
@@ -561,7 +561,7 @@ Buffalo Trace, 080244009167
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <BarcodeScanner
+              <EnhancedBarcodeScanner
                 onScan={handleBarcodeScan}
                 onClose={() => setShowScanner(false)}
               />

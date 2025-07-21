@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 
-const BarcodeScanner = dynamic(() => import('@/components/BarcodeScanner'), {
+const EnhancedBarcodeScanner = dynamic(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
 });
 
@@ -231,7 +231,7 @@ export default function ScanPage() {
 
           {isScanning && (
             <div className="card-premium">
-              <BarcodeScanner
+              <EnhancedBarcodeScanner
                 onScan={handleBarcodeScan}
                 onClose={() => setIsScanning(false)}
               />
