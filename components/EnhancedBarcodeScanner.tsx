@@ -11,7 +11,8 @@ import {
   Info,
   Settings,
   RotateCcw,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
@@ -40,41 +41,62 @@ export default function EnhancedBarcodeScanner({ onScan, onClose }: EnhancedBarc
   const [scanConfidence, setScanConfidence] = useState(0);
   const [lastScannedCode, setLastScannedCode] = useState('');
   const [manualCode, setManualCode] = useState('');
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
 
-  // Check and request camera permissions
-  const checkCameraPermission = useCallback(async () => {
+  // Request camera permission immediately on mount
+  const requestCameraPermission = useCallback(async () => {
     try {
-      // First check if permissions API is available
-      if ('permissions' in navigator) {
-        const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
-        setPermissionStatus(result.state as PermissionStatus);
+      setIsRequestingPermission(true);
+      
+      if (typeof navigator === 'undefined' || !('mediaDevices' in navigator)) {
+        setPermissionStatus('denied');
+        return;
+      }
+
+      const nav = navigator as any;
+      const mediaDevices = nav.mediaDevices;
+      
+      if (!mediaDevices || typeof mediaDevices.getUserMedia !== 'function') {
+        setPermissionStatus('denied');
+        return;
+      }
+
+      try {
+        // Immediately request camera permission
+        const stream = await mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          } 
+        });
         
-        // Listen for permission changes
-        result.onchange = () => {
-          setPermissionStatus(result.state as PermissionStatus);
-        };
-      } else if (typeof navigator !== 'undefined' && 'mediaDevices' in navigator) {
-        // Fallback: try to get user media to check permission
-        try {
-          const nav = navigator as any;
-          const mediaDevices = nav.mediaDevices;
-          if (mediaDevices && typeof mediaDevices.getUserMedia === 'function') {
-            const stream = await mediaDevices.getUserMedia({ video: true });
-            stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-            setPermissionStatus('granted');
-          } else {
-            setPermissionStatus('denied');
-          }
-        } catch (err) {
+        // Permission granted - clean up stream and set status
+        stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        setPermissionStatus('granted');
+        
+        // Scanner will be initialized automatically after state update
+        
+      } catch (err: any) {
+        console.error('Camera permission error:', err);
+        
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          // User denied permission
+          setPermissionStatus('denied');
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          // No camera available
+          setPermissionStatus('denied');
+          toast.error('No camera found on this device');
+        } else {
+          // Other error
           setPermissionStatus('denied');
         }
-      } else {
-        // No camera API available
-        setPermissionStatus('denied');
       }
     } catch (err) {
-      console.error('Error checking camera permission:', err);
-      setPermissionStatus('prompt');
+      console.error('Error requesting camera permission:', err);
+      setPermissionStatus('denied');
+    } finally {
+      setIsRequestingPermission(false);
     }
   }, []);
 
@@ -293,9 +315,9 @@ export default function EnhancedBarcodeScanner({ onScan, onClose }: EnhancedBarc
     }
   };
 
-  // Cleanup
+  // Request permission immediately on mount
   useEffect(() => {
-    checkCameraPermission();
+    requestCameraPermission();
     
     return () => {
       if (Quagga && scannerInitialized.current) {
@@ -303,14 +325,14 @@ export default function EnhancedBarcodeScanner({ onScan, onClose }: EnhancedBarc
         scannerInitialized.current = false;
       }
     };
-  }, [checkCameraPermission]);
+  }, [requestCameraPermission]);
 
   // Initialize scanner when permission is granted
   useEffect(() => {
-    if (permissionStatus === 'granted' && !scannerInitialized.current) {
+    if (permissionStatus === 'granted' && !scannerInitialized.current && !isRequestingPermission) {
       initializeScanner();
     }
-  }, [permissionStatus, initializeScanner]);
+  }, [permissionStatus, initializeScanner, isRequestingPermission]);
 
   // Browser-specific help content
   const getBrowserHelp = () => {
@@ -390,26 +412,28 @@ export default function EnhancedBarcodeScanner({ onScan, onClose }: EnhancedBarc
       </div>
 
       {/* Permission Status */}
-      {permissionStatus !== 'granted' && (
+      {(permissionStatus !== 'granted' || isRequestingPermission) && (
         <div className="bg-gray-800/90 backdrop-blur px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
+              isRequestingPermission ? 'bg-blue-500 animate-pulse' :
               permissionStatus === 'denied' ? 'bg-red-500' : 
               permissionStatus === 'prompt' ? 'bg-yellow-500' : 
               'bg-gray-500'
             }`} />
             <span className="text-sm text-gray-300">
-              Camera {permissionStatus === 'denied' ? 'Blocked' : 
-                     permissionStatus === 'prompt' ? 'Permission Needed' : 
-                     'Checking...'}
+              {isRequestingPermission ? 'Requesting camera permission...' :
+               permissionStatus === 'denied' ? 'Camera Blocked' : 
+               permissionStatus === 'prompt' ? 'Permission Needed' : 
+               'Checking...'}
             </span>
           </div>
-          {permissionStatus === 'prompt' && (
+          {permissionStatus === 'denied' && !isRequestingPermission && (
             <button
-              onClick={initializeScanner}
+              onClick={requestCameraPermission}
               className="text-xs px-3 py-1 bg-copper text-white rounded hover:bg-copper-light transition-colors"
             >
-              Request Permission
+              Try Again
             </button>
           )}
         </div>
@@ -417,7 +441,21 @@ export default function EnhancedBarcodeScanner({ onScan, onClose }: EnhancedBarc
 
       {/* Main Content */}
       <div className="flex-1 relative overflow-hidden">
-        {permissionStatus === 'granted' ? (
+        {isRequestingPermission ? (
+          /* Loading state while requesting permission */
+          <div className="flex flex-col items-center justify-center h-full p-4 bg-gray-900">
+            <div className="relative">
+              <Camera className="w-16 h-16 text-copper animate-pulse" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-20 h-20 border-4 border-copper/20 border-t-copper rounded-full animate-spin" />
+              </div>
+            </div>
+            <h3 className="text-white text-xl mt-6 mb-2">Requesting Camera Access</h3>
+            <p className="text-gray-400 text-center max-w-sm">
+              Please allow camera access when prompted by your browser to scan barcodes
+            </p>
+          </div>
+        ) : permissionStatus === 'granted' ? (
           <>
             {/* Scanner View */}
             <div ref={videoRef} className="w-full h-full relative bg-black" />
