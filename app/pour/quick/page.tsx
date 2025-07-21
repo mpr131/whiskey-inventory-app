@@ -288,7 +288,7 @@ export default function QuickPourPage() {
         </div>
       </header>
 
-      <main className="p-4 pb-20 max-w-lg mx-auto">
+      <main className="p-4 pb-24 md:pb-20 max-w-lg mx-auto">
         {/* Bottle Selection */}
         {!selectedBottle ? (
           <div className="space-y-4">
@@ -350,7 +350,7 @@ export default function QuickPourPage() {
                           {bottle.status}
                         </span>
                         {bottle.fillLevel !== undefined && bottle.status === 'opened' && (
-                          <div className="text-xs text-gray-500 mt-1">{bottle.fillLevel}% full</div>
+                          <div className="text-xs text-gray-500 mt-1">{bottle.fillLevel.toFixed(2)}% full</div>
                         )}
                       </div>
                     </div>
@@ -384,7 +384,7 @@ export default function QuickPourPage() {
                 <div className="mt-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-500">Fill Level</span>
-                    <span className="text-gray-300">{selectedBottle.fillLevel}%</span>
+                    <span className="text-gray-300">{selectedBottle.fillLevel.toFixed(2)}%</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div

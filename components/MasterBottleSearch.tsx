@@ -214,7 +214,7 @@ export default function MasterBottleSearch({
                 {bottle.age && ` • ${bottle.age} Year`}
                 {bottle.proof && ` • ${bottle.proof} Proof`}
                 {bottle.isUserBottle && bottle.fillLevel !== undefined && bottle.status === 'opened' && (
-                  <span className="ml-2">• {bottle.fillLevel}% Full</span>
+                  <span className="ml-2">• {bottle.fillLevel.toFixed(2)}% Full</span>
                 )}
               </div>
             </button>

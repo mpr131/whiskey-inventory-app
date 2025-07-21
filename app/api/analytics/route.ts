@@ -134,7 +134,15 @@ export async function GET(request: Request) {
     };
 
     let totalValue = 0;
-    const valuableBottles: Array<{ name: string; value: number }> = [];
+    const valuableBottles: Array<{ name: string; value: number; rating?: number; valuePerPoint?: number }> = [];
+    const valueAnalysisBottles: Array<{
+      name: string;
+      category: string;
+      price: number;
+      rating: number;
+      valuePerPoint: number;
+    }> = [];
+    const categoryValueData: Record<string, { totalValuePerPoint: number; count: number }> = {};
 
     userBottles.forEach(bottle => {
       const master = bottle.masterBottleId as any;
@@ -145,8 +153,8 @@ export async function GET(request: Request) {
       categoryCount[category] = (categoryCount[category] || 0) + 1;
 
       // Age
-      if (master.statedAge) {
-        const ageGroup = `${master.statedAge} Year`;
+      if (master.age) {
+        const ageGroup = `${master.age} Year`;
         ageCount[ageGroup] = (ageCount[ageGroup] || 0) + 1;
       }
 
@@ -162,8 +170,36 @@ export async function GET(request: Request) {
       // Value
       const value = bottle.marketValue || bottle.purchasePrice || 0;
       totalValue += value;
+      
+      // Get rating from bottle's average rating
+      const rating = bottle.averageRating || 0;
+      
       if (value > 0) {
-        valuableBottles.push({ name: master.name, value });
+        valuableBottles.push({ 
+          name: master.name, 
+          value,
+          rating: rating > 0 ? rating : undefined,
+          valuePerPoint: rating > 0 ? value / rating : undefined
+        });
+      }
+
+      // Value per point analysis
+      if (value > 0 && rating > 0) {
+        const valuePerPoint = value / rating;
+        valueAnalysisBottles.push({
+          name: master.name,
+          category,
+          price: value,
+          rating,
+          valuePerPoint
+        });
+
+        // Track category averages
+        if (!categoryValueData[category]) {
+          categoryValueData[category] = { totalValuePerPoint: 0, count: 0 };
+        }
+        categoryValueData[category].totalValuePerPoint += valuePerPoint;
+        categoryValueData[category].count++;
       }
     });
 
@@ -184,6 +220,23 @@ export async function GET(request: Request) {
     const mostValuable = valuableBottles
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
+
+    // Process value analytics
+    const bestValues = valueAnalysisBottles
+      .sort((a, b) => a.valuePerPoint - b.valuePerPoint)
+      .slice(0, 10);
+
+    const overpriced = valueAnalysisBottles
+      .sort((a, b) => b.valuePerPoint - a.valuePerPoint)
+      .slice(0, 10);
+
+    const categoryValueBreakdown = Object.entries(categoryValueData)
+      .map(([category, data]) => ({
+        category,
+        avgValuePerPoint: data.totalValuePerPoint / data.count,
+        bottleCount: data.count
+      }))
+      .sort((a, b) => a.avgValuePerPoint - b.avgValuePerPoint);
 
     // Pour Analytics - Limit to reasonable amount
     console.time('Pour Analytics Query');
@@ -694,6 +747,11 @@ export async function GET(request: Request) {
           totalValue,
           averageValue: totalValue / userBottles.length
         },
+        valueAnalytics: {
+          bestValues,
+          overpriced,
+          categoryBreakdown: categoryValueBreakdown
+        },
         pourAnalytics: {
           mostPoured,
           pourSizeDistribution,
@@ -764,6 +822,11 @@ export async function GET(request: Request) {
         mostValuable,
         totalValue,
         averageValue: totalValue / userBottles.length
+      },
+      valueAnalytics: {
+        bestValues,
+        overpriced,
+        categoryBreakdown: categoryValueBreakdown
       },
       pourAnalytics: {
         mostPoured,

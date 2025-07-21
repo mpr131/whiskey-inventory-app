@@ -864,7 +864,7 @@ export default function BottleDetailPage() {
                       <span className="text-sm text-gray-400">Fill Level</span>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-white">
-                          {Math.round(bottle.fillLevel)}% ({calculateRemainingOz(bottle.fillLevel)}oz remaining)
+                          {bottle.fillLevel.toFixed(2)}% ({calculateRemainingOz(bottle.fillLevel)}oz remaining)
                         </span>
                         <button
                           onClick={() => {

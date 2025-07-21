@@ -119,7 +119,7 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-24 md:pb-12">
         {/* Search Section */}
         <div className="mb-12">
           <div className="flex items-center space-x-4">
@@ -309,7 +309,7 @@ export default function DashboardPage() {
                                     style={{ width: `${bottle.fillLevel}%` }}
                                   />
                                 </div>
-                                <span className="text-xs text-gray-400">{bottle.fillLevel}%</span>
+                                <span className="text-xs text-gray-400">{bottle.fillLevel.toFixed(2)}%</span>
                               </div>
                             )}
                           </div>
@@ -347,7 +347,7 @@ export default function DashboardPage() {
                           style={{ width: `${bottle.fillLevel}%` }}
                         />
                       </div>
-                      <div className="text-red-400 font-semibold">{bottle.fillLevel}% remaining</div>
+                      <div className="text-red-400 font-semibold">{bottle.fillLevel.toFixed(2)}% remaining</div>
                     </div>
                     {bottle.location && (
                       <div className="text-xs text-gray-500">{bottle.location.area} - {bottle.location.bin}</div>

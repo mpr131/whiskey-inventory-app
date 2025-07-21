@@ -6,6 +6,8 @@ import PrintQueueButton from '@/components/PrintQueueButton';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import BottomNav from '@/components/BottomNav';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,6 +44,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log('Layout rendered on client');
+  } else {
+    console.log('Layout rendered on server');
+  }
+  
   return (
     <html lang="en" className="dark">
       <head>
@@ -55,6 +64,9 @@ export default function RootLayout({
         <Providers>
           <OfflineIndicator />
           {children}
+          <ErrorBoundary>
+            <BottomNav />
+          </ErrorBoundary>
           <PrintQueueButton />
           <ServiceWorkerRegistration />
           <PWAInstallPrompt />

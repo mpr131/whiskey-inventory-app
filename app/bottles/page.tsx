@@ -280,7 +280,7 @@ export default function BottlesPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
         {/* Clean Header Section */}
         <div className="mb-8">
           {/* Top Row - Title and Search */}
@@ -673,7 +673,7 @@ export default function BottlesPage() {
                       <div className="mt-4">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-gray-500">Fill Level</span>
-                          <span className="text-xs text-gray-300">{bottle.fillLevel}%</span>
+                          <span className="text-xs text-gray-300">{bottle.fillLevel.toFixed(2)}%</span>
                         </div>
                         <div className="w-full bg-gray-700 rounded-full h-1.5">
                           <div

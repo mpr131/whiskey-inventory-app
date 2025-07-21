@@ -331,3 +331,10 @@ body {
   padding: 4px;
   display: inline-block;
 }
+
+/* Safe area padding for iOS devices */
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

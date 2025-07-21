@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ChevronLeft, Wine, TrendingUp, Award, Target, Brain,
-  Clock, Calendar, MapPin, Star, Users, Tag, AlertTriangle
+  Clock, Calendar, MapPin, Star, Users, Tag, AlertTriangle, DollarSign
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -31,9 +31,30 @@ interface AnalyticsData {
     categoryBreakdown: Array<{ name: string; value: number; percentage: number }>;
     ageDistribution: Array<{ age: string; count: number }>;
     proofDistribution: Array<{ range: string; count: number }>;
-    mostValuable: Array<{ name: string; value: number }>;
+    mostValuable: Array<{ name: string; value: number; valuePerPoint?: number; rating?: number }>;
     totalValue: number;
     averageValue: number;
+  };
+  valueAnalytics: {
+    bestValues: Array<{
+      name: string;
+      category: string;
+      price: number;
+      rating: number;
+      valuePerPoint: number;
+    }>;
+    overpriced: Array<{
+      name: string;
+      category: string;
+      price: number;
+      rating: number;
+      valuePerPoint: number;
+    }>;
+    categoryBreakdown: Array<{
+      category: string;
+      avgValuePerPoint: number;
+      bottleCount: number;
+    }>;
   };
   pourAnalytics: {
     mostPoured: Array<{ name: string; pours: number; amount: number }>;
@@ -111,6 +132,7 @@ export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('30d');
   const [error, setError] = useState<string | null>(null);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [valuableSortBy, setValuableSortBy] = useState<'value' | 'valuePerPoint'>('value');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -165,6 +187,11 @@ export default function AnalyticsPage() {
           mostValuable: [],
           totalValue: 0,
           averageValue: 0
+        },
+        valueAnalytics: data.valueAnalytics || {
+          bestValues: [],
+          overpriced: [],
+          categoryBreakdown: []
         },
         pourAnalytics: data.pourAnalytics || {
           mostPoured: [],
@@ -330,7 +357,7 @@ export default function AnalyticsPage() {
         </div>
       </header>
 
-      <main className="p-4 max-w-7xl mx-auto space-y-8">
+      <main className="p-4 pb-24 md:pb-4 max-w-7xl mx-auto space-y-8">
         {/* Tonight's Pour Timeline */}
         <section className="bg-gray-800 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-6">
@@ -469,19 +496,60 @@ export default function AnalyticsPage() {
 
             {/* Most Valuable Bottles */}
             <div className="bg-gray-700/30 rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Most Valuable Bottles</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Most Valuable Bottles</h3>
+                <select
+                  value={valuableSortBy}
+                  onChange={(e) => setValuableSortBy(e.target.value as 'value' | 'valuePerPoint')}
+                  className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-sm"
+                >
+                  <option value="value">By Total Value</option>
+                  <option value="valuePerPoint">By Value per Point</option>
+                </select>
+              </div>
               <div className="space-y-3">
-                {analytics.collectionInsights.mostValuable.slice(0, 5).map((bottle, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-copper/20 rounded-full flex items-center justify-center text-copper font-bold">
-                        {index + 1}
+                {(() => {
+                  const sortedBottles = valuableSortBy === 'value' 
+                    ? analytics.collectionInsights.mostValuable.slice(0, 5)
+                    : analytics.collectionInsights.mostValuable
+                        .filter(bottle => bottle.valuePerPoint !== undefined)
+                        .sort((a, b) => (a.valuePerPoint || 999) - (b.valuePerPoint || 999))
+                        .slice(0, 5);
+                  
+                  return sortedBottles.map((bottle, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-copper/20 rounded-full flex items-center justify-center text-copper font-bold">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <span className="font-medium">{bottle.name}</span>
+                          {valuableSortBy === 'valuePerPoint' && bottle.rating && (
+                            <div className="text-xs text-gray-400">
+                              ${bottle.value} • {bottle.rating}/10
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-medium">{bottle.name}</span>
+                      <div className="text-right">
+                        {valuableSortBy === 'value' ? (
+                          <span className="text-copper font-bold">${bottle.value.toLocaleString()}</span>
+                        ) : (
+                          <div>
+                            <span className={`font-bold ${
+                              bottle.valuePerPoint && bottle.valuePerPoint < 10 ? 'text-green-500' : 
+                              bottle.valuePerPoint && bottle.valuePerPoint < 20 ? 'text-amber-500' : 
+                              'text-red-500'
+                            }`}>
+                              ${bottle.valuePerPoint?.toFixed(2)}/pt
+                            </span>
+                            <div className="text-xs text-gray-400">${bottle.value}</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-copper font-bold">${bottle.value.toLocaleString()}</span>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
               <div className="mt-4 pt-4 border-t border-gray-700">
                 <div className="flex justify-between items-center">
@@ -489,6 +557,107 @@ export default function AnalyticsPage() {
                   <span className="text-2xl font-bold text-copper">${analytics.collectionInsights.totalValue.toLocaleString()}</span>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Best Value Bottles */}
+        <section className="bg-gray-800 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <DollarSign className="w-6 h-6 text-copper" />
+            <h2 className="text-2xl font-bold">Best Value Bottles</h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Top 10 Best Values */}
+            <div className="bg-gray-700/30 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Top 10 Best Values</h3>
+              {analytics.valueAnalytics?.bestValues?.length > 0 ? (
+                <div className="space-y-3">
+                  {analytics.valueAnalytics.bestValues.map((bottle, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium text-white">{bottle.name}</div>
+                        <div className="text-sm text-gray-400">
+                          {bottle.category} • ${bottle.price} • {bottle.rating}/10
+                        </div>
+                      </div>
+                      <div className={`text-right font-bold ${
+                        bottle.valuePerPoint < 10 ? 'text-green-500' : 
+                        bottle.valuePerPoint < 20 ? 'text-amber-500' : 
+                        'text-red-500'
+                      }`}>
+                        ${bottle.valuePerPoint.toFixed(2)}/pt
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No bottles with price and rating data</p>
+                </div>
+              )}
+            </div>
+
+            {/* Top 10 Overpriced */}
+            <div className="bg-gray-700/30 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Top 10 Overpriced</h3>
+              {analytics.valueAnalytics?.overpriced?.length > 0 ? (
+                <div className="space-y-3">
+                  {analytics.valueAnalytics.overpriced.map((bottle, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium text-white">{bottle.name}</div>
+                        <div className="text-sm text-gray-400">
+                          {bottle.category} • ${bottle.price} • {bottle.rating}/10
+                        </div>
+                      </div>
+                      <div className={`text-right font-bold ${
+                        bottle.valuePerPoint < 10 ? 'text-green-500' : 
+                        bottle.valuePerPoint < 20 ? 'text-amber-500' : 
+                        'text-red-500'
+                      }`}>
+                        ${bottle.valuePerPoint.toFixed(2)}/pt
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No overpriced bottles found</p>
+                </div>
+              )}
+            </div>
+
+            {/* Category Breakdown */}
+            <div className="bg-gray-700/30 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Category Average $/Point</h3>
+              {analytics.valueAnalytics?.categoryBreakdown?.length > 0 ? (
+                <div className="space-y-3">
+                  {analytics.valueAnalytics.categoryBreakdown.map((category, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                      <div>
+                        <div className="font-medium text-white">{category.category}</div>
+                        <div className="text-sm text-gray-400">{category.bottleCount} bottles</div>
+                      </div>
+                      <div className={`text-right font-bold ${
+                        category.avgValuePerPoint < 10 ? 'text-green-500' : 
+                        category.avgValuePerPoint < 20 ? 'text-amber-500' : 
+                        'text-red-500'
+                      }`}>
+                        ${category.avgValuePerPoint.toFixed(2)}/pt
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No category data available</p>
+                </div>
+              )}
             </div>
           </div>
         </section>
