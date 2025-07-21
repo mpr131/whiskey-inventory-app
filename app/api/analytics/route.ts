@@ -546,7 +546,7 @@ export async function GET(request: Request) {
     .lean();
     
     // Group pours by bottle
-    const bottlePourData: Record<string, { pours: any[]; bottle: any }> = {};
+    const bottlePourData: Record<string, { pours: typeof recentPours; bottle: typeof openBottles[0] }> = {};
     openBottles.forEach(bottle => {
       const bottlePours = recentPours.filter(p => 
         p.userBottleId.toString() === bottle._id.toString()
@@ -583,13 +583,14 @@ export async function GET(request: Request) {
       const ozPerWeek = ozPerDay * 7;
       
       const bottleSize = 25.36; // 750ml in oz
-      const remainingOz = (bottle.fillLevel / 100) * bottleSize;
+      const fillLevel = bottle.fillLevel || 0;
+      const remainingOz = (fillLevel / 100) * bottleSize;
       const daysUntilEmpty = ozPerDay > 0 ? Math.round(remainingOz / ozPerDay) : 999;
       
       depletionPredictions.push({
         bottleId: bottle._id.toString(),
         bottleName: (bottle.masterBottleId as any)?.name || 'Unknown',
-        fillLevel: bottle.fillLevel,
+        fillLevel: fillLevel,
         daysUntilEmpty,
         depletionRate: ozPerWeek,
         remainingOz
@@ -601,7 +602,7 @@ export async function GET(request: Request) {
         const projection = [];
         
         // Calculate historical fill levels
-        let currentFill = bottle.fillLevel;
+        let currentFill = bottle.fillLevel || 0;
         const poursReversed = [...pours].reverse();
         
         history.push({
@@ -621,7 +622,7 @@ export async function GET(request: Request) {
         if (daysUntilEmpty < 180) {
           const projectionDays = Math.min(daysUntilEmpty + 7, 90);
           for (let day = 1; day <= projectionDays; day += 7) {
-            const projectedFill = Math.max(0, bottle.fillLevel - (ozPerDay * day / bottleSize) * 100);
+            const projectedFill = Math.max(0, fillLevel - (ozPerDay * day / bottleSize) * 100);
             const projectionDate = new Date();
             projectionDate.setDate(projectionDate.getDate() + day);
             projection.push({
