@@ -117,11 +117,12 @@ export async function recalculateAllMasterBottleRatings() {
     await dbConnect();
     
     const masterBottles = await MasterBottle.find({});
-    const results = [];
+    const results: any[] = [];
 
     for (const bottle of masterBottles) {
-      const result = await updateMasterBottleRating(bottle._id.toString());
-      results.push({ bottleId: bottle._id.toString(), ...result });
+      const bottleId = (bottle._id as Types.ObjectId).toString();
+      const result = await updateMasterBottleRating(bottleId);
+      results.push({ bottleId, ...result });
     }
 
     return results;

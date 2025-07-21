@@ -128,6 +128,10 @@ MasterBottleSchema.index({ name: 1, distillery: 1, isStorePick: 1 }, { unique: t
 // Text search index
 MasterBottleSchema.index({ name: 'text', brand: 'text', distillery: 'text' });
 
+// Index for rating queries
+MasterBottleSchema.index({ communityRating: -1 });
+MasterBottleSchema.index({ lastCalculated: 1 });
+
 // Method to check if a similar bottle exists
 MasterBottleSchema.statics.findSimilar = async function(name: string, distillery: string) {
   return this.find({

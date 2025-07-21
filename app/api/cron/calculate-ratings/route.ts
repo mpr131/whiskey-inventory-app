@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     await dbConnect();
 
-    console.log('[CRON] Starting nightly rating calculation...');
+    // Starting nightly rating calculation
 
     // Use aggregation pipeline to efficiently calculate ratings for all master bottles
     const ratingAggregation = await Pour.aggregate([
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       }
     ]);
 
-    console.log(`[CRON] Found ${ratingAggregation.length} master bottles with ratings`);
+    // Found master bottles with ratings: ratingAggregation.length
 
     // Batch update all master bottles with new ratings
     const bulkOps = ratingAggregation.map(result => ({
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('[CRON] Rating calculation completed:', response);
+    // Rating calculation completed
 
     return NextResponse.json(response);
   } catch (error) {

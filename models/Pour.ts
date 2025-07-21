@@ -98,6 +98,8 @@ PourSchema.index({ rating: 1 });
 // Additional index for analytics queries
 PourSchema.index({ userId: 1, createdAt: -1 });
 PourSchema.index({ userId: 1, userBottleId: 1, createdAt: -1 });
+// Compound index for rating aggregation pipeline
+PourSchema.index({ rating: 1, userBottleId: 1 });
 
 // Calculate cost per pour before saving
 PourSchema.pre('save', async function(next) {
