@@ -387,7 +387,7 @@ export default function DashboardPage() {
         {session.user.isAdmin && (
           <div className="mt-12">
             <h2 className="text-2xl font-bold text-white mb-6">Admin Tools</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Link href="/admin/invite-codes" className="card-premium hover:border-copper/50 transition-all duration-300">
                 <h3 className="text-lg font-semibold text-white mb-2">Manage Invite Codes</h3>
                 <p className="text-gray-400">Create and manage invite codes for new users</p>
@@ -396,6 +396,11 @@ export default function DashboardPage() {
               <Link href="/admin/users" className="card-premium hover:border-copper/50 transition-all duration-300">
                 <h3 className="text-lg font-semibold text-white mb-2">Manage Users</h3>
                 <p className="text-gray-400">View and manage user accounts</p>
+              </Link>
+
+              <Link href="/admin/upc" className="card-premium hover:border-copper/50 transition-all duration-300">
+                <h3 className="text-lg font-semibold text-white mb-2">Manage UPC Codes</h3>
+                <p className="text-gray-400">Add, review, and manage UPC codes for bottles</p>
               </Link>
             </div>
           </div>

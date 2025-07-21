@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { checkAndGenerateAllNotifications } from '@/lib/notifications/generator';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,9 +14,12 @@ export async function GET(request: NextRequest) {
     // Run all notification checks
     await checkAndGenerateAllNotifications();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      data: { message: 'Notifications check completed' }
+    });
   } catch (error) {
-    console.error('Error in notifications cron:', error);
+    logger.error('Error in notifications cron', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

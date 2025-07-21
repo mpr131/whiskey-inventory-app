@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { Shield, Users, Ticket, ArrowLeft } from 'lucide-react';
+import { Shield, Users, Ticket, ArrowLeft, Package } from 'lucide-react';
 
 export default function AdminLayout({
   children,
@@ -73,6 +73,13 @@ export default function AdminLayout({
             >
               <Users className="h-4 w-4" />
               Users
+            </Link>
+            <Link
+              href="/admin/upc"
+              className="text-gray-300 hover:text-white px-3 py-4 text-sm font-medium border-b-2 border-transparent hover:border-copper flex items-center gap-2"
+            >
+              <Package className="h-4 w-4" />
+              UPC Management
             </Link>
           </nav>
         </div>

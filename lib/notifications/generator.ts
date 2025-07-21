@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
-import Bottle from '@/models/Bottle';
+import UserBottle from '@/models/UserBottle';
 import Pour from '@/models/Pour';
 import UserPreferences from '@/models/UserPreferences';
 import type { NotificationType, NotificationPriority } from '@/types/notifications';
@@ -100,7 +100,7 @@ export async function checkLowStock() {
     await dbConnect();
     
     // Get all unique user IDs who have bottles
-    const users = await Bottle.distinct('owner');
+    const users = await UserBottle.distinct('userId');
   
   for (const userId of users) {
     // Check user preferences
@@ -110,32 +110,35 @@ export async function checkLowStock() {
     const threshold = preferences?.lowStockThreshold || 25;
     
     // Get bottles with low fill level for this user
-    const lowStockBottles = await Bottle.find({
-      owner: userId,
+    const lowStockBottles = await UserBottle.find({
+      userId: userId,
       fillLevel: { $lt: threshold, $gt: 0 },
-      status: 'open'
-    });
+      status: 'opened'
+    }).populate('masterBottleId');
 
-    for (const bottle of lowStockBottles) {
+    for (const bottle of lowStockBottles as any[]) {
       // Check if low stock alert already sent recently (within 7 days)
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const recentNotification = await Notification.findOne({
-        userId: bottle.owner,
+        userId: bottle.userId.toString(),
         type: 'low_stock',
         'data.bottleId': bottle._id.toString(),
         createdAt: { $gt: sevenDaysAgo }
       });
 
-      if (!recentNotification) {
-        await createNotification({
-          userId: bottle.owner,
-          type: 'low_stock',
-          priority: 'medium',
-          title: 'Low Stock Alert',
-          message: `${bottle.name} is running low (${bottle.fillLevel}% remaining)`,
-          data: { bottleId: bottle._id.toString() },
-          actionUrl: `/bottles/${bottle._id}`
-        });
+      if (!recentNotification && bottle.masterBottleId) {
+        const masterBottle = typeof bottle.masterBottleId === 'object' ? bottle.masterBottleId : null;
+        if (masterBottle) {
+          await createNotification({
+            userId: bottle.userId.toString(),
+            type: 'low_stock',
+            priority: 'medium',
+            title: 'Low Stock Alert',
+            message: `${masterBottle.name} is running low (${bottle.fillLevel}% remaining)`,
+            data: { bottleId: bottle._id.toString() },
+            actionUrl: `/bottles/${bottle._id}`
+          });
+        }
       }
     }
   }

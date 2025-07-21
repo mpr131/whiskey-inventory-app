@@ -93,11 +93,28 @@ export default function AddBottlePage() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // Handle masterBottleId from query params
+  // Handle query params
   useEffect(() => {
     const masterBottleId = searchParams.get('masterBottleId');
+    const name = searchParams.get('name');
+    const brand = searchParams.get('brand');
+    const upc = searchParams.get('upc');
+    
     if (masterBottleId) {
       fetchMasterBottle(masterBottleId);
+    } else if (name || brand) {
+      // Pre-fill for new bottle creation from UPC scan
+      setCreateNew(true);
+      setMasterData(prev => ({
+        ...prev,
+        name: name || '',
+        brand: brand || '',
+      }));
+      setSearchQuery(name || '');
+      
+      if (upc) {
+        toast.success(`Creating new bottle for UPC: ${upc}`);
+      }
     }
   }, [searchParams]);
 

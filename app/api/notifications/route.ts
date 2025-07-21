@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import NotificationModel from '@/models/Notification';
-import type { Notification } from '@/types/notifications';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,9 +38,12 @@ export async function GET(request: NextRequest) {
       icon: n.icon
     }));
 
-    return NextResponse.json({ notifications: transformedNotifications });
+    return NextResponse.json({ 
+      success: true,
+      data: { notifications: transformedNotifications }
+    });
   } catch (error) {
-    console.error('Error in notifications API:', error);
+    logger.error('Error in notifications API', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -78,23 +81,26 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ 
-      notification: {
-        id: notification._id.toString(),
-        userId: notification.userId,
-        type: notification.type,
-        priority: notification.priority,
-        title: notification.title,
-        message: notification.message,
-        data: notification.data,
-        read: notification.read,
-        createdAt: notification.createdAt,
-        expiresAt: notification.expiresAt,
-        actionUrl: notification.actionUrl,
-        icon: notification.icon
+      success: true,
+      data: {
+        notification: {
+          id: notification._id.toString(),
+          userId: notification.userId,
+          type: notification.type,
+          priority: notification.priority,
+          title: notification.title,
+          message: notification.message,
+          data: notification.data,
+          read: notification.read,
+          createdAt: notification.createdAt,
+          expiresAt: notification.expiresAt,
+          actionUrl: notification.actionUrl,
+          icon: notification.icon
+        }
       }
     });
   } catch (error) {
-    console.error('Error in create notification API:', error);
+    logger.error('Error in create notification API', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

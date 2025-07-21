@@ -22,6 +22,13 @@ export interface IMasterBottle extends Document {
   communityRating?: number;
   communityRatingCount?: number;
   lastCalculated?: Date;
+  upcCodes?: Array<{
+    code: string;
+    submittedBy: mongoose.Types.ObjectId;
+    verifiedCount: number;
+    dateAdded: Date;
+    isAdminAdded: boolean;
+  }>;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -111,6 +118,31 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
       type: Date,
       default: undefined,
     },
+    upcCodes: [{
+      code: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      submittedBy: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+      },
+      verifiedCount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      dateAdded: {
+        type: Date,
+        default: Date.now,
+      },
+      isAdminAdded: {
+        type: Boolean,
+        default: false,
+      },
+    }],
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -131,6 +163,9 @@ MasterBottleSchema.index({ name: 'text', brand: 'text', distillery: 'text' });
 // Index for rating queries
 MasterBottleSchema.index({ communityRating: -1 });
 MasterBottleSchema.index({ lastCalculated: 1 });
+
+// Index for UPC code lookups
+MasterBottleSchema.index({ 'upcCodes.code': 1 });
 
 // Method to check if a similar bottle exists
 MasterBottleSchema.statics.findSimilar = async function(name: string, distillery: string) {

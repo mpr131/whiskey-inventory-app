@@ -128,6 +128,20 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user }) {
+      // Update lastLogin timestamp
+      if (user?.id) {
+        try {
+          await dbConnect();
+          await User.findByIdAndUpdate(user.id, {
+            lastLogin: new Date(),
+          });
+        } catch (error) {
+          console.error('Error updating lastLogin:', error);
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       if (trigger === 'update' && session) {
         token = { ...token, ...session };
