@@ -8,6 +8,7 @@ import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import BottomNav from '@/components/BottomNav';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import ProfileSetupBanner from '@/components/ProfileSetupBanner';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -63,6 +64,7 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased`}>
         <Providers>
           <OfflineIndicator />
+          <ProfileSetupBanner />
           {children}
           <ErrorBoundary>
             <BottomNav />

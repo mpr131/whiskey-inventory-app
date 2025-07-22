@@ -37,14 +37,14 @@ async function testPourCreation() {
     try {
       await Pour.create({
         userId: user._id,
-        userBottleId: bottle._id,
+        userBottleId: (bottle as any)._id,
         amount: 1.5,
         date: new Date(),
       });
       console.error('❌ Test 1 FAILED: Pour was created without a session!');
     } catch (error) {
       console.log('✅ Test 1 PASSED: Pour creation without session was rejected');
-      console.log(`   Error: ${error.message}\n`);
+      console.log(`   Error: ${(error as Error).message}\n`);
     }
 
     // Test 2: Create pour with session using the helper (should succeed)
@@ -52,7 +52,7 @@ async function testPourCreation() {
     try {
       const { pour, session } = await createPourWithSession({
         userId: user._id.toString(),
-        userBottleId: bottle._id.toString(),
+        userBottleId: (bottle as any)._id.toString(),
         amount: 1.5,
         rating: 8.5,
         notes: 'Test pour with auto-session',
@@ -66,7 +66,7 @@ async function testPourCreation() {
       // Clean up test pour
       await Pour.findByIdAndDelete(pour._id);
     } catch (error) {
-      console.error('❌ Test 2 FAILED:', error.message);
+      console.error('❌ Test 2 FAILED:', (error as Error).message);
     }
 
     // Test 3: Test session grouping (4-hour window)
@@ -78,7 +78,7 @@ async function testPourCreation() {
       // Create first pour
       const { pour: pour1, session: session1 } = await createPourWithSession({
         userId: user._id.toString(),
-        userBottleId: bottle._id.toString(),
+        userBottleId: (bottle as any)._id.toString(),
         amount: 1,
         date: threeHoursAgo,
       });
@@ -86,7 +86,7 @@ async function testPourCreation() {
       // Create second pour (should use same session)
       const { pour: pour2, session: session2 } = await createPourWithSession({
         userId: user._id.toString(),
-        userBottleId: bottle._id.toString(),
+        userBottleId: (bottle as any)._id.toString(),
         amount: 1.5,
         date: now,
       });
@@ -104,7 +104,7 @@ async function testPourCreation() {
       await Pour.findByIdAndDelete(pour2._id);
       await session1.updateStats();
     } catch (error) {
-      console.error('❌ Test 3 FAILED:', error.message);
+      console.error('❌ Test 3 FAILED:', (error as Error).message);
     }
 
     // Test 4: Test session separation (>4 hours apart)
@@ -116,7 +116,7 @@ async function testPourCreation() {
       // Create first pour
       const { pour: pour1, session: session1 } = await createPourWithSession({
         userId: user._id.toString(),
-        userBottleId: bottle._id.toString(),
+        userBottleId: (bottle as any)._id.toString(),
         amount: 1,
         date: fiveHoursAgo,
       });
@@ -124,7 +124,7 @@ async function testPourCreation() {
       // Create second pour (should create new session)
       const { pour: pour2, session: session2 } = await createPourWithSession({
         userId: user._id.toString(),
-        userBottleId: bottle._id.toString(),
+        userBottleId: (bottle as any)._id.toString(),
         amount: 1.5,
         date: now,
       });
@@ -143,7 +143,7 @@ async function testPourCreation() {
       await PourSession.findByIdAndDelete(session1._id);
       await PourSession.findByIdAndDelete(session2._id);
     } catch (error) {
-      console.error('❌ Test 4 FAILED:', error.message);
+      console.error('❌ Test 4 FAILED:', (error as Error).message);
     }
 
     console.log('\n=====================================');

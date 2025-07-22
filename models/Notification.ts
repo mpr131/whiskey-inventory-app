@@ -2,7 +2,7 @@ import mongoose, { Schema, model, models } from 'mongoose';
 
 export interface INotification {
   userId: string;
-  type: 'pour_reminder' | 'low_stock' | 'achievement' | 'weekly_insight' | 'new_feature' | 'system';
+  type: 'pour_reminder' | 'low_stock' | 'achievement' | 'weekly_insight' | 'new_feature' | 'system' | 'friend_request' | 'friend_request_accepted' | 'pour_cheers' | 'bottle_rating';
   priority: 'low' | 'medium' | 'high';
   title: string;
   message: string;
@@ -23,7 +23,7 @@ const notificationSchema = new Schema<INotification>({
   type: {
     type: String,
     required: true,
-    enum: ['pour_reminder', 'low_stock', 'achievement', 'weekly_insight', 'new_feature', 'system'],
+    enum: ['pour_reminder', 'low_stock', 'achievement', 'weekly_insight', 'new_feature', 'system', 'friend_request', 'friend_request_accepted', 'pour_cheers', 'bottle_rating'],
     index: true,
   },
   priority: {

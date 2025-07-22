@@ -20,6 +20,23 @@ export interface IUser extends Document {
   lastLogin?: Date;
   resetPasswordToken?: string;
   resetPasswordExpiry?: Date;
+  // Social profile fields
+  username?: string;
+  displayName?: string;
+  bio?: string;
+  avatar?: string;
+  privacy?: {
+    showCollection: 'public' | 'friends' | 'private';
+    showPours: 'public' | 'friends' | 'private';
+    showRatings: 'public' | 'friends' | 'private';
+    showValue: 'never';
+  };
+  stats?: {
+    bottleCount: number;
+    uniqueBottles: number;
+    totalPours: number;
+    favoriteBrand?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -89,11 +106,73 @@ const UserSchema = new Schema<IUser>(
       type: Date,
       select: false,
     },
+    // Social profile fields
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+      match: [/^[a-z0-9_]{3,20}$/, 'Username must be 3-20 characters, lowercase letters, numbers, and underscores only'],
+    },
+    displayName: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Display name cannot be more than 50 characters'],
+    },
+    bio: {
+      type: String,
+      maxlength: [500, 'Bio cannot be more than 500 characters'],
+    },
+    avatar: {
+      type: String,
+      trim: true,
+    },
+    privacy: {
+      showCollection: {
+        type: String,
+        enum: ['public', 'friends', 'private'],
+        default: 'friends',
+      },
+      showPours: {
+        type: String,
+        enum: ['public', 'friends', 'private'],
+        default: 'friends',
+      },
+      showRatings: {
+        type: String,
+        enum: ['public', 'friends', 'private'],
+        default: 'friends',
+      },
+      showValue: {
+        type: String,
+        enum: ['never'],
+        default: 'never',
+      },
+    },
+    stats: {
+      bottleCount: {
+        type: Number,
+        default: 0,
+      },
+      uniqueBottles: {
+        type: Number,
+        default: 0,
+      },
+      totalPours: {
+        type: Number,
+        default: 0,
+      },
+      favoriteBrand: String,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Add index for username lookups
+UserSchema.index({ username: 1 });
 
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();

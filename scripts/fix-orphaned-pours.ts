@@ -68,7 +68,7 @@ async function fixOrphanedPours() {
     let sessionsCreated = 0;
     let sessionsReused = 0;
 
-    for (const [dateKey, pours] of poursByDay) {
+    for (const [dateKey, pours] of Array.from(poursByDay)) {
       console.log(`\nProcessing ${dateKey}:`);
       console.log(`  Found ${pours.length} orphaned pours`);
 

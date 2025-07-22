@@ -5,6 +5,9 @@ import dbConnect from '@/lib/mongodb';
 import Pour from '@/models/Pour';
 import UserBottle from '@/models/UserBottle';
 import PourSession from '@/models/PourSession';
+import Activity from '@/models/Activity';
+import LivePour from '@/models/LivePour';
+import MasterBottle from '@/models/MasterBottle';
 import mongoose from 'mongoose';
 import { createPourWithSession } from '@/lib/pour-session-manager';
 
@@ -152,6 +155,46 @@ export async function POST(req: NextRequest) {
         }
       })
       .populate('sessionId');
+
+    // Create activity for the pour
+    try {
+      const masterBottle = await MasterBottle.findById(bottle.masterBottleId);
+      
+      if (masterBottle) {
+        await Activity.create({
+          userId: session.user.id,
+          type: 'pour',
+          targetId: pour._id,
+          metadata: {
+            bottleName: masterBottle.name,
+            bottleImage: masterBottle.imageUrl,
+            pourAmount: pour.amount,
+            location: pour.location,
+            rating: pour.rating,
+            sessionId: pour.sessionId,
+          },
+        });
+
+        // Handle live pour if this is the start
+        if (body.isLivePour) {
+          // Start live pour
+          await fetch(`${process.env.NEXTAUTH_URL}/api/feed/live`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              bottleId: masterBottle._id,
+              bottleName: masterBottle.name,
+              bottleImage: masterBottle.imageUrl,
+              location: pour.location,
+              sessionId: pour.sessionId,
+            }),
+          });
+        }
+      }
+    } catch (activityError) {
+      console.error('Error creating activity:', activityError);
+      // Don't fail the pour creation if activity fails
+    }
 
     return NextResponse.json({ pour: populatedPour }, { status: 201 });
   } catch (error) {

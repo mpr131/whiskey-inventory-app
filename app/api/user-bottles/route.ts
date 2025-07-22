@@ -7,6 +7,7 @@ import MasterBottle from '@/models/MasterBottle';
 import UserStore from '@/models/UserStore';
 import MasterStore from '@/models/MasterStore';
 import User from '@/models/User';
+import Activity from '@/models/Activity';
 import mongoose from 'mongoose';
 import { extractAbvFromName } from '@/utils/extractAbv';
 import { findOrCreateStore } from '@/utils/storeHelpers';
@@ -458,6 +459,31 @@ export async function POST(req: NextRequest) {
           model: 'MasterStore'
         }
       });
+
+    // Create activity for new bottle
+    try {
+      const masterBottle = await MasterBottle.findById(masterBottleId);
+      
+      if (masterBottle) {
+        await Activity.create({
+          userId: session.user.id,
+          type: 'new_bottle',
+          targetId: userBottle._id,
+          metadata: {
+            bottleName: masterBottle.name,
+            bottleImage: masterBottle.imageUrl,
+          },
+        });
+
+        // Update user stats
+        await User.findByIdAndUpdate(session.user.id, {
+          $inc: { 'stats.bottleCount': 1 },
+        });
+      }
+    } catch (activityError) {
+      console.error('Error creating activity:', activityError);
+      // Don't fail the bottle creation if activity fails
+    }
 
     return NextResponse.json({ bottle: populatedBottle }, { status: 201 });
   } catch (error) {

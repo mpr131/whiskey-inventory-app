@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { ScanLine } from 'lucide-react';
 import dynamicImport from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
-import NotificationCenter from '@/components/NotificationCenter';
+import TopNav from '@/components/TopNav';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
@@ -104,22 +104,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <nav className="glass-dark border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gradient">Whiskey Vault</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <NotificationCenter userId={session.user.id} />
-              <span className="text-gray-300">Welcome, {session.user.name}</span>
-              <Link href="/api/auth/signout" className="btn-secondary text-sm px-4 py-2">
-                Sign Out
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <TopNav />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-24 md:pb-12">
         {/* Search Section */}
@@ -263,6 +248,19 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
                 <p className="text-lg font-semibold text-white">Print Labels</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* TEMPORARY: Social Profile Setup Button for Testing */}
+          <Link href="/profile/setup" className="card-premium hover:border-amber-500 transition-all duration-300 group border-amber-500/50">
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <svg className="w-12 h-12 text-amber-500 mx-auto mb-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <p className="text-lg font-semibold text-amber-500">Setup Social Profile</p>
+                <p className="text-xs text-amber-400 mt-1">(Testing)</p>
               </div>
             </div>
           </Link>

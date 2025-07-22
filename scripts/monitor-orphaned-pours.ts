@@ -45,7 +45,7 @@ async function monitorOrphanedPours() {
     }
 
     // Display orphaned pours by user
-    for (const [userEmail, pours] of poursByUser) {
+    for (const [userEmail, pours] of Array.from(poursByUser)) {
       console.log(`\nUser: ${userEmail}`);
       console.log(`Orphaned pours: ${pours.length}`);
       console.log('-------------------');

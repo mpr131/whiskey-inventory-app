@@ -4,7 +4,11 @@ export type NotificationType =
   | 'achievement'
   | 'weekly_insight'
   | 'new_feature'
-  | 'system';
+  | 'system'
+  | 'friend_request'
+  | 'friend_request_accepted'
+  | 'pour_cheers'
+  | 'bottle_rating';
 
 export type NotificationPriority = 'low' | 'medium' | 'high';
 

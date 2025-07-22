@@ -204,7 +204,7 @@ export async function getCurrentPourSession(
       recentSession.location = sessionData.location;
     }
     if (sessionData?.tags && sessionData.tags.length > 0) {
-      recentSession.tags = [...new Set([...recentSession.tags, ...sessionData.tags])];
+      recentSession.tags = Array.from(new Set([...recentSession.tags, ...sessionData.tags]));
     }
     await recentSession.save();
     return recentSession;

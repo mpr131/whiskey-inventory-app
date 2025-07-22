@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, X, Wine, TrendingDown, Trophy, BarChart3, Sparkles, AlertCircle } from 'lucide-react';
+import { Bell, X, Wine, TrendingDown, Trophy, BarChart3, Sparkles, AlertCircle, Users, Heart, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { haptic } from '@/utils/haptics';
 import type { Notification, NotificationType } from '@/types/notifications';
@@ -29,11 +29,15 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
       const response = await fetch('/api/notifications');
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.notifications.filter((n: Notification) => !n.read).length);
+        // Add null checks
+        const notificationsList = data.notifications || [];
+        setNotifications(notificationsList);
+        setUnreadCount(notificationsList.filter((n: Notification) => !n.read).length);
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 
@@ -91,6 +95,13 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
         return <Sparkles className="w-5 h-5" />;
       case 'system':
         return <AlertCircle className="w-5 h-5" />;
+      case 'friend_request':
+      case 'friend_request_accepted':
+        return <Users className="w-5 h-5" />;
+      case 'pour_cheers':
+        return <Heart className="w-5 h-5" />;
+      case 'bottle_rating':
+        return <Star className="w-5 h-5" />;
       default:
         return <Bell className="w-5 h-5" />;
     }
@@ -110,6 +121,13 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
         return 'text-purple-500';
       case 'system':
         return 'text-gray-500';
+      case 'friend_request':
+      case 'friend_request_accepted':
+        return 'text-green-500';
+      case 'pour_cheers':
+        return 'text-pink-500';
+      case 'bottle_rating':
+        return 'text-amber-500';
       default:
         return 'text-copper';
     }
@@ -190,6 +208,53 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
                           <p className="text-sm text-gray-400 mt-1">
                             {notification.message}
                           </p>
+                          
+                          {/* Friend Request Actions */}
+                          {notification.type === 'friend_request' && notification.data?.friendshipId && (
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  haptic.medium();
+                                  try {
+                                    const response = await fetch(`/api/friends/accept/${notification.data!.friendshipId}`, {
+                                      method: 'PUT',
+                                    });
+                                    if (response.ok) {
+                                      haptic.success();
+                                      await fetchNotifications();
+                                    }
+                                  } catch (error) {
+                                    haptic.error();
+                                  }
+                                }}
+                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  haptic.light();
+                                  try {
+                                    const response = await fetch(`/api/friends/remove/${notification.data!.friendshipId}`, {
+                                      method: 'DELETE',
+                                    });
+                                    if (response.ok) {
+                                      haptic.success();
+                                      await fetchNotifications();
+                                    }
+                                  } catch (error) {
+                                    haptic.error();
+                                  }
+                                }}
+                                className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors"
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          )}
+                          
                           <p className="text-xs text-gray-500 mt-2">
                             {new Date(notification.createdAt).toLocaleDateString('en-US', {
                               month: 'short',
