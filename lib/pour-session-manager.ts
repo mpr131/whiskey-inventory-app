@@ -40,7 +40,6 @@ export async function findOrCreatePourSession(
   }).sort('-createdAt'); // Get the most recent session in the window
 
   if (existingSession) {
-    console.log(`Found existing session ${existingSession._id} for user ${userId}`);
     return existingSession;
   }
 
@@ -57,7 +56,6 @@ export async function findOrCreatePourSession(
     totalCost: 0,
   });
 
-  console.log(`Created new session ${newSession._id} for user ${userId}`);
   return newSession;
 }
 
@@ -121,8 +119,6 @@ export async function createPourWithSession(
 
     await session.commitTransaction();
     
-    console.log(`Created pour ${pour[0]._id} in session ${pourSession._id}`);
-    
     return { pour: pour[0], session: pourSession };
   } catch (error) {
     await session.abortTransaction();
@@ -165,7 +161,6 @@ export async function ensureAllPoursHaveSessions(userId?: string): Promise<numbe
       await session.updateStats();
       
       fixed++;
-      console.log(`Assigned orphaned pour ${pour._id} to session ${session._id}`);
     } catch (error) {
       console.error(`Failed to assign session to pour ${pour._id}:`, error);
     }

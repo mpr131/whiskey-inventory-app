@@ -45,13 +45,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Debug logging
-  if (typeof window !== 'undefined') {
-    console.log('Layout rendered on client');
-  } else {
-    console.log('Layout rendered on server');
-  }
-  
   return (
     <html lang="en" className="dark">
       <head>

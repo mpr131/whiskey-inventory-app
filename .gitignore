@@ -41,3 +41,7 @@ next-env.d.ts
 .vscode/
 
 certificates
+
+# Don't commit active plist files
+/Library/LaunchAgents/com.whiskeyvault.*.plist
+~/Library/LaunchAgents/com.whiskeyvault.*.plist

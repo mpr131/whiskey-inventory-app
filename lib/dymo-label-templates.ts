@@ -132,10 +132,6 @@ export function generateDymoLabelXml(labelSize: DymoLabelSize, data: LabelData):
 export function generateDymoLabelXmlWithBarcode(labelSize: DymoLabelSize, data: LabelData): string {
   const labelInfo = DYMO_LABEL_INFO[labelSize];
   
-  // Debug logging for label dimensions
-  console.log('Using label size:', labelSize);
-  console.log('labelInfo:', labelInfo.width, labelInfo.height);
-  
   // For Code 128 barcodes, we need to split the label into text and barcode sections
   const margin = 72; // 0.05 inch vertical margin
   const leftMargin = 350; // Large left margin to prevent text cutoff

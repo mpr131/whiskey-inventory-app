@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.whiskeyvault.notifications</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/curl</string>
+        <string>-X</string>
+        <string>GET</string>
+        <string>-H</string>
+        <string>Authorization: Bearer p+zbMRbJbLWMwmDmnBrCDHhzx88z1wZDK7AtZwyH7aA=</string>
+        <string>http://localhost:3005/api/cron/notifications</string>
+    </array>
+    
+    <!-- Run every hour -->
+    <key>StartInterval</key>
+    <integer>3600</integer>
+    
+    <!-- Keep alive only during successful runs -->
+    <key>KeepAlive</key>
+    <false/>
+    
+    <!-- Run at load -->
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <!-- Standard output log -->
+    <key>StandardOutPath</key>
+    <string>/tmp/whiskeyvault-notifications.log</string>
+    
+    <!-- Standard error log -->
+    <key>StandardErrorPath</key>
+    <string>/tmp/whiskeyvault-notifications-error.log</string>
+</dict>
+</plist>
