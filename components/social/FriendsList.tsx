@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, UserPlus, UserX, Circle } from 'lucide-react';
+import { User, UserPlus, UserX, Circle, Share2, Copy, Check } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface Friend {
   friendshipId: string;
@@ -37,6 +38,7 @@ interface PendingRequest {
 }
 
 export default function FriendsList() {
+  const { data: session } = useSession();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingReceived, setPendingReceived] = useState<PendingRequest[]>([]);
   const [pendingSent, setPendingSent] = useState<PendingRequest[]>([]);
@@ -44,11 +46,49 @@ export default function FriendsList() {
   const [activeTab, setActiveTab] = useState<'friends' | 'pending'>('friends');
   const [searchEmail, setSearchEmail] = useState('');
   const [searchError, setSearchError] = useState('');
+  const [showShareLink, setShowShareLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [connectMessage, setConnectMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFriends();
     fetchPendingRequests();
-  }, []);
+    
+    // Check for connect_with parameter
+    const params = new URLSearchParams(window.location.search);
+    const connectWith = params.get('connect_with');
+    
+    if (connectWith && session?.user) {
+      // Automatically send friend request
+      sendAutoFriendRequest(connectWith);
+    }
+  }, [session]);
+  
+  const sendAutoFriendRequest = async (username: string) => {
+    try {
+      const response = await fetch('/api/friends/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientUsername: username }),
+      });
+
+      if (response.ok) {
+        setConnectMessage(`Friend request sent to ${username}!`);
+        fetchPendingRequests();
+        // Remove the parameter from URL
+        window.history.replaceState({}, '', '/friends');
+      } else {
+        const data = await response.json();
+        if (data.error.includes('Already friends')) {
+          setConnectMessage(`You're already connected with ${username}!`);
+        } else if (data.error.includes('pending')) {
+          setConnectMessage(`Friend request to ${username} is already pending.`);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending auto friend request:', error);
+    }
+  };
 
   const fetchFriends = async () => {
     try {
@@ -101,7 +141,12 @@ export default function FriendsList() {
         setSearchEmail('');
         fetchPendingRequests();
       } else {
-        setSearchError(data.error || 'Failed to send friend request');
+        const data = await response.json();
+        if (data.code === 'USER_NO_USERNAME') {
+          setSearchError(`${data.recipientName} hasn't set up their profile yet. They need to add a username before you can connect.`);
+        } else {
+          setSearchError(data.error || 'Failed to send friend request');
+        }
       }
     } catch (error) {
       setSearchError('Failed to send friend request');
@@ -159,6 +204,12 @@ export default function FriendsList() {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      {connectMessage && (
+        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-600 rounded-lg">
+          <p className="text-green-800 dark:text-green-300">{connectMessage}</p>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Friends</h2>
         <div className="flex gap-2">
@@ -215,6 +266,55 @@ export default function FriendsList() {
             {searchError && (
               <p className="mt-2 text-sm text-red-600 dark:text-red-400">{searchError}</p>
             )}
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              Search by email, username, or user ID
+            </p>
+            
+            {/* Share Invite Link */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <button
+                onClick={() => setShowShareLink(!showShareLink)}
+                className="flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                Share invite link
+              </button>
+              
+              {showShareLink && session?.user?.username && (
+                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Share this link with friends to connect:
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${window.location.origin}/auth/signin?invite_from=${session.user.username}`}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `${window.location.origin}/auth/signin?invite_from=${session.user.username}`
+                        );
+                        setLinkCopied(true);
+                        setTimeout(() => setLinkCopied(false), 2000);
+                      }}
+                      className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors text-sm flex items-center gap-1"
+                    >
+                      {linkCopied ? (
+                        <><Check className="w-4 h-4" /> Copied!</>
+                      ) : (
+                        <><Copy className="w-4 h-4" /> Copy</>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    When they sign up, you&apos;ll automatically be connected!
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Friends List */}

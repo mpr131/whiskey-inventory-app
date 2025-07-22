@@ -261,7 +261,10 @@ export default function BottleDetailPage() {
 
   const handleOpenBottle = async () => {
     if (!bottle) return;
-
+    
+    // Disable UI during update
+    setLoading(true);
+    
     try {
       const response = await fetch(`/api/bottles/${bottleId}`, {
         method: 'PUT',
@@ -277,15 +280,28 @@ export default function BottleDetailPage() {
 
       if (response.ok) {
         const updatedBottle = await response.json();
+        
+        // Update state with the response data
         setBottle(updatedBottle);
         setShowOpenModal(false);
+        
+        // Small delay to ensure state updates propagate
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Force a complete refresh to ensure all UI elements update
+        await fetchBottleDetails();
+        
         toast.success('Bottle opened successfully!');
       } else {
-        toast.error('Failed to open bottle');
+        const errorData = await response.json();
+        console.error('Failed to open bottle:', errorData);
+        toast.error(errorData.error || 'Failed to open bottle');
       }
     } catch (error) {
       console.error('Failed to open bottle:', error);
       toast.error('Failed to open bottle');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -330,51 +346,37 @@ export default function BottleDetailPage() {
         return;
       }
 
-      const response = await fetch(`/api/bottles/${bottleId}/pour`, {
+      // Use the new Pour API directly
+      const pourResponse = await fetch('/api/pours', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          userBottleId: bottle._id,
+          sessionId, // Include session ID
           amount: pourAmount,
-          notes: pourNotes,
-          rating: pourRating,
+          rating: pourRating > 0 ? pourRating : undefined,
+          notes: pourNotes || undefined,
+          location: pourLocation,
+          companions: pourCompanions.length > 0 ? pourCompanions : undefined,
+          tags: pourTags.length > 0 ? pourTags : undefined,
         }),
       });
-
-      if (response.ok) {
-        // Use the new Pour API
-        const pourResponse = await fetch('/api/pours', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userBottleId: bottle._id,
-            sessionId, // Include session ID
-            amount: pourAmount,
-            rating: pourRating > 0 ? pourRating : undefined,
-            notes: pourNotes || undefined,
-            location: pourLocation,
-            companions: pourCompanions.length > 0 ? pourCompanions : undefined,
-            tags: pourTags.length > 0 ? pourTags : undefined,
-          }),
-        });
+      
+      if (pourResponse.ok) {
+        // Refresh bottle data
+        const bottleResponse = await fetch(`/api/bottles/${bottleId}`);
+        if (bottleResponse.ok) {
+          const refreshedBottle = await bottleResponse.json();
+          setBottle(refreshedBottle);
+        }
         
-        if (pourResponse.ok) {
-          // Refresh bottle data
-          const bottleResponse = await fetch(`/api/bottles/${bottleId}`);
-          if (bottleResponse.ok) {
-            const refreshedBottle = await bottleResponse.json();
-            setBottle(refreshedBottle);
-          }
-          
-          // Refresh pours list
-          const poursResponse = await fetch(`/api/pours?userBottleId=${bottleId}`);
-          if (poursResponse.ok) {
-            const poursData = await poursResponse.json();
-            setPours(poursData.pours || []);
-          }
+        // Refresh pours list
+        const poursResponse = await fetch(`/api/pours?userBottleId=${bottleId}`);
+        if (poursResponse.ok) {
+          const poursData = await poursResponse.json();
+          setPours(poursData.pours || []);
         }
         
         setShowPourModal(false);

@@ -112,10 +112,11 @@ export async function POST(req: NextRequest) {
       body.sessionId
     );
 
-    // Update bottle fill level and stats
-    if (bottle.status === 'unopened') {
-      bottle.status = 'opened';
-      bottle.openDate = new Date();
+    // Check if bottle is opened
+    if (bottle.status !== 'opened') {
+      return NextResponse.json({ 
+        error: 'Bottle must be opened before pouring. Please open the bottle first.' 
+      }, { status: 400 });
     }
 
     // Update fill level (assuming 750ml = 25.36 oz)

@@ -32,7 +32,19 @@ export async function POST(request: Request) {
     }
 
     if (!recipient) {
-      return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
+      return NextResponse.json({ 
+        error: 'No user found with that email or username',
+        code: 'USER_NOT_FOUND'
+      }, { status: 404 });
+    }
+    
+    // Check if recipient has username
+    if (!recipient.username) {
+      return NextResponse.json({ 
+        error: 'User found but hasn\'t set up their profile yet',
+        code: 'USER_NO_USERNAME',
+        recipientName: recipient.name
+      }, { status: 400 });
     }
 
     // Can't friend yourself

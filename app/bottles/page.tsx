@@ -83,18 +83,23 @@ export default function BottlesPage() {
   const { addToQueue, isInQueue } = usePrintQueue();
   const [bottles, setBottles] = useState<(UserBottle | MasterBottle | GroupedBottle)[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  // Initialize filters from URL parameters immediately
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
   const [proofFilter, setProofFilter] = useState('');
   const [viewMode, setViewMode] = useState<'my' | 'community' | 'all'>('my');
-  const [sortBy, setSortBy] = useState('-createdAt');
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || '-createdAt');
   const [isMasterBottles, setIsMasterBottles] = useState(false);
   const [isGrouped, setIsGrouped] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  // Show filters if any are pre-applied from URL
+  const [showFilters, setShowFilters] = useState(
+    !!(searchParams.get('status') || searchParams.get('category') || searchParams.get('proof'))
+  );
   const [quickPourBottle, setQuickPourBottle] = useState<UserBottle | null>(null);
   const [quickRateBottle, setQuickRateBottle] = useState<UserBottle | null>(null);
+  const [filtersInitialized, setFiltersInitialized] = useState(true); // True since we initialize from URL
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 24,
@@ -103,16 +108,19 @@ export default function BottlesPage() {
   });
 
 
-  // Initialize filters from URL parameters
+  // Update filters when URL parameters change (only after initial mount)
   useEffect(() => {
+    // Skip the first render since we initialize from URL
+    if (!filtersInitialized) return;
+    
     const statusParam = searchParams.get('status');
     const sortParam = searchParams.get('sort');
     const categoryParam = searchParams.get('category');
     
-    if (statusParam) setStatusFilter(statusParam);
-    if (sortParam) setSortBy(sortParam);
-    if (categoryParam) setCategoryFilter(categoryParam);
-  }, [searchParams]);
+    setStatusFilter(statusParam || '');
+    setSortBy(sortParam || '-createdAt');
+    setCategoryFilter(categoryParam || '');
+  }, [searchParams, filtersInitialized]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -121,15 +129,21 @@ export default function BottlesPage() {
   }, [status, router]);
 
   useEffect(() => {
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when filters change
-    fetchBottles();
+    // Only fetch if filters are initialized and session is ready
+    if (status === 'authenticated' && filtersInitialized) {
+      setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when filters change
+      fetchBottles();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter, statusFilter, proofFilter, sortBy, viewMode, searchParams]);
+  }, [categoryFilter, statusFilter, proofFilter, sortBy, viewMode, status, filtersInitialized]);
 
   useEffect(() => {
-    fetchBottles();
+    // Only fetch if filters are initialized and session is ready
+    if (status === 'authenticated' && filtersInitialized && pagination.page > 1) {
+      fetchBottles();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page]);
+  }, [pagination.page, status, filtersInitialized]);
 
   const fetchBottles = async () => {
     try {

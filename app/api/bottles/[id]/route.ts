@@ -90,18 +90,6 @@ export async function GET(
         return NextResponse.json({ error: 'Bottle not found' }, { status: 404 });
       }
       
-      // Debug what's being retrieved from database
-      console.log('Retrieved bottle from DB:', {
-        _id: bottle._id,
-        barcode: bottle.barcode,
-        wineBarcode: bottle.wineBarcode,
-        marketValue: bottle.marketValue,
-        cellarTrackerId: bottle.cellarTrackerId,
-      });
-      
-      // Check raw document
-      const rawBottle = await UserBottle.findById(params.id).lean();
-      console.log('Raw bottle document:', rawBottle);
 
       return NextResponse.json(bottle);
     }

@@ -1,15 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
+  const [inviteFrom, setInviteFrom] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const from = searchParams.get('invite_from');
+    if (from) {
+      setInviteFrom(from);
+      // Store in session storage to persist after registration
+      sessionStorage.setItem('invite_from', from);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -60,7 +71,16 @@ export default function SignInPage() {
         if (process.env.NODE_ENV === 'development') {
           console.log('✅ Signin successful, redirecting...');
         }
-        router.push('/dashboard');
+        // Check if this was a registration with an invite
+        const storedInviteFrom = sessionStorage.getItem('invite_from');
+        if (isRegistering && storedInviteFrom) {
+          // Clear the stored invite
+          sessionStorage.removeItem('invite_from');
+          // Redirect to friends page with invite parameter
+          router.push(`/friends?connect_with=${storedInviteFrom}`);
+        } else {
+          router.push('/dashboard');
+        }
         router.refresh();
       }
     } catch (error) {
@@ -79,6 +99,16 @@ export default function SignInPage() {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gradient mb-2">Whiskey Vault</h1>
             <p className="text-gray-400">Premium Collection Management</p>
+            {inviteFrom && (
+              <div className="mt-4 p-3 bg-amber-900/20 border border-amber-600/40 rounded-lg">
+                <p className="text-sm text-amber-400">
+                  You&apos;ve been invited by <span className="font-semibold">{inviteFrom}</span>!
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {isRegistering ? 'You&apos;ll be connected after you sign up' : 'Sign up to connect'}
+                </p>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

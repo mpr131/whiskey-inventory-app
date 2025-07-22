@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Globe, Lock, Users as UsersIcon, AlertCircle, Save } from 'lucide-react';
 
 interface ProfileData {
@@ -18,11 +19,16 @@ interface ProfileData {
 
 export default function ProfileSettings() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session, update } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState<ProfileData | null>(null);
+  const [hasUsername, setHasUsername] = useState(false);
+  
+  const isFirstTimeSetup = searchParams.get('setup') === 'true';
 
   useEffect(() => {
     fetchProfile();
@@ -45,6 +51,7 @@ export default function ProfileSettings() {
             showRatings: 'friends',
           }
         });
+        setHasUsername(!!data.username);
       }
     } catch (error) {
       setError('Failed to load profile');
@@ -66,6 +73,7 @@ export default function ProfileSettings() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: !hasUsername ? formData.username : undefined,
           displayName: formData.displayName,
           bio: formData.bio,
           privacy: formData.privacy,
@@ -77,7 +85,17 @@ export default function ProfileSettings() {
       }
 
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      
+      // If username was just set, update the session
+      if (!hasUsername && formData.username) {
+        await update({ username: formData.username });
+        // Redirect to dashboard or previous page
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 1000);
+      } else {
+        setTimeout(() => setSuccess(false), 3000);
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to update profile');
     } finally {
@@ -121,10 +139,20 @@ export default function ProfileSettings() {
             <input
               type="text"
               value={formData.username}
-              disabled
-              className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              disabled={hasUsername}
+              placeholder="Choose a unique username"
+              className={`w-full px-4 py-3 bg-gray-800 border rounded-lg transition-colors ${
+                hasUsername 
+                  ? 'border-gray-600 text-gray-400 cursor-not-allowed' 
+                  : 'border-gray-600 text-white hover:border-gray-500 focus:border-amber-500 focus:outline-none'
+              }`}
             />
-            <p className="mt-1 text-xs text-gray-500">Username cannot be changed</p>
+            <p className="mt-1 text-xs text-gray-500">
+              {hasUsername 
+                ? 'Username cannot be changed' 
+                : 'Choose carefully - this cannot be changed later'}
+            </p>
           </div>
 
           <div>

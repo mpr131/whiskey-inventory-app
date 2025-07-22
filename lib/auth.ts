@@ -66,6 +66,7 @@ export const authOptions: NextAuthOptions = {
             email: existingUser.email,
             name: existingUser.name,
             isAdmin: existingUser.isAdmin,
+            username: existingUser.username,
           };
         } else {
           // Registration flow - requires invite code
@@ -122,6 +123,7 @@ export const authOptions: NextAuthOptions = {
             email: newUser.email,
             name: newUser.name,
             isAdmin: newUser.isAdmin,
+            username: newUser.username,
           };
         }
       },
@@ -152,6 +154,20 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.isAdmin = user.isAdmin;
+        token.username = user.username;
+      }
+      
+      // If we have a token but no username, try to fetch it from the database
+      if (token && token.email && !token.username) {
+        try {
+          await dbConnect();
+          const dbUser = await User.findOne({ email: token.email }).select('username');
+          if (dbUser && dbUser.username) {
+            token.username = dbUser.username;
+          }
+        } catch (error) {
+          console.error('Error fetching username in jwt callback:', error);
+        }
       }
       
       return token;
@@ -163,6 +179,7 @@ export const authOptions: NextAuthOptions = {
           email: token.email as string,
           name: token.name as string,
           isAdmin: token.isAdmin as boolean,
+          username: token.username as string | undefined,
         };
       }
       return session;
