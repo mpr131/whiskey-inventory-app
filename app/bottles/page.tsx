@@ -16,7 +16,7 @@ import NotificationCenter from '@/components/NotificationCenter';
 import BarrelRating from '@/components/BarrelRating';
 import { getUserBottleRating } from '@/utils/ratingCalculations';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
 });
 

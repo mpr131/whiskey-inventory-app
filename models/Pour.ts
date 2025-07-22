@@ -120,6 +120,32 @@ PourSchema.pre('save', async function(next) {
   next();
 });
 
+// Add validation to ensure pour has a session
+PourSchema.pre('validate', function(next) {
+  if (!this.sessionId && this.isNew) {
+    return next(new Error('Pour must be associated with a session. Use createPourWithSession() helper.'));
+  }
+  next();
+});
+
+// Add post-save hook to log orphaned pours (safety net)
+PourSchema.post('save', async function(doc) {
+  if (!doc.sessionId) {
+    console.error(`WARNING: Pour ${doc._id} was created without a session!`, {
+      userId: doc.userId,
+      date: doc.date,
+      amount: doc.amount,
+    });
+    // Could trigger auto-fix here, but it's better to fail fast
+  }
+});
+
+// Add static method to safely create pours
+PourSchema.statics.createWithSession = async function(pourData: any, sessionId?: string) {
+  // This should use the pour-session-manager helper
+  throw new Error('Use createPourWithSession from lib/pour-session-manager instead');
+};
+
 const Pour = mongoose.models.Pour || mongoose.model<IPour>('Pour', PourSchema);
 
 export default Pour;

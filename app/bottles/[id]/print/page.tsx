@@ -194,11 +194,11 @@ export default function PrintLabelPage() {
               </div>
               
               <div className="flex flex-col items-end space-y-2">
-                {/* QR Code */}
+                {/* Barcode */}
                 <div className="border border-gray-300 p-1">
                   <img 
                     src={generateQRCode(`${window.location.origin}/bottles/${bottle._id}`)}
-                    alt="QR Code"
+                    alt="Barcode"
                     className="w-16 h-16 print:w-12 print:h-12"
                   />
                 </div>
@@ -254,7 +254,7 @@ export default function PrintLabelPage() {
               <div className="flex items-center space-x-2">
                 <img 
                   src={generateQRCode(`${window.location.origin}/bottles/${bottle._id}`)}
-                  alt="QR Code"
+                  alt="Barcode"
                   className="w-8 h-8 print:w-6 print:h-6"
                 />
                 <div className="text-[10px] font-mono">

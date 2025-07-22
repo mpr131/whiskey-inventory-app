@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import PourSession from '@/models/PourSession';
+import { getCurrentPourSession } from '@/lib/pour-session-manager';
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,24 +15,8 @@ export async function GET(req: NextRequest) {
 
     await dbConnect();
 
-    // Find session from today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const currentSession = await PourSession.findOne({
-      userId: session.user.id,
-      date: {
-        $gte: today,
-        $lt: tomorrow,
-      },
-    }).sort('-createdAt');
-
-    if (!currentSession) {
-      return NextResponse.json({ session: null });
-    }
+    // Use the improved session manager that handles time windows
+    const currentSession = await getCurrentPourSession(session.user.id);
 
     return NextResponse.json({ session: currentSession });
   } catch (error) {

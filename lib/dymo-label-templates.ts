@@ -128,25 +128,39 @@ export function generateDymoLabelXml(labelSize: DymoLabelSize, data: LabelData):
 </DieCutLabel>`;
 }
 
-// Template for labels with QR codes (future enhancement)
-export function generateDymoLabelXmlWithQR(labelSize: DymoLabelSize, data: LabelData): string {
+// Template for labels with Code 128 barcodes
+export function generateDymoLabelXmlWithBarcode(labelSize: DymoLabelSize, data: LabelData): string {
   const labelInfo = DYMO_LABEL_INFO[labelSize];
   
-  // For QR codes, we need to split the label into text and barcode sections
-  const margin = 72; // 0.05 inch vertical margin
-  const leftMargin = 100; // Increased left margin for text (was 72)
+  // Debug logging for label dimensions
+  console.log('Using label size:', labelSize);
+  console.log('labelInfo:', labelInfo.width, labelInfo.height);
   
-  // Calculate QR size based on label size
-  let qrSize = 720; // 0.5 inch default
+  // For Code 128 barcodes, we need to split the label into text and barcode sections
+  const margin = 72; // 0.05 inch vertical margin
+  const leftMargin = 350; // Large left margin to prevent text cutoff
+  const rightMargin = 100; // Right margin
+  
+  // Calculate barcode dimensions - MUCH bigger for reliable scanning
+  let barcodeHeight = 600; // Minimum 100px height for scanning
+  let barcodeWidth = 1800; // Proportional width
+  
   if (labelSize === '30336') {
-    qrSize = 1300; // Further increased for better scanning
+    barcodeHeight = 500; // Good scanning height for small label
+    barcodeWidth = 1600; // About 50% of label width
   } else if (labelSize === '30252' || labelSize === '30256') {
-    qrSize = 1200; // 0.83 inch for larger labels
+    barcodeHeight = 700; // Larger for bigger labels
+    barcodeWidth = 2200; // Proportionally bigger
   }
   
-  // Calculate text area with proper margins
-  const textWidth = labelInfo.width - qrSize - leftMargin - (margin * 2); // Proper spacing
-  const textHeight = labelInfo.height - (margin * 2);
+  // Position barcode in bottom-right corner
+  const barcodeX = labelInfo.width - barcodeWidth - margin; // Right-aligned with margin
+  const barcodeY = labelInfo.height - barcodeHeight - margin; // Bottom-aligned with margin
+  
+  // Calculate text area - avoid overlap with barcode
+  // Text can use the area above the barcode and to the left of it
+  const textWidth = barcodeX - leftMargin - margin; // Stop where barcode starts
+  const textHeight = labelInfo.height - (margin * 2); // Full height available
   
   // Build text lines - CORE fields always shown
   const textLines: string[] = [];
@@ -196,7 +210,7 @@ export function generateDymoLabelXmlWithQR(labelSize: DymoLabelSize, data: Label
       <Name>Text</Name>
       <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
       <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
-      <LinkedObjectName />
+      <LinkedObjectName></LinkedObjectName>
       <Rotation>Rotation0</Rotation>
       <IsMirrored>False</IsMirrored>
       <IsVariable>False</IsVariable>
@@ -224,24 +238,27 @@ export function generateDymoLabelXmlWithQR(labelSize: DymoLabelSize, data: Label
       <Name>Barcode</Name>
       <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
       <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
-      <LinkedObjectName />
+      <LinkedObjectName></LinkedObjectName>
       <Rotation>Rotation0</Rotation>
       <IsMirrored>False</IsMirrored>
       <IsVariable>False</IsVariable>
       <GroupID>-1</GroupID>
       <IsOutlined>False</IsOutlined>
       <Text>${data.barcode}</Text>
-      <Type>QRCode</Type>
-      <Size>Large</Size>
-      <TextPosition>None</TextPosition>
-      <TextFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
-      <CheckSumFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+      <Type>Code128Auto</Type>
+      <Size>Medium</Size>
+      <TextPosition>Bottom</TextPosition>
+      <TextFont Family="Arial" Size="6" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+      <CheckSumFont Family="Arial" Size="6" Bold="False" Italic="False" Underline="False" Strikeout="False" />
       <TextEmbedding>None</TextEmbedding>
       <ECLevel>0</ECLevel>
       <HorizontalAlignment>Center</HorizontalAlignment>
       <QuietZonesPadding Left="0" Top="0" Right="0" Bottom="0" />
     </BarcodeObject>
-    <Bounds X="${labelInfo.width - qrSize - margin}" Y="${(labelInfo.height - qrSize) / 2}" Width="${qrSize}" Height="${qrSize}" />
+    <Bounds X="${barcodeX}" Y="${barcodeY}" Width="${barcodeWidth}" Height="${barcodeHeight}" />
   </ObjectInfo>
 </DieCutLabel>`;
 }
+
+// Export with old name for backward compatibility
+export const generateDymoLabelXmlWithQR = generateDymoLabelXmlWithBarcode;

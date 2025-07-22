@@ -7,7 +7,7 @@ import dynamicImport from 'next/dynamic';
 import toast from 'react-hot-toast';
 import { ScanLine, Search, X, ChevronLeft, Wine, Users, MapPin, Tag, Camera, Star } from 'lucide-react';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
 });
 

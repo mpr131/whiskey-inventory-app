@@ -6,6 +6,7 @@ import Pour from '@/models/Pour';
 import UserBottle from '@/models/UserBottle';
 import PourSession from '@/models/PourSession';
 import mongoose from 'mongoose';
+import { createPourWithSession } from '@/lib/pour-session-manager';
 
 export async function GET(req: NextRequest) {
   try {
@@ -37,7 +38,13 @@ export async function GET(req: NextRequest) {
 
     const [pours, total] = await Promise.all([
       Pour.find(query)
-        .populate('userBottleId')
+        .populate({
+          path: 'userBottleId',
+          populate: {
+            path: 'masterBottleId',
+            model: 'MasterBottle'
+          }
+        })
         .sort('-date')
         .skip(skip)
         .limit(limit),
@@ -92,13 +99,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Bottle not found' }, { status: 404 });
     }
 
-    // Create the pour
-    const pour = await Pour.create({
-      ...body,
-      userId: new mongoose.Types.ObjectId(session.user.id),
-      userBottleId: new mongoose.Types.ObjectId(body.userBottleId),
-      sessionId: body.sessionId ? new mongoose.Types.ObjectId(body.sessionId) : undefined,
-    });
+    // Create the pour with guaranteed session assignment
+    const { pour, session: pourSession } = await createPourWithSession(
+      {
+        ...body,
+        userId: session.user.id,
+        userBottleId: body.userBottleId,
+      },
+      body.sessionId
+    );
 
     // Update bottle fill level and stats
     if (bottle.status === 'unopened') {
@@ -128,20 +137,20 @@ export async function POST(req: NextRequest) {
     // Update bottle statistics
     await bottle.updatePourStats();
 
-    // Update session statistics if part of a session
-    if (pour.sessionId) {
-      const pourSession = await PourSession.findById(pour.sessionId);
-      if (pourSession) {
-        await pourSession.updateStats();
-      }
-    }
+    // Session statistics are already updated in createPourWithSession
 
     // Note: Community ratings are now calculated nightly for better performance
     // Personal ratings are still calculated in real-time when viewing bottles
 
     // Return populated pour
     const populatedPour = await Pour.findById(pour._id)
-      .populate('userBottleId')
+      .populate({
+        path: 'userBottleId',
+        populate: {
+          path: 'masterBottleId',
+          model: 'MasterBottle'
+        }
+      })
       .populate('sessionId');
 
     return NextResponse.json({ pour: populatedPour }, { status: 201 });

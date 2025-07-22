@@ -9,7 +9,7 @@ import dynamicImport from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
 import NotificationCenter from '@/components/NotificationCenter';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/BarcodeScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
 });
 

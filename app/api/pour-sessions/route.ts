@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import PourSession from '@/models/PourSession';
+import Pour from '@/models/Pour';
 import mongoose from 'mongoose';
 
 export async function GET(req: NextRequest) {
@@ -32,7 +33,6 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Also get orphaned pours (pours without sessions) from the last 24 hours
-    const Pour = mongoose.model('Pour');
     const twentyFourHoursAgo = new Date();
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
     

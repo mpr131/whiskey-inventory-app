@@ -11,7 +11,11 @@
     "seed": "tsx scripts/seed.ts",
     "clear-db": "node scripts/clear-database.js",
     "backfill-barcodes": "tsx scripts/backfill-vault-barcodes.ts",
-    "list-users": "tsx scripts/list-users.ts"
+    "list-users": "tsx scripts/list-users.ts",
+    "debug-pour-sessions": "tsx scripts/debug-pour-sessions.ts",
+    "fix-orphaned-pours": "tsx scripts/fix-orphaned-pours.ts",
+    "monitor-orphaned-pours": "tsx scripts/monitor-orphaned-pours.ts",
+    "test-pour-creation": "tsx scripts/test-pour-creation.ts"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.8.4",

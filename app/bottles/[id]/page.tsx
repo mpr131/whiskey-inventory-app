@@ -324,7 +324,10 @@ export default function BottleDetailPage() {
         }
       } catch (error) {
         console.error('Error managing session:', error);
-        // Continue without session if there's an error
+        // Don't continue without a session - show error to user
+        toast.error('Failed to create pour session. Please try again.');
+        setLoading(false);
+        return;
       }
 
       const response = await fetch(`/api/bottles/${bottleId}/pour`, {

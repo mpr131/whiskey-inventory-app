@@ -19,7 +19,7 @@ import {
   Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import QRCode from 'react-qr-code';
+// import QRCode from 'react-qr-code'; // No longer needed for Code 128
 import { generateDymoLabelXmlWithQR, DYMO_LABEL_INFO, type DymoLabelSize } from '@/lib/dymo-label-templates';
 
 // DYMO types
@@ -407,9 +407,19 @@ export default function LabelsContent() {
       // Generate label XML
       const labelXml = generateDymoLabelXmlWithQR(dymoLabelSize, testLabelData);
       
-      // Create label from XML and print directly
-      const label = window.dymo.label.framework.openLabelXml(labelXml);
-      label.print(selectedPrinter);
+      // Debug: Log the generated XML
+      console.log('=== GENERATED TEST LABEL XML ===');
+      console.log(labelXml);
+      
+      // Also try validating with DYMO's own validator
+      try {
+        const testLabel = window.dymo.label.framework.openLabelXml(labelXml);
+        console.log('Label valid?', testLabel.isValidLabel());
+        testLabel.print(selectedPrinter);
+      } catch (e) {
+        console.error('DYMO validation error:', e);
+        throw e;
+      }
       
       toast.success('Test label sent to DYMO printer!');
     } catch (error) {
@@ -454,9 +464,23 @@ export default function LabelsContent() {
         // Generate properly formatted label XML using template with QR code
         const labelXml = generateDymoLabelXmlWithQR(dymoLabelSize, labelData);
         
-        // Create label from XML and print directly
-        const label = window.dymo.label.framework.openLabelXml(labelXml);
-        label.print(selectedPrinter);
+        // Debug: Log the generated XML (only for first label)
+        if (successCount === 0) {
+          console.log('=== GENERATED BATCH LABEL XML ===');
+          console.log(labelXml);
+        }
+        
+        // Also try validating with DYMO's own validator
+        try {
+          const label = window.dymo.label.framework.openLabelXml(labelXml);
+          if (successCount === 0) {
+            console.log('Label valid?', label.isValidLabel());
+          }
+          label.print(selectedPrinter);
+        } catch (e) {
+          console.error('DYMO validation error for bottle', bottle.vaultBarcode, ':', e);
+          throw e;
+        }
         
         successCount++;
       }
@@ -864,13 +888,11 @@ export default function LabelsContent() {
                         {optionalFields.store && <div className="truncate">Total Wine</div>}
                         {optionalFields.location && <div className="truncate">A1-B2</div>}
                       </div>
-                      {/* QR Code */}
+                      {/* Barcode */}
                       <div className="flex-shrink-0">
-                        <QRCode 
-                          value="WV002-000464" 
-                          size={dymoLabelSize === '30336' ? 45 : 55} 
-                          level="L"
-                        />
+                        <div className="text-xs font-mono bg-black text-white px-1">
+                          WV002-000464
+                        </div>
                       </div>
                     </div>
                   </div>
