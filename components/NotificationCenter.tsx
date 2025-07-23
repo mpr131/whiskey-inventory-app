@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell, X, Wine, TrendingDown, Trophy, BarChart3, Sparkles, AlertCircle, Users, Heart, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { haptic } from '@/utils/haptics';
@@ -12,6 +12,7 @@ interface NotificationCenterProps {
 
 export default function NotificationCenter({ userId }: NotificationCenterProps) {
   const router = useRouter();
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -24,15 +25,42 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
     return () => clearInterval(interval);
   }, [userId]);
 
+  // Click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   const fetchNotifications = async () => {
     try {
+      console.log('Fetching notifications...');
       const response = await fetch('/api/notifications');
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Notifications data:', data);
+        
         // Add null checks
         const notificationsList = data.notifications || [];
+        console.log('Notifications list:', notificationsList);
+        
         setNotifications(notificationsList);
         setUnreadCount(notificationsList.filter((n: Notification) => !n.read).length);
+      } else {
+        const errorData = await response.json();
+        console.error('API error:', errorData);
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -134,12 +162,14 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
   };
 
   return (
-    <>
+    <div className="relative" ref={dropdownRef}>
       {/* Notification Bell */}
       <button
         onClick={() => {
           haptic.light();
+          console.log('Bell clicked, current isOpen:', isOpen);
           setIsOpen(!isOpen);
+          console.log('Setting isOpen to:', !isOpen);
         }}
         className="relative p-2 text-gray-400 hover:text-white transition-colors"
       >
@@ -151,17 +181,17 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
         )}
       </button>
 
-      {/* Notification Panel */}
+      {/* Notification Dropdown */}
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop for mobile */}
           <div
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            className="fixed inset-0 z-40 md:hidden"
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Panel */}
-          <div className="fixed right-0 top-0 h-full w-full md:w-96 bg-gray-900 shadow-xl z-50 overflow-hidden flex flex-col">
+          {/* Dropdown Panel */}
+          <div className="absolute right-0 mt-2 w-96 max-h-[600px] bg-gray-900 border border-gray-800 rounded-lg shadow-2xl z-[100] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="p-4 border-b border-gray-800 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Notifications</h2>
@@ -312,6 +342,6 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }

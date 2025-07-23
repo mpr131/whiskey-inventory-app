@@ -8,6 +8,7 @@ import { ScanLine } from 'lucide-react';
 import dynamicImport from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
 import TopNav from '@/components/TopNav';
+import TestNotifications from '@/components/TestNotifications';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
@@ -265,33 +266,10 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          {/* TEMPORARY: Test Notifications Button */}
-          <button 
-            onClick={async () => {
-              try {
-                const res = await fetch('/api/cron/notifications', {
-                  headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'p+zbMRbJbLWMwmDmnBrCDHhzx88z1wZDK7AtZwyH7aA='}` }
-                });
-                const data = await res.json();
-                console.log('Notification cron result:', data);
-                alert('Notification cron triggered! Check console and notification bell.');
-              } catch (error) {
-                console.error('Error triggering notifications:', error);
-                alert('Error triggering notifications. Check console.');
-              }
-            }}
-            className="card-premium hover:border-purple-500 transition-all duration-300 group border-purple-500/50"
-          >
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <svg className="w-12 h-12 text-purple-500 mx-auto mb-3 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                <p className="text-lg font-semibold text-purple-500">Test Notifications</p>
-                <p className="text-xs text-purple-400 mt-1">(Dev Testing)</p>
-              </div>
-            </div>
-          </button>
+          {/* TEMPORARY: Test Notifications Component */}
+          <div className="md:col-span-2">
+            <TestNotifications />
+          </div>
         </div>
 
         {/* Recent Activity */}

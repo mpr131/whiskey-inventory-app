@@ -38,9 +38,12 @@ export async function GET(request: NextRequest) {
       icon: n.icon
     }));
 
+    logger.info(`Fetching notifications for user ${session.user.id}`, {
+      count: transformedNotifications.length
+    });
+
     return NextResponse.json({ 
-      success: true,
-      data: { notifications: transformedNotifications }
+      notifications: transformedNotifications 
     });
   } catch (error) {
     logger.error('Error in notifications API', error);
