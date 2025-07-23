@@ -8,7 +8,7 @@ import { ScanLine } from 'lucide-react';
 import dynamicImport from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
 import TopNav from '@/components/TopNav';
-import TestNotifications from '@/components/TestNotifications';
+// import TestNotifications from '@/components/TestNotifications';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
@@ -267,9 +267,9 @@ export default function DashboardPage() {
           </Link>
 
           {/* TEMPORARY: Test Notifications Component */}
-          <div className="md:col-span-2">
+          {/* <div className="md:col-span-2">
             <TestNotifications />
-          </div>
+          </div> */}
         </div>
 
         {/* Recent Activity */}
