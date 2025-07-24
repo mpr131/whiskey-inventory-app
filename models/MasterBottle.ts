@@ -10,7 +10,7 @@ export interface IMasterBottle extends Document {
   age?: number;
   proof?: number;
   abv?: number;
-  statedProof?: string;
+  statedProof?: number;
   msrp?: number;
   description?: string;
   isStorePick: boolean;
@@ -32,6 +32,20 @@ export interface IMasterBottle extends Document {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  size?: string;
+  country?: string;
+  externalData?: {
+    source: string;
+    externalId: string;
+    importDate: Date;
+  };
+  defaultImageUrl?: string;
+  imageUrls?: string[];
+  communityPhotos?: Array<{
+    url: string;
+    uploadedBy: mongoose.Types.ObjectId;
+    uploadedAt: Date;
+  }>;
 }
 
 const MasterBottleSchema = new Schema<IMasterBottle>(
@@ -61,7 +75,7 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
     category: {
       type: String,
       required: [true, 'Category is required'],
-      enum: ['Bourbon', 'Rye', 'Scotch', 'Irish', 'Japanese', 'Other'],
+      enum: ['Bourbon', 'Rye', 'Scotch', 'Irish', 'Japanese', 'American Whiskey', 'Canadian Whisky', 'Tennessee Whiskey', 'Irish Whiskey', 'Japanese Whiskey', 'Rye Whiskey', 'Vodka', 'Rum', 'Gin', 'Tequila', 'Mezcal', 'Brandy', 'Cognac', 'Liqueur', 'Wine', 'Beer', 'Spirits', 'Other'],
       default: 'Bourbon',
     },
     type: {
@@ -83,8 +97,9 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
       max: 100,
     },
     statedProof: {
-      type: String,
-      trim: true,
+      type: Number,
+      min: 0,
+      max: 200,
     },
     msrp: {
       type: Number,
@@ -148,6 +163,53 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
       ref: 'User',
       required: true,
     },
+    size: {
+      type: String,
+      trim: true,
+      default: '750ML',
+    },
+    country: {
+      type: String,
+      trim: true,
+      default: 'United States',
+    },
+    externalData: {
+      source: {
+        type: String,
+        trim: true,
+      },
+      externalId: {
+        type: String,
+        trim: true,
+      },
+      importDate: {
+        type: Date,
+      },
+    },
+    defaultImageUrl: {
+      type: String,
+      trim: true,
+    },
+    imageUrls: [{
+      type: String,
+      trim: true,
+    }],
+    communityPhotos: [{
+      url: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      uploadedBy: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
   },
   {
     timestamps: true,

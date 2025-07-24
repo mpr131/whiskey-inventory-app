@@ -157,13 +157,28 @@ export const authOptions: NextAuthOptions = {
         token.username = user.username;
       }
       
-      // If we have a token but no username, try to fetch it from the database
-      if (token && token.email && !token.username) {
+      // ALWAYS fetch username from database to ensure it's current
+      if (token && (token.email || token.id)) {
         try {
           await dbConnect();
-          const dbUser = await User.findOne({ email: token.email }).select('username');
-          if (dbUser && dbUser.username) {
+          const dbUser = await User.findOne({ 
+            $or: [
+              { email: token.email },
+              { _id: token.id }
+            ]
+          }).select('username email isAdmin');
+          
+          if (dbUser) {
             token.username = dbUser.username;
+            token.isAdmin = dbUser.isAdmin;
+            // Log for debugging
+            if (process.env.NODE_ENV === 'development') {
+              console.log('JWT callback - loaded user:', {
+                email: dbUser.email,
+                username: dbUser.username,
+                hasUsername: !!dbUser.username
+              });
+            }
           }
         } catch (error) {
           console.error('Error fetching username in jwt callback:', error);

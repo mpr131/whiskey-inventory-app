@@ -5,6 +5,14 @@ import dbConnect from '@/lib/mongodb';
 import MasterBottle from '@/models/MasterBottle';
 import UserBottle from '@/models/UserBottle';
 import mongoose from 'mongoose';
+import { connectToExternalDB } from '@/lib/external-db';
+import { 
+  mapCategory, 
+  extractAge, 
+  cleanHTML, 
+  parseSize,
+  type ExternalProduct 
+} from '@/lib/external-product-helpers';
 
 // Cache for UPC API results to minimize API calls
 const upcCache = new Map<string, { data: any; timestamp: number }>();
@@ -159,7 +167,88 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Step 4: New UPC - Call API and find matches
+    // Step 4: Check external database for UPC
+    try {
+      const externalDb = await connectToExternalDB();
+      const externalProduct = await externalDb
+        .collection<ExternalProduct>('image_price_data')
+        .findOne({ 'b2c_upc': barcode });
+      
+      if (externalProduct) {
+        // Handle proof properly - it's a string in the external DB
+        const proofNum = parseFloat(externalProduct.b2c_proof || '0') || 0;
+        
+        // Collect image URLs if available
+        const imageUrls: string[] = [];
+        let defaultImageUrl: string | undefined;
+        
+        if (externalProduct.primaryLargeImageURL && externalProduct.primaryLargeImageURL !== '/img/no-image.jpg') {
+          defaultImageUrl = `https://www.finewineandgoodspirits.com${externalProduct.primaryLargeImageURL}`;
+          
+          // Collect all available image sizes
+          ['primaryLargeImageURL', 'primaryMediumImageURL', 'primarySmallImageURL'].forEach(field => {
+            const url = externalProduct[field as keyof ExternalProduct] as string;
+            if (url && url !== '/img/no-image.jpg') {
+              imageUrls.push(`https://www.finewineandgoodspirits.com${url}`);
+            }
+          });
+        }
+        
+        // Create new MasterBottle from external data
+        const masterBottle = await MasterBottle.create({
+          name: externalProduct.displayName || 'Unknown',
+          brand: externalProduct.brand || '',
+          distillery: externalProduct.brand || '', // Use brand as distillery fallback
+          category: mapCategory(externalProduct.b2c_newMarketingCategory || externalProduct.b2c_type || ''),
+          type: externalProduct.b2c_type || 'Spirits',
+          age: extractAge(externalProduct.b2c_age),
+          statedProof: proofNum,
+          proof: proofNum,
+          abv: proofNum / 2, // Calculate ABV from proof
+          msrp: externalProduct.listPrice || 0,
+          size: parseSize(externalProduct.b2c_size),
+          description: cleanHTML(externalProduct.b2c_tastingNotes),
+          region: externalProduct.b2c_region || '',
+          country: externalProduct.b2c_country || 'United States',
+          defaultImageUrl,
+          imageUrls,
+          
+          // Add the UPC with high trust score
+          upcCodes: [{
+            code: barcode,
+            submittedBy: new mongoose.Types.ObjectId(session.user.id),
+            verifiedCount: 1000, // High trust for external data
+            dateAdded: new Date(),
+            isAdminAdded: true
+          }],
+          
+          // Store original external data for reference
+          externalData: {
+            source: 'stock_data',
+            externalId: externalProduct.repositoryId,
+            importDate: new Date()
+          }
+        });
+
+        // Find all user bottles for this newly created master bottle
+        const userBottles = await UserBottle.find({
+          userId: session.user.id,
+          masterBottleId: masterBottle._id,
+        }).populate('masterBottleId');
+
+        return NextResponse.json({
+          type: 'upc',
+          masterBottle: masterBottle,
+          userBottles: userBottles,
+          fromExternal: true
+        });
+      }
+    } catch (error) {
+      console.error('Error checking external database:', error);
+      // Continue with UPC API fallback if external DB fails
+    }
+
+    // Step 5: New UPC - Call API and find matches
     const upcData = await fetchFromUpcApi(barcode);
     
     if (!upcData || upcData.items.length === 0) {

@@ -13,7 +13,7 @@ interface PrivacySettings {
 
 export default function ProfileSetup() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
@@ -88,6 +88,9 @@ export default function ProfileSetup() {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to update profile');
       }
+
+      // Update the session with the new username
+      await update({ username: formData.username });
 
       // Redirect to new profile
       router.push(`/profile/${formData.username}`);
