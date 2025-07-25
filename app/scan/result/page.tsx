@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Plus, Package, ExternalLink, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -20,7 +20,7 @@ interface ScanResult {
 
 export const dynamic = 'force-dynamic';
 
-export default function ScanResultPage() {
+function ScanResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const barcode = searchParams.get('barcode');
@@ -385,5 +385,20 @@ export default function ScanResultPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ScanResultPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ScanResultContent />
+    </Suspense>
   );
 }
