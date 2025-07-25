@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Package, Upload, Search, Plus, Trash2, CheckCircle, Loader2, ScanLine, X } from 'lucide-react';
+import { Package, Upload, Search, Plus, Trash2, CheckCircle, Loader2, ScanLine, X, Database, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import MasterBottleSearch from '@/components/MasterBottleSearch';
+import UPCBackfillTool from '@/components/admin/UPCBackfillTool';
+import FWGSImportDashboard from '@/components/admin/FWGSImportDashboard';
 
 const EnhancedBarcodeScanner = dynamic(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
@@ -46,7 +48,7 @@ interface UpcSubmission {
 export default function AdminUpcPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'add' | 'bulk' | 'review' | 'search'>('add');
+  const [activeTab, setActiveTab] = useState<'add' | 'bulk' | 'review' | 'search' | 'backfill' | 'import'>('add');
   const [selectedBottle, setSelectedBottle] = useState<MasterBottle | null>(null);
   const [upcCode, setUpcCode] = useState('');
   const [searchUpc, setSearchUpc] = useState('');
@@ -316,6 +318,24 @@ export default function AdminUpcPage() {
             <Search className="w-4 h-4 inline mr-2" />
             Search UPC
           </button>
+          <button
+            onClick={() => setActiveTab('backfill')}
+            className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+              activeTab === 'backfill' ? 'bg-copper text-white' : 'bg-gray-800 text-gray-400'
+            }`}
+          >
+            <Database className="w-4 h-4 inline mr-2" />
+            Backfill UPCs
+          </button>
+          <button
+            onClick={() => setActiveTab('import')}
+            className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+              activeTab === 'import' ? 'bg-copper text-white' : 'bg-gray-800 text-gray-400'
+            }`}
+          >
+            <Download className="w-4 h-4 inline mr-2" />
+            FWGS Import
+          </button>
         </div>
 
         {/* Add UPC Tab */}
@@ -545,6 +565,20 @@ Buffalo Trace, 080244009167
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Backfill Tab */}
+        {activeTab === 'backfill' && (
+          <div className="card p-6">
+            <UPCBackfillTool />
+          </div>
+        )}
+
+        {/* FWGS Import Tab */}
+        {activeTab === 'import' && (
+          <div className="w-full max-w-none">
+            <FWGSImportDashboard />
           </div>
         )}
 

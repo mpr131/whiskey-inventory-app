@@ -88,7 +88,8 @@ export default function DashboardPage() {
 
   const handleBarcodeScan = (barcode: string) => {
     setShowScanner(false);
-    router.push(`/bottles?barcode=${encodeURIComponent(barcode)}`);
+    // Use new smart scan flow
+    router.push(`/scan/result?barcode=${encodeURIComponent(barcode)}`);
   };
 
   if (status === 'loading' || loading) {

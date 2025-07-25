@@ -24,23 +24,28 @@ export interface IMasterBottle extends Document {
   lastCalculated?: Date;
   upcCodes?: Array<{
     code: string;
-    submittedBy: mongoose.Types.ObjectId;
+    submittedBy: mongoose.Types.ObjectId | string;
     verifiedCount: number;
     dateAdded: Date;
     isAdminAdded: boolean;
   }>;
-  createdBy: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId | 'system_import';
   createdAt: Date;
   updatedAt: Date;
   size?: string;
   country?: string;
   externalData?: {
-    source: string;
-    externalId: string;
-    importDate: Date;
+    source: 'fwgs' | 'manual' | 'user';
+    fwgsId?: string;  // repositoryId from FWGS
+    sku?: string;     // id from FWGS
+    externalId?: string; // Keep for backwards compatibility
+    lastSync?: Date;
+    importDate?: Date;
   };
   defaultImageUrl?: string;
   imageUrls?: string[];
+  duplicateOf?: mongoose.Types.ObjectId;
+  active?: boolean;
   communityPhotos?: Array<{
     url: string;
     uploadedBy: mongoose.Types.ObjectId;
@@ -142,7 +147,7 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
       submittedBy: {
         type: Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: false, // Allow null for system imports
       },
       verifiedCount: {
         type: Number,
@@ -159,9 +164,9 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
       },
     }],
     createdBy: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.Mixed,  // Can be ObjectId or 'system_import'
       ref: 'User',
-      required: true,
+      required: false,
     },
     size: {
       type: String,
@@ -176,19 +181,40 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
     externalData: {
       source: {
         type: String,
+        enum: ['fwgs', 'manual', 'user'],
+        default: 'manual'
+      },
+      fwgsId: {
+        type: String,
         trim: true,
+        sparse: true
+      },
+      sku: {
+        type: String,
+        trim: true
       },
       externalId: {
         type: String,
-        trim: true,
+        trim: true
+      },
+      lastSync: {
+        type: Date
       },
       importDate: {
-        type: Date,
-      },
+        type: Date
+      }
     },
     defaultImageUrl: {
       type: String,
       trim: true,
+    },
+    duplicateOf: {
+      type: Schema.Types.ObjectId,
+      ref: 'MasterBottle'
+    },
+    active: {
+      type: Boolean,
+      default: true
     },
     imageUrls: [{
       type: String,
@@ -228,6 +254,11 @@ MasterBottleSchema.index({ lastCalculated: 1 });
 
 // Index for UPC code lookups
 MasterBottleSchema.index({ 'upcCodes.code': 1 });
+
+// Index for external data lookups
+MasterBottleSchema.index({ 'externalData.fwgsId': 1 });
+MasterBottleSchema.index({ 'externalData.source': 1 });
+MasterBottleSchema.index({ active: 1 });
 
 // Method to check if a similar bottle exists
 MasterBottleSchema.statics.findSimilar = async function(name: string, distillery: string) {

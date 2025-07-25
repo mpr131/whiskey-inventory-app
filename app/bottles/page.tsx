@@ -180,9 +180,8 @@ export default function BottlesPage() {
 
   const handleBarcodeScanned = (barcode: string) => {
     setShowScanner(false);
-    // Navigate to bottles page with barcode search
-    router.push(`/bottles?search=${encodeURIComponent(barcode)}`);
-    toast.success(`Searching for barcode: ${barcode}`);
+    // Use new smart scan flow
+    router.push(`/scan/result?barcode=${encodeURIComponent(barcode)}`);
   };
 
   const handleDelete = async (id: string) => {
