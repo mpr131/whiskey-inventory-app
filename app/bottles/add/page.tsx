@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -75,6 +75,44 @@ export default function AddBottlePage() {
     notes: '',
   });
 
+  const searchMasterBottles = useCallback(async () => {
+    setSearching(true);
+    try {
+      const response = await fetch(`/api/master-bottles/search?q=${encodeURIComponent(searchQuery)}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setSearchResults(data.bottles);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setSearching(false);
+    }
+  }, [searchQuery]);
+
+  const fetchMasterBottle = useCallback(async (masterBottleId: string) => {
+    setLoadingMasterBottle(true);
+    try {
+      const response = await fetch(`/api/master-bottles/search?id=${masterBottleId}`);
+      const data = await response.json();
+      
+      if (response.ok && data.bottles && data.bottles.length > 0) {
+        const masterBottle = data.bottles[0];
+        setSelectedMaster(masterBottle);
+        setSearchQuery(masterBottle.name);
+        toast.success(`Pre-selected: ${masterBottle.name}`);
+      } else {
+        toast.error('Master bottle not found');
+      }
+    } catch (error) {
+      console.error('Error fetching master bottle:', error);
+      toast.error('Failed to load master bottle');
+    } finally {
+      setLoadingMasterBottle(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -91,9 +129,8 @@ export default function AddBottlePage() {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, searchMasterBottles]);
 
-  // Handle query params
   useEffect(() => {
     const masterBottleId = searchParams.get('masterBottleId');
     const name = searchParams.get('name');
@@ -116,45 +153,7 @@ export default function AddBottlePage() {
         toast.success(`Creating new bottle for UPC: ${upc}`);
       }
     }
-  }, [searchParams]);
-
-  const searchMasterBottles = async () => {
-    setSearching(true);
-    try {
-      const response = await fetch(`/api/master-bottles/search?q=${encodeURIComponent(searchQuery)}`);
-      const data = await response.json();
-      
-      if (response.ok) {
-        setSearchResults(data.bottles);
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const fetchMasterBottle = async (masterBottleId: string) => {
-    setLoadingMasterBottle(true);
-    try {
-      const response = await fetch(`/api/master-bottles/search?id=${masterBottleId}`);
-      const data = await response.json();
-      
-      if (response.ok && data.bottles && data.bottles.length > 0) {
-        const masterBottle = data.bottles[0];
-        setSelectedMaster(masterBottle);
-        setSearchQuery(masterBottle.name);
-        toast.success(`Pre-selected: ${masterBottle.name}`);
-      } else {
-        toast.error('Master bottle not found');
-      }
-    } catch (error) {
-      console.error('Error fetching master bottle:', error);
-      toast.error('Failed to load master bottle');
-    } finally {
-      setLoadingMasterBottle(false);
-    }
-  };
+  }, [searchParams, fetchMasterBottle]);
 
   const handleSelectMaster = (master: MasterBottle) => {
     haptic.selection();

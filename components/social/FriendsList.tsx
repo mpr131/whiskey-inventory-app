@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, UserPlus, UserX, Circle, Share2, Copy, Check } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -50,21 +50,22 @@ export default function FriendsList() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [connectMessage, setConnectMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchFriends();
-    fetchPendingRequests();
-    
-    // Check for connect_with parameter
-    const params = new URLSearchParams(window.location.search);
-    const connectWith = params.get('connect_with');
-    
-    if (connectWith && session?.user) {
-      // Automatically send friend request
-      sendAutoFriendRequest(connectWith);
+  const fetchPendingRequests = useCallback(async () => {
+    try {
+      const response = await fetch('/api/friends/pending');
+      if (response.ok) {
+        const data = await response.json();
+        setPendingReceived(data.received);
+        setPendingSent(data.sent);
+      }
+    } catch (error) {
+      console.error('Error fetching pending requests:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [session]);
+  }, []);
   
-  const sendAutoFriendRequest = async (username: string) => {
+  const sendAutoFriendRequest = useCallback(async (username: string) => {
     try {
       const response = await fetch('/api/friends/request', {
         method: 'POST',
@@ -88,7 +89,21 @@ export default function FriendsList() {
     } catch (error) {
       console.error('Error sending auto friend request:', error);
     }
-  };
+  }, [fetchPendingRequests]);
+
+  useEffect(() => {
+    fetchFriends();
+    fetchPendingRequests();
+    
+    // Check for connect_with parameter
+    const params = new URLSearchParams(window.location.search);
+    const connectWith = params.get('connect_with');
+    
+    if (connectWith && session?.user) {
+      // Automatically send friend request
+      sendAutoFriendRequest(connectWith);
+    }
+  }, [session, sendAutoFriendRequest, fetchPendingRequests]);
 
   const fetchFriends = async () => {
     try {
@@ -99,21 +114,6 @@ export default function FriendsList() {
       }
     } catch (error) {
       console.error('Error fetching friends:', error);
-    }
-  };
-
-  const fetchPendingRequests = async () => {
-    try {
-      const response = await fetch('/api/friends/pending');
-      if (response.ok) {
-        const data = await response.json();
-        setPendingReceived(data.received);
-        setPendingSent(data.sent);
-      }
-    } catch (error) {
-      console.error('Error fetching pending requests:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

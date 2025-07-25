@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -42,20 +42,7 @@ export default function MasterBottleSearch({
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (search && search.length >= 2) {
-        searchMasterBottles();
-      } else {
-        setSearchResults([]);
-        setShowDropdown(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [search]);
-
-  const searchMasterBottles = async () => {
+  const searchMasterBottles = useCallback(async () => {
     setSearching(true);
     try {
       // Search both master bottles and user bottles
@@ -99,7 +86,20 @@ export default function MasterBottleSearch({
     } finally {
       setSearching(false);
     }
-  };
+  }, [search, redirectToBottle]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (search && search.length >= 2) {
+        searchMasterBottles();
+      } else {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, searchMasterBottles]);
 
   const handleSelectBottle = (bottle: MasterBottle) => {
     if (onSelect) {

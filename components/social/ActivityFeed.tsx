@@ -71,7 +71,7 @@ export default function ActivityFeed({ filter = 'all' }: ActivityFeedProps) {
 
   useEffect(() => {
     fetchActivities(true);
-  }, [filter]);
+  }, [filter, fetchActivities]);
 
   const handleCheers = async (activityId: string, pourId: string) => {
     try {

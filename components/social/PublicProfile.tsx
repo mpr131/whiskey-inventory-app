@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, Package, Wine, Star, Settings, UserPlus, UserCheck, Lock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -45,17 +45,7 @@ export default function PublicProfile({ username }: PublicProfileProps) {
   const [bottlesLoading, setBottlesLoading] = useState(false);
   const [canViewCollection, setCanViewCollection] = useState(false);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [username]);
-
-  useEffect(() => {
-    if (profile && canViewCollection) {
-      fetchBottles();
-    }
-  }, [profile, canViewCollection]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const response = await fetch(`/api/users/${username}`);
       
@@ -84,9 +74,9 @@ export default function PublicProfile({ username }: PublicProfileProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [username]);
 
-  const fetchBottles = async () => {
+  const fetchBottles = useCallback(async () => {
     setBottlesLoading(true);
     try {
       const response = await fetch(`/api/users/${username}/collection?limit=12`);
@@ -100,7 +90,17 @@ export default function PublicProfile({ username }: PublicProfileProps) {
     } finally {
       setBottlesLoading(false);
     }
-  };
+  }, [username]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [username, fetchProfile]);
+
+  useEffect(() => {
+    if (profile && canViewCollection) {
+      fetchBottles();
+    }
+  }, [profile, canViewCollection, fetchBottles]);
 
   const sendFriendRequest = async () => {
     try {

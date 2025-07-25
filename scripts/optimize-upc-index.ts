@@ -33,13 +33,13 @@ async function optimizeUPCIndex() {
     );
     console.log('✅ Created optimized UPC index');
     
-    // Get index stats
-    const stats = await MasterBottle.collection.indexStats();
-    console.log('\nIndex Statistics:');
-    const upcIndex = stats.find((idx: any) => idx.name === 'upc_code_optimized');
+    // Get index information
+    const indexes = await MasterBottle.collection.indexes();
+    console.log('\nIndex Information:');
+    const upcIndex = indexes.find((idx: any) => idx.name === 'upc_code_optimized');
     if (upcIndex) {
-      console.log(`  Size: ${(upcIndex.storageSize / 1024 / 1024).toFixed(2)} MB`);
-      console.log(`  Documents indexed: ${upcIndex.ops || 'N/A'}`);
+      console.log(`  Index found: ${upcIndex.name}`);
+      console.log(`  Keys: ${JSON.stringify(upcIndex.key)}`);
     }
     
     // Count bottles with UPCs

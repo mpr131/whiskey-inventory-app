@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Package, Check, CheckCircle, X, SkipForward, ExternalLink, AlertCircle, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
@@ -41,11 +41,6 @@ export default function UPCBackfillTool() {
   const [skipIds, setSkipIds] = useState<string[]>([]);
   const [totalRemaining, setTotalRemaining] = useState<number>(0);
 
-  useEffect(() => {
-    loadStats();
-    loadNextBottle();
-  }, []);
-
   const loadStats = async () => {
     try {
       const response = await fetch('/api/admin/upc-backfill?action=stats');
@@ -58,7 +53,7 @@ export default function UPCBackfillTool() {
     }
   };
 
-  const loadNextBottle = async (additionalReviewedId?: string, additionalSkipId?: string) => {
+  const loadNextBottle = useCallback(async (additionalReviewedId?: string, additionalSkipId?: string) => {
     setLoading(true);
     try {
       // Use the additional IDs if provided (for immediate updates)
@@ -99,7 +94,12 @@ export default function UPCBackfillTool() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [reviewedIds, skipIds]);
+
+  useEffect(() => {
+    loadStats();
+    loadNextBottle();
+  }, [loadNextBottle]);
 
   const approveMatch = async (match: MatchResult) => {
     if (!currentBottle) return;

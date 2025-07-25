@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -69,17 +69,7 @@ export default function PrintLabelPage() {
   const [bottle, setBottle] = useState<UserBottle | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (status === 'loading') return;
-    if (!session) {
-      router.push('/auth/signin');
-      return;
-    }
-
-    fetchBottleDetails();
-  }, [session, status, router, bottleId]);
-
-  const fetchBottleDetails = async () => {
+  const fetchBottleDetails = useCallback(async () => {
     try {
       const response = await fetch(`/api/bottles/${bottleId}`);
       if (response.ok) {
@@ -97,7 +87,17 @@ export default function PrintLabelPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [bottleId, router]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    fetchBottleDetails();
+  }, [session, status, router, fetchBottleDetails]);
 
   const handlePrint = () => {
     window.print();

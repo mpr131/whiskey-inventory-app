@@ -158,7 +158,7 @@ export default function ImportBottlesPage() {
     } else {
       toast.error('Please upload a CSV file');
     }
-  }, []);
+  }, [isCellarTracker]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

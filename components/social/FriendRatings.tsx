@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Star, Users, TrendingUp, TrendingDown } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -32,11 +32,7 @@ export default function FriendRatings({ masterBottleId, currentUserRating }: Fri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchFriendsWithBottle();
-  }, [masterBottleId]);
-
-  const fetchFriendsWithBottle = async () => {
+  const fetchFriendsWithBottle = useCallback(async () => {
     try {
       const response = await fetch(`/api/bottles/${masterBottleId}/friends`);
       
@@ -55,7 +51,11 @@ export default function FriendRatings({ masterBottleId, currentUserRating }: Fri
     } finally {
       setLoading(false);
     }
-  };
+  }, [masterBottleId]);
+
+  useEffect(() => {
+    fetchFriendsWithBottle();
+  }, [masterBottleId, fetchFriendsWithBottle]);
 
   const getRatingDifference = (friendRating?: number) => {
     if (!currentUserRating || !friendRating) return null;
