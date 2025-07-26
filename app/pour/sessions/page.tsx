@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, Wine, Calendar, MapPin, Users, Tag, Star, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatDate, formatTime } from '@/lib/date-utils';
 
 interface PourSession {
   _id: string;
@@ -61,22 +62,6 @@ export default function PourSessionsPage() {
     }
   }, [session, page, fetchSessions]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
 
   if (loading) {
     return (
@@ -134,7 +119,7 @@ export default function PourSessionsPage() {
                     <h3 className="text-lg font-semibold text-white mb-1">{session.sessionName}</h3>
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                       <Calendar className="w-4 h-4" />
-                      {formatDate(session.date)} at {formatTime(session.date)}
+                      {formatDate(session.date, { includeWeekday: true })} at {formatTime(session.date)}
                     </div>
                   </div>
                   <div className="text-right">

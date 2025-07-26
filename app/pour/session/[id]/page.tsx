@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { ChevronLeft, Wine, Calendar, MapPin, Users, Tag, Star } from 'lucide-react';
+import { formatDate, formatTime, formatPourDateTime } from '@/lib/date-utils';
 
 interface Pour {
   _id: string;
@@ -181,12 +182,7 @@ export default function PourSessionPage() {
           <div className="space-y-3 text-sm">
             <div className="flex items-center gap-2 text-gray-300">
               <Calendar className="w-4 h-4 text-gray-500" />
-              {new Date(pourSession.date).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
+              {formatDate(pourSession.date, { includeWeekday: true })} at {formatTime(pourSession.date)}
             </div>
 
             {pourSession.location && (
@@ -255,11 +251,7 @@ export default function PourSessionPage() {
               )}
               
               <div className="text-xs text-gray-500 mt-2">
-                {new Date(pour.date).toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true,
-                })}
+                {formatPourDateTime(pour.date, pourSession.date)}
               </div>
             </div>
           ))}

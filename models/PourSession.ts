@@ -29,7 +29,8 @@ const PourSessionSchema = new Schema<IPourSession>(
       trim: true,
       default: function() {
         const date = new Date();
-        return `Session ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        // Use ISO format for consistent server-side generation
+        return `Session ${date.toISOString().split('T')[0]} ${date.toISOString().split('T')[1].substring(0, 5)}`;
       },
     },
     date: {

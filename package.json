@@ -16,7 +16,11 @@
     "fix-orphaned-pours": "tsx scripts/fix-orphaned-pours.ts",
     "monitor-orphaned-pours": "tsx scripts/monitor-orphaned-pours.ts",
     "test-pour-creation": "tsx scripts/test-pour-creation.ts",
-    "test-external-db": "tsx scripts/test-external-db.ts"
+    "test-external-db": "tsx scripts/test-external-db.ts",
+    "analyze-fwgs-gap": "tsx scripts/analyze-fwgs-gap.ts",
+    "check-fwgs-product": "tsx scripts/check-fwgs-product.ts",
+    "import-fwgs-fix": "tsx scripts/import-fwgs-fix.ts",
+    "import-missing-fwgs": "tsx scripts/import-missing-fwgs.ts"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.8.4",

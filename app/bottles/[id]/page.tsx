@@ -8,6 +8,7 @@ import { ArrowLeft, Edit, Trash2, MapPin, Calendar, DollarSign, FileText, Packag
 import toast from 'react-hot-toast';
 import PhotoUpload from '@/components/PhotoUpload';
 import BarrelRating from '@/components/BarrelRating';
+import { formatDate as formatDateUtil, formatTime as formatTimeUtil } from '@/lib/date-utils';
 
 interface MasterBottle {
   _id: string;
@@ -1078,7 +1079,7 @@ export default function BottleDetailPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-white font-medium">{pour.amount}oz</span>
                         <span className="text-gray-400 text-sm">
-                          {new Date(pour.date).toLocaleDateString()} at {new Date(pour.date).toLocaleTimeString()}
+                          {formatDateUtil(pour.date, { relative: true, includeTime: true })}
                         </span>
                       </div>
                       <div className="text-right">

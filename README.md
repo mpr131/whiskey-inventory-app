@@ -1,476 +1,401 @@
-# Whiskey Vault - Premium Inventory Management System
+# 🥃 Whiskey Vault
 
-A sophisticated whiskey collection management system built with Next.js 14, MongoDB, and NextAuth.js. Features a premium dark theme with glass morphism effects and copper accents.
+A modern, full-featured whiskey inventory management system with social features, advanced barcode scanning, and a comprehensive database of over 71,000 products.
 
-## Features
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green?logo=mongodb)](https://www.mongodb.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 
-- 🔐 **Secure Authentication** with invite code system
-- 🥃 **Comprehensive Bottle Management** with custom fields for store picks
-- 📍 **Location & Bin Tracking** for organized storage
-- 💰 **Value Tracking** with purchase price and current estimates
-- 📸 **Image Uploads** via Cloudinary integration
-- 🎨 **Premium Design** with dark theme and glass morphism effects
-- 📱 **Mobile Responsive** interface
+## 🚀 Overview
 
-## Tech Stack
+Whiskey Vault is a comprehensive whiskey collection management platform that combines powerful inventory tracking with social features and advanced analytics. Whether you're a casual enthusiast or serious collector, Whiskey Vault helps you catalog, track, and share your whiskey journey.
 
-- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, MongoDB with Mongoose
-- **Authentication**: NextAuth.js with credentials provider
-- **Image Storage**: Cloudinary
-- **Styling**: Tailwind CSS with custom premium theme
+### Key Differentiators
 
-## Getting Started
+- **71,000+ Product Database**: Pre-loaded with FWGS (Fine Wine & Good Spirits) catalog including UPCs, pricing, and product details
+- **Multi-Format Barcode Scanning**: Supports standard UPCs, custom vault barcodes, and CellarTracker IDs
+- **Social Integration**: Connect with friends, share your collection, and track tasting sessions together
+- **Advanced Analytics**: Track consumption patterns, collection value, and rating trends
+- **Professional Label Printing**: DYMO LabelWriter support for collection organization
 
-### Prerequisites
+## ✨ Major Features
 
-- Node.js 18+ 
-- MongoDB instance (local or cloud)
-- Cloudinary account (for image uploads)
+### 📦 Inventory Management
+- **Dual-Level Architecture**: Master bottles (product catalog) and user bottles (personal collection)
+- **Smart Product Matching**: Automatic matching with 71k+ product database
+- **Bulk Import**: CSV import with intelligent column mapping and CellarTracker support
+- **Custom Bottles**: Add rare or private label bottles not in the database
+- **Location Tracking**: Organize by area, bin, and position
+- **Store Pick Support**: Track store-exclusive selections with custom details
 
-### Installation
+### 📱 Advanced Barcode Scanning
+- **Multi-Format Support**:
+  - Standard UPCs (with/without leading zeros)
+  - Vault Barcodes (WV_XXXXX format)
+  - CellarTracker IDs (7-8 digit codes)
+- **Smart Detection**: Automatically identifies barcode type and searches appropriate database
+- **Mobile-Optimized**: Full-screen mobile interface with camera integration
+- **Offline Capability**: Scan and queue for later sync
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd whiskey-inventory-app
-```
+### 👥 Social Features
+- **Friend System**: Connect with other collectors
+- **Activity Feed**: See what friends are drinking and rating
+- **Shared Pour Sessions**: Track group tastings with multiple participants
+- **Public Profiles**: Share your collection (with privacy controls)
+- **Rating Comparisons**: See how your ratings compare to friends
+- **Cheers System**: React to friends' pours and activities
 
-2. Install dependencies:
-```bash
-npm install
-```
+### 🍷 Pour Tracking & Sessions
+- **Quick Pour**: Log a drink with one tap
+- **Pour Sessions**: Organize themed tastings or events
+- **Live Pouring**: Real-time updates when friends are drinking
+- **Rating System**: 1-10 scale with tasting notes
+- **Analytics**: Track consumption patterns and favorites
+- **Cost Tracking**: Monitor pour costs based on bottle prices
 
-3. Create a `.env.local` file based on `.env.example`:
-```bash
-cp .env.example .env.local
-```
+### 🏷️ Label Printing
+- **DYMO LabelWriter Support**: Direct integration with DYMO printers
+- **Multiple Formats**: Large (4"x3") and small (2"x1") label templates
+- **QR Codes**: Each label includes scannable QR code
+- **Batch Printing**: Print multiple labels at once
+- **Custom Fields**: Include location, purchase date, and notes
 
-4. Update the environment variables in `.env.local`:
-```
-MONGODB_URI=mongodb://localhost:27017/whiskey-inventory
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-secret-key-here
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
-```
+### 📊 Analytics & Insights
+- **Collection Overview**: Total bottles, unique items, total value
+- **Consumption Tracking**: Monthly/yearly consumption patterns
+- **Rating Analytics**: Average ratings by category, distillery, age
+- **Value Tracking**: Current value vs. purchase price
+- **Popular Bottles**: Most poured and highest rated
+- **Friend Comparisons**: See how your collection compares
 
-5. Seed the database with an admin user:
-```bash
-npm run seed
-```
-
-This will create:
-- Admin user: `admin@whiskeyvault.com` / `admin123`
-- Initial invite code: `ADMIN001` (already used by admin)
-
-6. Run the development server:
-```bash
-npm run dev
-```
-
-7. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-## Project Structure
-
-```
-whiskey-inventory-app/
-├── app/                    # Next.js 14 app directory
-│   ├── api/               # API routes
-│   ├── auth/              # Authentication pages
-│   ├── dashboard/         # Dashboard page
-│   └── layout.tsx         # Root layout
-├── components/            # React components
-├── lib/                   # Utility functions
-│   ├── auth.ts           # NextAuth configuration
-│   └── mongodb.ts        # MongoDB connection
-├── models/               # Mongoose schemas
-│   ├── User.ts
-│   ├── InviteCode.ts
-│   ├── Bottle.ts
-│   └── Location.ts
-├── scripts/              # Utility scripts
-│   └── seed.ts          # Database seeding
-└── types/               # TypeScript type definitions
-```
-
-## Key Features
-
-### Authentication System
-- Secure login with email/password
-- Invite code system for new registrations
-- Admin users can generate and manage invite codes
-- Session-based authentication with JWT
-
-### Bottle Management
-- Comprehensive bottle information tracking
-- Support for store picks with custom fields
-- Image uploads for bottle photos
-- Value tracking and rating system
-- Open/closed bottle status
-
-### Location Management
-- Create storage locations (cabinets, shelves, cellars)
-- Bin system for detailed organization
-- Temperature and humidity tracking
-- Capacity management
-
-### Rating System
-- **Personal Ratings**: Real-time calculation of your average rating per bottle
-- **Community Ratings**: Nightly calculation of average ratings across all users
-- T8ke scale (0-10) with one decimal precision
-- Ratings displayed on bottle cards, detail pages, and search results
-- "Updated daily" indicator for community ratings
-
-## Scheduled Tasks (Cron Jobs)
-
-### Setting up Cron Jobs (macOS)
-
-The application includes two optional cron jobs for enhanced functionality:
-
-1. **Notification Checks** (hourly) - Sends notifications for low stock bottles
-2. **Rating Calculations** (nightly at 2 AM) - Updates community ratings
-
-To set up both cron jobs:
-
-```bash
-# Run the setup script
-./scripts/setup-notifications-cron.sh
-
-# When prompted, choose 'y' to also set up rating calculations
-```
-
-Or set them up individually:
-
-```bash
-# Notifications only
-./scripts/setup-notifications-cron.sh
-
-# Ratings only
-./scripts/setup-ratings-cron.sh
-```
-
-### Manual Triggers
-
-You can manually trigger the cron endpoints:
-
-```bash
-# Trigger notifications
-curl -X GET -H "Authorization: Bearer $CRON_SECRET" http://localhost:3005/api/cron/notifications
-
-# Trigger rating calculations
-curl -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3005/api/cron/calculate-ratings
-```
-
-### Monitoring Cron Jobs
-
-```bash
-# Check if jobs are running
-launchctl list | grep whiskeyvault
-
-# View logs
-tail -f /tmp/whiskeyvault-notifications.log
-tail -f /tmp/whiskeyvault-ratings.log
-```
-
-## Development
-
-### Running Tests
-```bash
-npm run test
-```
-
-### Building for Production
-```bash
-npm run build
-npm start
-```
-
-### Linting
-```bash
-npm run lint
-```
-
-## Deployment
-
-The application can be deployed to any platform that supports Next.js:
-
-- Vercel (recommended)
-- Netlify
-- AWS Amplify
-- Self-hosted with Node.js
-
-Make sure to set all environment variables in your deployment platform.
-
-## License
-
-This project is private and proprietary.
-
-## Support
-
-For support or questions, please contact the development team.
-
-
-## Addtional Information
-# Whiskey Vault 🥃
-
-A premium whiskey/spirits inventory management system built with Next.js, MongoDB, and TypeScript. Think CellarTracker but specifically designed for whiskey collectors with features like store pick tracking, pour management, and secondary market pricing.
-
-## 🚀 Features
-
-### Core Features
-- **Multi-user authentication** with invite-only registration system
-- **Master bottle database** - Community-shared whiskey information
-- **Personal collection tracking** - Your specific bottles, purchases, and locations
-- **CSV import** - Import from CellarTracker or Excel
-- **Store pick management** - Track barrel numbers, pick dates, and store-specific details
-- **Location/bin management** - Organize bottles across multiple locations
-- **Pour tracking** - Monitor consumption of open bottles
-- **Dark premium UI** - Glass morphism effects with copper/amber accents
-
-### Upcoming Features
-- 📸 **Photo upload** - Multiple photos per bottle via Cloudinary
-- 🏷️ **Label printing** - Generate labels with QR codes
-- 📱 **UPC/Label scanning** - Quick bottle entry via camera
-- 💰 **Secondary market pricing** - Track value with Unicorn Auctions integration
-- 📊 **Analytics** - Collection value, drinking patterns, and trends
-- 🔄 **Trading/sharing** - Share wishlists with friends
+### 🔌 FWGS Integration
+- **71,000+ Products**: Complete Pennsylvania liquor store inventory
+- **Automatic Updates**: Regular syncs with FWGS database
+- **Price Tracking**: Current prices and availability
+- **UPC Matching**: Instant product identification via barcode
+- **Image Library**: Product images for most bottles
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: MongoDB with Mongoose
-- **Authentication**: NextAuth.js
-- **Image Storage**: Cloudinary (ready for integration)
-- **Styling**: Dark theme with copper accents (#B87333, #D2691E)
+### Frontend
+- **Framework**: Next.js 14.2 (App Router)
+- **Language**: TypeScript 5.0
+- **Styling**: Tailwind CSS 3.4
+- **UI Components**: Custom components with Radix UI primitives
+- **State Management**: React hooks with SWR for data fetching
+- **Authentication**: NextAuth.js 4.24
 
-## 📦 Installation
+### Backend
+- **API**: Next.js API Routes
+- **Database**: MongoDB 7.0 with Mongoose ODM
+- **Image Storage**: Cloudinary for bottle images
+- **External APIs**: FWGS data sync, UPC lookup services
+- **Cron Jobs**: Scheduled tasks for ratings calculation and notifications
+
+### Infrastructure
+- **Deployment**: Docker containers
+- **Environment**: Node.js 20.x
+- **Package Manager**: npm/yarn
+- **Build Tools**: Next.js built-in webpack configuration
+
+## 📋 Installation & Setup
 
 ### Prerequisites
-- Node.js 18+
-- MongoDB (local or Atlas)
+- Node.js 20.x or higher
+- MongoDB 7.0 or higher
+- npm or yarn
 - Git
 
-### Setup
+### Environment Variables
+Create a `.env` file in the root directory:
+
+```env
+# Database
+MONGODB_URI=mongodb://localhost:27017/whiskey-vault
+MONGODB_URI_EXTERNAL=mongodb://external-db-uri  # For FWGS data
+
+# Authentication
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key-here
+
+# Cloudinary (for image uploads)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+
+# Email (optional)
+EMAIL_SERVER_HOST=smtp.gmail.com
+EMAIL_SERVER_PORT=587
+EMAIL_SERVER_USER=your-email@gmail.com
+EMAIL_SERVER_PASSWORD=your-app-password
+EMAIL_FROM=noreply@whiskeyvault.app
+
+# Analytics (optional)
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+```
+
+### Local Development Setup
 
 1. **Clone the repository**
-```bash
-git clone https://github.com/mpr131/whiskey-inventory-app.git
-cd whiskey-inventory-app
-```
+   ```bash
+   git clone https://github.com/yourusername/whiskey-vault.git
+   cd whiskey-vault
+   ```
 
 2. **Install dependencies**
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-3. **Configure environment variables**
-```bash
-cp .env.example .env.local
-```
+3. **Set up MongoDB**
+   ```bash
+   # Start MongoDB locally
+   mongod --dbpath /path/to/data/directory
+   ```
 
-Edit `.env.local`:
-```env
-# MongoDB connection (local or Atlas)
-MONGODB_URI=mongodb://localhost:27017/whiskey-inventory
+4. **Initialize the database**
+   ```bash
+   # Run database migrations
+   npm run db:migrate
 
-# NextAuth configuration
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=[generate with: openssl rand -base64 32]
-
-# Cloudinary (optional for now)
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-```
-
-4. **Run database seed**
-```bash
-npm run seed
-```
-This creates an admin user:
-- Email: `admin@whiskeyvault.com`
-- Password: `admin123`
+   # (Optional) Import FWGS data
+   npm run import:fwgs
+   ```
 
 5. **Start the development server**
-```bash
-npm run dev
-```
+   ```bash
+   npm run dev
+   ```
 
-Visit http://localhost:3000
+6. **Access the application**
+   Open [http://localhost:3000](http://localhost:3000)
 
 ## 🗄️ Data Architecture
 
 ### MasterBottle Schema
-Shared bottle information used by all users:
 ```javascript
 {
-  name: String,              // "Russell's Reserve 13 Year"
-  brand: String,             // "Russell's Reserve"
-  distillery: String,        // "Wild Turkey"
-  category: String,          // "Bourbon", "Rye", "Scotch"
-  type: String,              // "Kentucky Straight Bourbon"
-  age: Number,               // Years aged
-  statedProof: Number,       // Standard proof
-  msrp: Number,              // Retail price
-  description: String,
-  isStorePick: Boolean,
-  storePickDetails: {
-    store: String,
-    pickDate: Date,
-    warehouse: String,
-    floor: String
-  }
+  name: String,
+  brand: String,
+  distillery: String,
+  category: String,         // Bourbon, Rye, Scotch, etc.
+  type: String,            // Specific type
+  age: Number,
+  statedProof: Number,
+  size: String,
+  msrp: Number,
+  upcCodes: [{
+    code: String,
+    verifiedCount: Number,
+    dateAdded: Date
+  }],
+  externalData: {
+    source: String,        // 'fwgs', 'manual', 'user'
+    fwgsId: String,
+    sku: String,
+    lastSync: Date
+  },
+  communityRating: Number,
+  isActive: Boolean
 }
 ```
 
 ### UserBottle Schema
-User-specific bottle information:
 ```javascript
 {
-  userId: ObjectId,          // Owner
-  masterBottleId: ObjectId,  // References MasterBottle
+  userId: ObjectId,
+  masterBottleId: ObjectId,
   purchaseDate: Date,
   purchasePrice: Number,
   purchaseLocation: String,
-  quantity: Number,          // Bottles owned
+  quantity: Number,
   location: {
-    area: String,           // "Home", "Storage"
-    bin: String             // "A-12", "B-3"
+    area: String,
+    bin: String
   },
-  bottleNumber: String,      // "127 of 250"
-  barrelNumber: String,      // Specific barrel for store picks
-  actualProof: Number,       // Can vary from stated
-  personalNotes: String,
-  photos: [String],
-  status: String,            // "unopened", "opened", "finished"
-  openDate: Date,
-  fillLevel: Number,         // Percentage remaining
-  pours: [{
-    date: Date,
-    amount: Number,
-    notes: String,
-    occasion: String
-  }]
+  status: String,          // 'unopened', 'opened', 'finished'
+  fillLevel: Number,       // 0-100
+  personalRating: Number,
+  notes: String,
+  barcode: String,         // Vault barcode
+  cellarTrackerId: String
 }
 ```
 
-## 📊 Importing Your Collection
+### Key Relationships
+- **User → UserBottle**: One-to-many (a user owns multiple bottles)
+- **UserBottle → MasterBottle**: Many-to-one (multiple users can own the same product)
+- **User → Friend**: Many-to-many (bidirectional friendship)
+- **Pour → UserBottle**: Many-to-one (multiple pours from one bottle)
+- **PourSession → Pour**: One-to-many (session contains multiple pours)
 
-### From CellarTracker
-1. Export your collection as CSV from CellarTracker
-2. Navigate to `/bottles/import` 
-3. Upload your CSV file
-4. Map columns (automatic detection for common fields)
-5. Review and import
+## 🆕 Recent Additions
 
-### Field Mapping
-- `Wine` → MasterBottle name
-- `Producer` → Distillery
-- `Vintage` → Age/Year
-- `Price` → Purchase price
-- `Quantity` → Number of bottles
-- `BeginConsume/EndConsume` → Drinking window
-- `Location` → Storage location
-- Notes fields → Personal notes
+### FWGS Import System (71k+ Products)
+- Comprehensive import scripts for Pennsylvania liquor database
+- Automatic UPC parsing and validation
+- Duplicate detection and merging
+- Proof/ABV data cleaning
+- Regular sync capabilities
 
-## 🔑 Authentication & User Management
+### Enhanced Barcode Scanner
+- Mobile-first responsive design
+- Multi-format barcode detection
+- Success state with "Scan Another" functionality
+- Offline queue for poor connectivity
+- Integration with 71k+ product database
 
-### Admin Features
-- Generate invite codes
-- Manage users
-- View system statistics
-- Manage master bottle database
+### Social Features 2.0
+- Live pour notifications
+- Activity feed with real-time updates
+- Friend bottle comparisons
+- Shared tasting sessions
+- Public profile pages with privacy controls
 
-### Regular Users
-- Manage personal collection
-- View community bottles
-- Track purchases and consumption
-- Generate reports
+### Advanced Pour Tracking
+- Session management with themes
+- Multi-bottle pour sessions
+- Cost-per-pour calculations
+- Rating aggregation
+- Export capabilities
 
-## 🚧 Development
+## 👨‍💼 Admin Features
 
-### Project Structure
+### User Management
+- View all users with stats
+- Toggle admin privileges
+- Reset user passwords
+- Export user data
+- Monitor activity
+
+### UPC Management
+- Bulk UPC assignment tool
+- Manual UPC entry
+- Verification system
+- Duplicate detection
+- FWGS sync status
+
+### Data Import Tools
+- FWGS bulk import
+- CSV mapping interface
+- Duplicate management
+- Data validation
+- Import history
+
+## 📡 API Documentation
+
+### Key Endpoints
+
+#### Authentication
+- `POST /api/auth/signin` - User login
+- `POST /api/auth/signup` - User registration
+- `GET /api/auth/session` - Current session
+
+#### Bottles
+- `GET /api/bottles` - List user bottles
+- `POST /api/bottles` - Add new bottle
+- `GET /api/bottles/[id]` - Get bottle details
+- `PUT /api/bottles/[id]` - Update bottle
+- `DELETE /api/bottles/[id]` - Remove bottle
+
+#### Barcode Scanning
+- `POST /api/smart-scan` - Intelligent barcode lookup
+- `PUT /api/smart-scan` - Add scanned bottle to collection
+
+#### Social
+- `GET /api/friends` - List friends
+- `POST /api/friends/request` - Send friend request
+- `GET /api/feed` - Activity feed
+- `GET /api/users/[username]` - Public profile
+
+#### Pour Tracking
+- `POST /api/bottles/[id]/pour` - Log a pour
+- `GET /api/pour-sessions` - List sessions
+- `POST /api/pour-sessions` - Create session
+
+## 🚀 Deployment
+
+### Docker Setup
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
 ```
-whiskey-inventory-app/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   ├── auth/              # Auth pages
-│   ├── bottles/           # Bottle management
-│   └── dashboard/         # Main dashboard
-├── components/            # React components
-├── lib/                   # Utilities and helpers
-├── models/                # Mongoose schemas
-├── public/                # Static assets
-└── scripts/               # Database scripts
+
+### Environment Configuration
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://db:27017/whiskey-vault
+      - NODE_ENV=production
+    depends_on:
+      - db
+  
+  db:
+    image: mongo:7.0
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+
+volumes:
+  mongodb_data:
 ```
 
-### Key Components
-- `MasterBottleSearch` - Search/create master bottles
-- `BottleForm` - Add/edit bottles with store pick support
-- `ImportCSV` - CSV import with mapping
-- `LocationManager` - Manage storage locations
+### Production Deployment
+1. Build Docker image
+2. Push to container registry
+3. Deploy to cloud provider (AWS, GCP, Azure)
+4. Configure environment variables
+5. Set up SSL/TLS certificates
+6. Configure CDN for static assets
 
-### API Endpoints
-- `/api/bottles` - CRUD for user bottles
-- `/api/master-bottles` - Search/create master bottles
-- `/api/import` - CSV import processing
-- `/api/auth` - NextAuth endpoints
+## 🗺️ Future Roadmap
 
-## 🐛 Known Issues
+### Q1 2025
+- [ ] Mobile app (React Native)
+- [ ] Whiskey marketplace integration
+- [ ] AI-powered recommendations
+- [ ] Advanced collection insights
 
-1. **MongoDB Atlas DNS**: Some networks have issues with `mongodb+srv://` URLs. Use standard connection string format if needed.
-2. **Invite Code Length**: Registration form limits invite codes to 8 characters
-3. **Photo Upload**: Cloudinary integration pending
+### Q2 2025
+- [ ] Auction price tracking
+- [ ] Virtual tasting events
+- [ ] Distillery partnerships
+- [ ] NFT integration for rare bottles
+
+### Q3 2025
+- [ ] International product databases
+- [ ] Multi-language support
+- [ ] Wholesale/retail features
+- [ ] API for third-party apps
 
 ## 🤝 Contributing
 
-This is currently a private project, but if you're one of Mike's whiskey buddies with access:
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-1. Create a feature branch
-2. Make your changes
-3. Test thoroughly
-4. Submit a pull request
+## 📄 License
 
-## 📈 Future Roadmap
-
-### Phase 1 (Current)
-- ✅ Core CRUD operations
-- ✅ Master/User bottle architecture
-- ✅ CSV import
-- ⏳ Photo uploads
-- ⏳ Quick add feature
-
-### Phase 2
-- Label printing with QR codes
-- Barcode/UPC scanning
-- Secondary market price tracking
-- Advanced search and filtering
-
-### Phase 3
-- Mobile app (React Native)
-- Social features (trading, wishlists)
-- AI-powered tasting notes
-- Whiskey recommendations
-
-### Phase 4
-- Public bottle database API
-- Integration with whiskey retailers
-- Collection insurance documentation
-- Export to other platforms
-
-## 📝 License
-
-Private project - not for public distribution
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Built for the whiskey collecting community
-- Inspired by CellarTracker's wine management
-- Special thanks to all the store pick groups
+- FWGS for product data access
+- The whiskey community for feedback and testing
+- All contributors who have helped shape this project
 
 ---
 
-**Created with** 🥃 **by Mike and the whiskey collecting community**
+**Built with ❤️ by whiskey enthusiasts, for whiskey enthusiasts**

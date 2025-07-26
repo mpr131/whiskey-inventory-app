@@ -8,9 +8,13 @@ import Pour from '@/models/Pour';
 const SESSION_CONFIG = {
   // Hours after which a new session is created
   SESSION_TIMEOUT_HOURS: 4,
-  // Default session name format
-  DEFAULT_SESSION_NAME: (date: Date) => 
-    `Session ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+  // Default session name format - use UTC to avoid server timezone issues
+  DEFAULT_SESSION_NAME: (date: Date) => {
+    const isoString = date.toISOString();
+    const dateStr = isoString.split('T')[0];
+    const timeStr = isoString.split('T')[1].substring(0, 5);
+    return `Session ${dateStr} ${timeStr} UTC`;
+  },
 };
 
 /**

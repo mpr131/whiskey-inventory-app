@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { Ticket, Users, Package, Shield } from 'lucide-react';
+import { Ticket, Users, Package, Shield, GitMerge } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -81,6 +81,21 @@ export default function AdminDashboard() {
           </div>
           <p className="text-gray-400">
             Add, review, and manage UPC codes for bottles in the database
+          </p>
+        </Link>
+
+        <Link 
+          href="/admin/bottles/dedupe"
+          className="card-premium hover:border-copper/50 transition-all duration-300 p-6"
+        >
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-copper/20 rounded-lg">
+              <GitMerge className="h-6 w-6 text-copper" />
+            </div>
+            <h2 className="text-xl font-semibold text-white">Bottle Deduplication</h2>
+          </div>
+          <p className="text-gray-400">
+            Match your bottles to FWGS products to add UPCs and images
           </p>
         </Link>
       </div>
