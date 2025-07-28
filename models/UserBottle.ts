@@ -7,6 +7,15 @@ export interface IPour {
   rating?: number;
 }
 
+export interface IFillLevelAdjustment {
+  date: Date;
+  previousLevel: number;
+  newLevel: number;
+  reason: 'manual' | 'pour' | 'recalculation';
+  notes?: string;
+  poursSinceLastAdjustment?: number;
+}
+
 export interface IUserBottle extends Document {
   userId: mongoose.Types.ObjectId;
   masterBottleId: mongoose.Types.ObjectId;
@@ -38,6 +47,8 @@ export interface IUserBottle extends Document {
   openDate?: Date;
   fillLevel?: number;
   pours: IPour[];
+  fillLevelHistory: IFillLevelAdjustment[];
+  lastManualAdjustment?: Date;
   averageRating?: number;
   totalPours?: number;
   lastPourDate?: Date;
@@ -48,7 +59,9 @@ export interface IUserBottle extends Document {
   
   // Methods
   getTotalPours(): number;
+  getTotalPoursSince(date: Date): number;
   updateFillLevel(): void;
+  adjustFillLevel(newLevel: number, reason: 'manual' | 'pour' | 'recalculation', notes?: string): void;
   updatePourStats(): Promise<IUserBottle>;
 }
 
@@ -67,6 +80,36 @@ const PourSchema = new Schema<IPour>({
     type: Number,
     min: 0,
     max: 10,
+  },
+});
+
+const FillLevelAdjustmentSchema = new Schema<IFillLevelAdjustment>({
+  date: {
+    type: Date,
+    default: Date.now,
+    required: true,
+  },
+  previousLevel: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 100,
+  },
+  newLevel: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 100,
+  },
+  reason: {
+    type: String,
+    enum: ['manual', 'pour', 'recalculation'],
+    required: true,
+  },
+  notes: String,
+  poursSinceLastAdjustment: {
+    type: Number,
+    min: 0,
   },
 });
 
@@ -187,6 +230,11 @@ const UserBottleSchema = new Schema<IUserBottle>(
       default: 100,
     },
     pours: [PourSchema],
+    fillLevelHistory: {
+      type: [FillLevelAdjustmentSchema],
+      default: [],
+    },
+    lastManualAdjustment: Date,
     averageRating: {
       type: Number,
       min: 0,
@@ -234,13 +282,68 @@ UserBottleSchema.methods.getTotalPours = function() {
   return this.pours.reduce((total: number, pour: IPour) => total + pour.amount, 0);
 };
 
+// Method to calculate total pours since a specific date
+UserBottleSchema.methods.getTotalPoursSince = function(date: Date) {
+  return this.pours
+    .filter((pour: IPour) => pour.date > date)
+    .reduce((total: number, pour: IPour) => total + pour.amount, 0);
+};
+
+// Method to adjust fill level manually or programmatically
+UserBottleSchema.methods.adjustFillLevel = function(newLevel: number, reason: 'manual' | 'pour' | 'recalculation', notes?: string) {
+  const previousLevel = this.fillLevel || 100;
+  
+  // Add to history
+  this.fillLevelHistory.push({
+    date: new Date(),
+    previousLevel,
+    newLevel,
+    reason,
+    notes,
+    poursSinceLastAdjustment: reason === 'manual' ? 0 : undefined,
+  });
+  
+  // Update fill level
+  this.fillLevel = newLevel;
+  
+  // Track manual adjustments
+  if (reason === 'manual') {
+    this.lastManualAdjustment = new Date();
+  }
+};
+
 // Method to update fill level based on pours
 UserBottleSchema.methods.updateFillLevel = function() {
   if (this.status === 'opened' && this.pours.length > 0) {
-    const totalPoured = this.getTotalPours();
-    // Assuming a standard 750ml bottle
-    const bottleSize = 750;
-    this.fillLevel = Math.max(0, 100 - (totalPoured / bottleSize * 100));
+    const bottleSize = 750; // Standard 750ml bottle
+    
+    // Find the last manual adjustment or bottle opening
+    let baseLevel = 100;
+    let calculateFromDate = this.openDate || new Date(0);
+    
+    if (this.lastManualAdjustment && this.fillLevelHistory.length > 0) {
+      // Find the most recent manual adjustment
+      const lastManualAdj = this.fillLevelHistory
+        .filter((adj: IFillLevelAdjustment) => adj.reason === 'manual')
+        .sort((a: IFillLevelAdjustment, b: IFillLevelAdjustment) => b.date.getTime() - a.date.getTime())[0];
+      
+      if (lastManualAdj) {
+        baseLevel = lastManualAdj.newLevel;
+        calculateFromDate = lastManualAdj.date;
+      }
+    }
+    
+    // Calculate pours since the last manual adjustment
+    const poursSinceAdjustment = this.getTotalPoursSince(calculateFromDate);
+    
+    // Calculate new fill level
+    const fillLevelDecrease = (poursSinceAdjustment / bottleSize) * 100;
+    const newFillLevel = Math.max(0, baseLevel - fillLevelDecrease);
+    
+    // Only update if the fill level has changed
+    if (Math.abs(newFillLevel - (this.fillLevel || 100)) > 0.01) {
+      this.adjustFillLevel(newFillLevel, 'pour', `Calculated from ${poursSinceAdjustment}ml poured since last adjustment`);
+    }
   }
 };
 
@@ -273,6 +376,18 @@ UserBottleSchema.methods.updatePourStats = async function() {
 UserBottleSchema.pre('save', function(next) {
   if (this.isModified('openDate') && this.openDate && this.status === 'unopened') {
     this.status = 'opened';
+    
+    // Add initial fill level history entry when bottle is opened
+    if (this.fillLevelHistory.length === 0) {
+      this.fillLevelHistory.push({
+        date: this.openDate,
+        previousLevel: 100,
+        newLevel: 100,
+        reason: 'manual',
+        notes: 'Bottle opened',
+        poursSinceLastAdjustment: 0,
+      });
+    }
   }
   
   if (this.fillLevel === 0 || (this.quantity === 0 && this.status !== 'finished')) {

@@ -72,8 +72,8 @@ export async function PATCH(
       ? `${bottle.notes}\n${adjustmentNote}` 
       : adjustmentNote;
 
-    // Update bottle fill level
-    bottle.fillLevel = fillLevel;
+    // Use the new adjustFillLevel method to properly track the manual adjustment
+    bottle.adjustFillLevel(fillLevel, 'manual', `${reasonText}${notes ? ` - ${notes}` : ''}`);
 
     await bottle.save();
 

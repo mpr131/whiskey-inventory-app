@@ -1,5 +1,11 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
+export interface ICompanion {
+  type: 'friend' | 'text';
+  friendId?: Types.ObjectId;
+  name: string;
+}
+
 export interface IPourSession extends Document {
   userId: Types.ObjectId;
   sessionName: string;
@@ -8,7 +14,8 @@ export interface IPourSession extends Document {
   averageRating?: number;
   totalAmount: number; // total ounces poured
   totalCost?: number;
-  companions?: string[];
+  companions?: string[]; // Legacy field for backward compatibility
+  companionTags?: ICompanion[]; // New structured field
   location?: string;
   tags?: string[];
   notes?: string;
@@ -62,6 +69,22 @@ const PourSessionSchema = new Schema<IPourSession>(
       type: String,
       trim: true,
     }],
+    companionTags: [{
+      type: {
+        type: String,
+        enum: ['friend', 'text'],
+        required: true,
+      },
+      friendId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+    }],
     location: {
       type: String,
       trim: true,
@@ -105,13 +128,25 @@ PourSessionSchema.methods.updateStats = async function() {
   // Collect unique companions and tags
   const allCompanions = new Set<string>();
   const allTags = new Set<string>();
+  const companionTagsMap = new Map<string, ICompanion>();
   
   pours.forEach(pour => {
+    // Legacy companions
     pour.companions?.forEach((c: string) => allCompanions.add(c));
+    
+    // New companionTags structure
+    pour.companionTags?.forEach((companion: ICompanion) => {
+      const key = companion.type === 'friend' 
+        ? `friend-${companion.friendId}` 
+        : `text-${companion.name}`;
+      companionTagsMap.set(key, companion);
+    });
+    
     pour.tags?.forEach((t: string) => allTags.add(t));
   });
   
   this.companions = Array.from(allCompanions);
+  this.companionTags = Array.from(companionTagsMap.values());
   this.tags = Array.from(allTags);
   
   return this.save();

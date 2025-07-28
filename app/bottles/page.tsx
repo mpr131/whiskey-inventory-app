@@ -254,7 +254,7 @@ export default function BottlesPage() {
 
   return (
     <div className="min-h-screen">
-      <nav className="glass-dark border-b border-white/10">
+      <nav className="bg-black/20 border border-white/10 shadow-2xl border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">

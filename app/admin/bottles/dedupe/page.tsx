@@ -3,29 +3,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Package, Search, CheckCircle, XCircle, SkipForward, ArrowRight, Image as ImageIcon } from 'lucide-react';
+import { Package, Search, CheckCircle, XCircle, SkipForward, ArrowRight, Image as ImageIcon, Users } from 'lucide-react';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 
-interface UserBottle {
+interface MasterBottle {
   _id: string;
   name: string;
+  brand?: string;
   producer?: string;
   category?: string;
   subcategory?: string;
-  purchaseDate?: string;
-  purchasePrice?: number;
-  purchaseLocation?: string;
-  status?: string;
-  notes?: string;
-  location?: string;
-  masterBottleId?: {
-    _id: string;
-    name: string;
-    externalData?: {
-      source: string;
-    };
+  proof?: number;
+  statedProof?: number;
+  size?: string;
+  externalData?: {
+    source: string;
+    mergedTo?: string;
+    noFwgsMatch?: boolean;
   };
+  userBottleCount?: number;
+  isMasterBottle?: boolean;
 }
 
 interface FWGSMatch {
@@ -56,11 +54,11 @@ export default function BottleDeduplicationPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [currentBottle, setCurrentBottle] = useState<UserBottle | null>(null);
+  const [currentBottle, setCurrentBottle] = useState<MasterBottle | null>(null);
   const [matches, setMatches] = useState<FWGSMatch[]>([]);
   const [searching, setSearching] = useState(false);
   const [merging, setMerging] = useState(false);
-  const [isStorePick, setIsStorePick] = useState(false);
+  const [storePickStates, setStorePickStates] = useState<Record<string, boolean>>({});
   const [stats, setStats] = useState({
     total: 0,
     processed: 0,
@@ -78,11 +76,12 @@ export default function BottleDeduplicationPage() {
   const loadNextBottle = useCallback(async () => {
     setLoading(true);
     setMatches([]);
+    setStorePickStates({}); // Reset store pick states
     
     try {
-      // Get skipped bottles from session storage
-      const skippedBottles = JSON.parse(sessionStorage.getItem('skippedBottles') || '[]');
-      console.log('Loading next bottle, skipping:', skippedBottles);
+      // Get skipped master bottles from session storage
+      const skippedBottles = JSON.parse(sessionStorage.getItem('skippedMasterBottles') || '[]');
+      console.log('Loading next master bottle, skipping:', skippedBottles);
       
       const response = await fetch('/api/admin/bottles/dedupe/next', {
         method: 'POST',
@@ -100,7 +99,8 @@ export default function BottleDeduplicationPage() {
       }
 
       const data = await response.json();
-      console.log('Loaded bottle:', data.bottle?._id, data.bottle?.name);
+      console.log('Loaded master bottle:', data.bottle?._id, data.bottle?.name);
+      console.log('This bottle affects', data.bottle?.userBottleCount, 'user bottles');
       
       setCurrentBottle(data.bottle);
       setStats({
@@ -167,8 +167,8 @@ export default function BottleDeduplicationPage() {
     }
   };
 
-  // Merge user bottle with FWGS master bottle
-  const handleMerge = async (masterBottleId: string) => {
+  // Merge master bottles
+  const handleMerge = async (targetMasterBottleId: string) => {
     if (!currentBottle) return;
     
     setMerging(true);
@@ -178,20 +178,34 @@ export default function BottleDeduplicationPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userBottleId: currentBottle._id,
-          masterBottleId: masterBottleId,
-          isStorePick: isStorePick,
+          sourceMasterBottleId: currentBottle._id,
+          targetMasterBottleId: targetMasterBottleId,
+          isStorePick: storePickStates[targetMasterBottleId] || false,
         }),
       });
 
-      if (!response.ok) throw new Error('Merge failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Merge API error:', errorData);
+        throw new Error(errorData.error || 'Merge failed');
+      }
 
-      toast.success('Bottle merged successfully!');
-      setIsStorePick(false); // Reset checkbox
-      loadNextBottle();
-    } catch (error) {
+      const data = await response.json();
+      console.log('Merge response:', data);
+      
+      if (!data.success) {
+        throw new Error('Merge did not complete successfully');
+      }
+      
+      toast.success(`Successfully merged! Updated ${data.result?.userBottlesUpdated || 0} user bottles.`);
+      
+      // Add a small delay before loading next bottle to ensure the merge is processed
+      setTimeout(() => {
+        loadNextBottle();
+      }, 500);
+    } catch (error: any) {
       console.error('Merge error:', error);
-      toast.error('Failed to merge bottle');
+      toast.error(error.message || 'Failed to merge bottles');
     } finally {
       setMerging(false);
     }
@@ -201,13 +215,12 @@ export default function BottleDeduplicationPage() {
   const handleSkip = async () => {
     console.log('Skip button clicked for bottle:', currentBottle?._id);
     
-    // For skip, we need to somehow mark this bottle as processed without merging
-    // One approach is to store skipped bottle IDs in session storage
+    // Store skipped master bottle IDs in session storage
     if (currentBottle) {
-      const skippedBottles = JSON.parse(sessionStorage.getItem('skippedBottles') || '[]');
+      const skippedBottles = JSON.parse(sessionStorage.getItem('skippedMasterBottles') || '[]');
       skippedBottles.push(currentBottle._id);
-      sessionStorage.setItem('skippedBottles', JSON.stringify(skippedBottles));
-      console.log('Added to skipped bottles:', currentBottle._id);
+      sessionStorage.setItem('skippedMasterBottles', JSON.stringify(skippedBottles));
+      console.log('Added to skipped master bottles:', currentBottle._id);
     }
     
     loadNextBottle();
@@ -224,7 +237,7 @@ export default function BottleDeduplicationPage() {
       const response = await fetch('/api/admin/bottles/dedupe/no-match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userBottleId: currentBottle._id }),
+        body: JSON.stringify({ masterBottleId: currentBottle._id }),
       });
 
       if (!response.ok) {
@@ -233,7 +246,8 @@ export default function BottleDeduplicationPage() {
         throw new Error(error.error || 'Failed to mark as no match');
       }
 
-      toast.success('Marked as no match - manual entry created');
+      const data = await response.json();
+      toast.success(`Marked as no match - Updated ${data.masterBottle.userBottlesUpdated} user bottles`);
       loadNextBottle();
     } catch (error) {
       console.error('No match error:', error);
@@ -251,10 +265,10 @@ export default function BottleDeduplicationPage() {
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Bottle Deduplication Tool
+          Master Bottle Deduplication Tool
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Match your original bottles to the FWGS product database
+          Match your original 276 master bottles to the FWGS product database
         </p>
       </div>
 
@@ -263,7 +277,7 @@ export default function BottleDeduplicationPage() {
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Bottles</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total Master Bottles</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-green-600">{stats.processed}</p>
@@ -292,11 +306,11 @@ export default function BottleDeduplicationPage() {
         </div>
       ) : currentBottle ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Side - User's Bottle */}
+          {/* Left Side - Master Bottle */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Package className="w-5 h-5" />
-              Your Bottle
+              Master Bottle
             </h2>
             
             <div className="space-y-3">
@@ -304,6 +318,13 @@ export default function BottleDeduplicationPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">Name</p>
                 <p className="font-semibold text-gray-900 dark:text-white">{currentBottle.name}</p>
               </div>
+              
+              {currentBottle.brand && (
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Brand</p>
+                  <p className="font-medium text-gray-800 dark:text-gray-200">{currentBottle.brand}</p>
+                </div>
+              )}
               
               {currentBottle.producer && (
                 <div>
@@ -319,24 +340,33 @@ export default function BottleDeduplicationPage() {
                 </div>
               )}
               
-              {currentBottle.purchasePrice && (
+              {currentBottle.proof && (
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Purchase Price</p>
-                  <p className="font-medium text-gray-800 dark:text-gray-200">${currentBottle.purchasePrice}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Proof</p>
+                  <p className="font-medium text-gray-800 dark:text-gray-200">{currentBottle.proof}°</p>
                 </div>
               )}
               
-              {currentBottle.purchaseLocation && (
+              {currentBottle.size && (
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Purchase Location</p>
-                  <p className="font-medium text-gray-800 dark:text-gray-200">{currentBottle.purchaseLocation}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Size</p>
+                  <p className="font-medium text-gray-800 dark:text-gray-200">{currentBottle.size}</p>
                 </div>
               )}
               
-              {currentBottle.notes && (
+              {currentBottle.userBottleCount !== undefined && (
+                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                  <p className="text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    This master bottle is linked to {currentBottle.userBottleCount} user bottle{currentBottle.userBottleCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              )}
+              
+              {currentBottle.externalData?.source && (
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Notes</p>
-                  <p className="text-gray-800 dark:text-gray-200 text-sm">{currentBottle.notes}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Source</p>
+                  <p className="font-medium text-gray-800 dark:text-gray-200">{currentBottle.externalData.source}</p>
                 </div>
               )}
             </div>
@@ -436,8 +466,11 @@ export default function BottleDeduplicationPage() {
                           <label className="flex items-center gap-2 text-sm">
                             <input
                               type="checkbox"
-                              checked={isStorePick}
-                              onChange={(e) => setIsStorePick(e.target.checked)}
+                              checked={storePickStates[match._id] || false}
+                              onChange={(e) => setStorePickStates(prev => ({
+                                ...prev,
+                                [match._id]: e.target.checked
+                              }))}
                               className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                             />
                             <span className="text-gray-700 dark:text-gray-300">This is a store pick</span>

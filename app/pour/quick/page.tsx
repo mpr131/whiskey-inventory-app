@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import toast from 'react-hot-toast';
 import { ScanLine, Search, X, ChevronLeft, Wine, Users, MapPin, Tag, Camera, Star } from 'lucide-react';
+import FriendSelector, { Companion } from '@/components/FriendSelector';
 
 const BarcodeScanner = dynamicImport(() => import('@/components/EnhancedBarcodeScanner'), {
   ssr: false,
@@ -45,7 +46,7 @@ export default function QuickPourPage() {
   const [selectedBottle, setSelectedBottle] = useState<UserBottle | null>(null);
   const [pourAmount, setPourAmount] = useState(1); // Default 1 oz
   const [rating, setRating] = useState<number | null>(null);
-  const [companions, setCompanions] = useState<string[]>([]);
+  const [companions, setCompanions] = useState<Companion[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [location, setLocation] = useState('Home');
   const [notes, setNotes] = useState('');
@@ -53,7 +54,6 @@ export default function QuickPourPage() {
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<UserBottle[]>([]);
   const [searching, setSearching] = useState(false);
-  const [companionInput, setCompanionInput] = useState('');
   const [tagInput, setTagInput] = useState('');
 
   // Common pour sizes
@@ -176,12 +176,6 @@ export default function QuickPourPage() {
     return (selectedBottle.purchasePrice / bottleOunces) * pourAmount;
   };
 
-  const handleAddCompanion = () => {
-    if (companionInput.trim() && !companions.includes(companionInput.trim())) {
-      setCompanions([...companions, companionInput.trim()]);
-      setCompanionInput('');
-    }
-  };
 
   const handleAddTag = () => {
     const tag = tagInput.trim().toLowerCase();
@@ -233,7 +227,7 @@ export default function QuickPourPage() {
           sessionId,
           amount: pourAmount,
           rating: rating || undefined,
-          companions,
+          companionTags: companions,
           tags,
           location,
           notes,
@@ -522,38 +516,17 @@ export default function QuickPourPage() {
                     <Users className="w-4 h-4 inline mr-1" />
                     Drinking With
                   </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={companionInput}
-                      onChange={(e) => setCompanionInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddCompanion()}
-                      placeholder="Add companion..."
-                      className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg"
-                    />
-                    <button
-                      onClick={handleAddCompanion}
-                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {companions.map((companion) => (
-                      <span
-                        key={companion}
-                        className="px-3 py-1 bg-gray-700 rounded-full text-sm flex items-center gap-1"
-                      >
-                        {companion}
-                        <button
-                          onClick={() => setCompanions(companions.filter(c => c !== companion))}
-                          className="text-gray-400 hover:text-white"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
+                  <FriendSelector
+                    value={companions}
+                    onChange={setCompanions}
+                    placeholder="Add friends or names..."
+                    className="w-full"
+                    onAddFriend={(name) => {
+                      // TODO: Implement friend request functionality
+                      console.log('Send friend request to:', name);
+                      toast.success(`Friend request feature coming soon for "${name}"`);
+                    }}
+                  />
                 </div>
 
                 {/* Tags */}

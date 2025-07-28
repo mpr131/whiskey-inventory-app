@@ -26,6 +26,10 @@ export async function GET(req: NextRequest) {
     // Get sessions with their pours populated
     const [sessions, total] = await Promise.all([
       PourSession.find(query)
+        .populate({
+          path: 'companionTags.friendId',
+          select: 'name displayName username avatar',
+        })
         .sort('-date')
         .skip(skip)
         .limit(limit),

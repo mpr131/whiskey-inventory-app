@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
         ...body,
         userId: session.user.id,
         userBottleId: body.userBottleId,
+        companionTags: body.companionTags,
       },
       body.sessionId
     );

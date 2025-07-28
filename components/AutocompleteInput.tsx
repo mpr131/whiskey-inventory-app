@@ -148,7 +148,7 @@ export default function AutocompleteInput({
 
       {/* Dropdown */}
       {isOpen && (filteredSuggestions.length > 0 || showAddNew) && (
-        <div className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute z-[9999] w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden">
           <div className="max-h-60 overflow-y-auto">
             {filteredSuggestions.map((suggestion, index) => (
               <div

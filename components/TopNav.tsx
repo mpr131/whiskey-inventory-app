@@ -13,7 +13,8 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  Package
+  Package,
+  Shield
 } from 'lucide-react';
 import NotificationCenter from '@/components/NotificationCenter';
 
@@ -156,6 +157,17 @@ export default function TopNav() {
                     <Settings className="w-4 h-4 text-gray-400" />
                     <span>Settings</span>
                   </Link>
+                  
+                  {session?.user?.isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition-colors"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <Shield className="w-4 h-4 text-gray-400" />
+                      <span>Admin Panel</span>
+                    </Link>
+                  )}
                   
                   <hr className="border-gray-700" />
                   

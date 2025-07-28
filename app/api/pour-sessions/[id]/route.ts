@@ -21,6 +21,9 @@ export async function GET(
     const pourSession = await PourSession.findOne({
       _id: params.id,
       userId: session.user.id,
+    }).populate({
+      path: 'companionTags.friendId',
+      select: 'name displayName username avatar',
     });
 
     if (!pourSession) {

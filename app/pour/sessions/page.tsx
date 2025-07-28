@@ -8,6 +8,18 @@ import { ChevronLeft, Wine, Calendar, MapPin, Users, Tag, Star, Plus } from 'luc
 import toast from 'react-hot-toast';
 import { formatDate, formatTime } from '@/lib/date-utils';
 
+interface Companion {
+  type: 'friend' | 'text';
+  friendId?: string | {
+    _id: string;
+    name: string;
+    displayName?: string;
+    username?: string;
+    avatar?: string;
+  };
+  name: string;
+}
+
 interface PourSession {
   _id: string;
   sessionName: string;
@@ -17,6 +29,7 @@ interface PourSession {
   totalAmount: number;
   totalCost?: number;
   companions?: string[];
+  companionTags?: Companion[];
   location?: string;
   tags?: string[];
   notes?: string;
@@ -163,10 +176,39 @@ export default function PourSessionsPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {session.companions && session.companions.length > 0 && (
+                  {/* Display companionTags (new format) or companions (legacy) */}
+                  {((session.companionTags && session.companionTags.length > 0) || 
+                    (session.companions && session.companions.length > 0)) && (
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="w-4 h-4 text-gray-500" />
-                      <span className="text-gray-400">{session.companions.join(', ')}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {session.companionTags && session.companionTags.length > 0 ? (
+                          session.companionTags.map((companion: Companion, index: number) => {
+                            const friend = companion.friendId;
+                            const isPopulated = friend && typeof friend === 'object';
+                            
+                            return (
+                              <span 
+                                key={`${companion.type}-${companion.friendId || companion.name}-${index}`}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                                  companion.type === 'friend' 
+                                    ? 'bg-copper/20 text-copper' 
+                                    : 'bg-gray-700 text-gray-300'
+                                }`}
+                              >
+                                {companion.type === 'friend' 
+                                  ? (isPopulated 
+                                    ? friend.displayName || friend.name || companion.name
+                                    : companion.name)
+                                  : `"${companion.name}"`}
+                              </span>
+                            );
+                          })
+                        ) : (
+                          // Legacy companions display
+                          <span className="text-gray-400">{session.companions!.join(', ')}</span>
+                        )}
+                      </div>
                     </div>
                   )}
                   

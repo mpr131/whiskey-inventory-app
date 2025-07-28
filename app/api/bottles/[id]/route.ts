@@ -148,6 +148,18 @@ export async function PUT(
       );
     }
 
+    // Handle fill level updates separately to track in history
+    if (body.fillLevel !== undefined && body.fillLevel !== bottle.fillLevel) {
+      const previousLevel = bottle.fillLevel || 100;
+      bottle.adjustFillLevel(
+        body.fillLevel, 
+        'manual', 
+        body.fillLevelNote || `Fill level adjusted from ${previousLevel.toFixed(2)}% to ${body.fillLevel.toFixed(2)}%`
+      );
+      delete body.fillLevel;
+      delete body.fillLevelNote;
+    }
+
     // Update bottle with new data
     Object.assign(bottle, body);
     await bottle.save();

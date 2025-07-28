@@ -266,7 +266,7 @@ export default function AddBottlePage() {
               />
               
               {searchResults.length > 0 && (
-                <div className="absolute top-full mt-2 w-full glass-dark rounded-lg shadow-xl z-10 max-h-64 overflow-y-auto">
+                <div className="absolute top-full mt-2 w-full glass-dark rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
                   {searchResults.map((bottle) => (
                     <button
                       key={bottle._id}

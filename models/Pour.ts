@@ -1,5 +1,11 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
+export interface ICompanion {
+  type: 'friend' | 'text';
+  friendId?: Types.ObjectId;
+  name: string;
+}
+
 export interface IPour extends Document {
   userId: Types.ObjectId;
   userBottleId: Types.ObjectId;
@@ -7,7 +13,8 @@ export interface IPour extends Document {
   date: Date;
   amount: number; // in ounces
   rating?: number; // t8ke scale 0-10 with decimals
-  companions?: string[];
+  companions?: string[]; // Legacy field for backward compatibility
+  companionTags?: ICompanion[]; // New structured field
   tags?: string[];
   location?: string;
   photo?: string;
@@ -59,6 +66,22 @@ const PourSchema = new Schema<IPour>(
     companions: [{
       type: String,
       trim: true,
+    }],
+    companionTags: [{
+      type: {
+        type: String,
+        enum: ['friend', 'text'],
+        required: true,
+      },
+      friendId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+      },
     }],
     tags: [{
       type: String,

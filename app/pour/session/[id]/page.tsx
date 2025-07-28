@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ChevronLeft, Wine, Calendar, MapPin, Users, Tag, Star } from 'lucide-react';
+import { ChevronLeft, Wine, Calendar, MapPin, Users, Tag, Star, UserPlus } from 'lucide-react';
+import Image from 'next/image';
 import { formatDate, formatTime, formatPourDateTime } from '@/lib/date-utils';
 
 interface Pour {
@@ -26,6 +27,18 @@ interface Pour {
   };
 }
 
+interface Companion {
+  type: 'friend' | 'text';
+  friendId?: string | {
+    _id: string;
+    name: string;
+    displayName?: string;
+    username?: string;
+    avatar?: string;
+  };
+  name: string;
+}
+
 interface PourSession {
   _id: string;
   sessionName: string;
@@ -35,6 +48,7 @@ interface PourSession {
   totalAmount: number;
   totalCost?: number;
   companions?: string[];
+  companionTags?: Companion[];
   location?: string;
   tags?: string[];
   notes?: string;
@@ -192,15 +206,82 @@ export default function PourSessionPage() {
               </div>
             )}
 
-            {pourSession.companions && pourSession.companions.length > 0 && (
-              <div className="flex items-start gap-2">
-                <Users className="w-4 h-4 text-gray-500 mt-0.5" />
-                <div className="flex flex-wrap gap-2">
-                  {pourSession.companions.map((companion) => (
-                    <span key={companion} className="px-2 py-1 bg-gray-700 rounded-full text-xs">
-                      {companion}
-                    </span>
-                  ))}
+            {((pourSession.companionTags && pourSession.companionTags.length > 0) || 
+              (pourSession.companions && pourSession.companions.length > 0)) && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-300">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm">Poured with</span>
+                </div>
+                <div className="flex flex-wrap gap-2 ml-6">
+                  {pourSession.companionTags && pourSession.companionTags.length > 0 ? (
+                    pourSession.companionTags.map((companion: Companion, index: number) => {
+                      const friend = companion.friendId;
+                      const isPopulated = friend && typeof friend === 'object';
+                      
+                      return (
+                        <div 
+                          key={`${companion.type}-${companion.friendId || companion.name}-${index}`} 
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                            companion.type === 'friend' 
+                              ? 'bg-copper/20 text-copper border border-copper/30' 
+                              : 'bg-gray-700 text-gray-300 border border-gray-600'
+                          }`}
+                        >
+                          {companion.type === 'friend' && isPopulated && friend.avatar ? (
+                            <Image
+                              src={friend.avatar}
+                              alt={friend.displayName || friend.name}
+                              width={20}
+                              height={20}
+                              className="rounded-full"
+                            />
+                          ) : companion.type === 'friend' ? (
+                            <div className="w-5 h-5 bg-copper/30 rounded-full flex items-center justify-center">
+                              <Users className="w-3 h-3" />
+                            </div>
+                          ) : null}
+                          
+                          <span>
+                            {companion.type === 'friend' 
+                              ? (isPopulated 
+                                ? friend.displayName || friend.name || companion.name
+                                : companion.name)
+                              : `"${companion.name}"`}
+                          </span>
+                          
+                          {companion.type === 'text' && (
+                            <button
+                              onClick={() => {
+                                // TODO: Implement quick add friend
+                                console.log('Add friend:', companion.name);
+                              }}
+                              className="ml-1 p-1 hover:bg-gray-600 rounded-full transition-colors"
+                              title="Add as friend"
+                            >
+                              <UserPlus className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : pourSession.companions ? (
+                    pourSession.companions.map((companion: string) => (
+                      <div key={companion} className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-700 rounded-full text-sm">
+                        <span>{companion}</span>
+                        <button
+                          onClick={() => {
+                            // TODO: Implement quick add friend
+                            console.log('Add friend:', companion);
+                          }}
+                          className="ml-1 p-1 hover:bg-gray-600 rounded-full transition-colors"
+                          title="Add as friend"
+                        >
+                          <UserPlus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))
+                  ) : null}
                 </div>
               </div>
             )}

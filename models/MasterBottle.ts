@@ -41,6 +41,16 @@ export interface IMasterBottle extends Document {
     externalId?: string; // Keep for backwards compatibility
     lastSync?: Date;
     importDate?: Date;
+    mergedTo?: mongoose.Types.ObjectId; // For deduplication - where this bottle was merged TO
+    mergedFrom?: mongoose.Types.ObjectId; // For deduplication - what bottle was merged INTO this one
+    mergedAt?: Date;
+    isStorePick?: boolean;
+    noFwgsMatch?: boolean;
+    originalUserData?: {
+      name: string;
+      createdBy: mongoose.Types.ObjectId | string;
+      source: string;
+    };
   };
   defaultImageUrl?: string;
   imageUrls?: string[];
@@ -202,6 +212,28 @@ const MasterBottleSchema = new Schema<IMasterBottle>(
       },
       importDate: {
         type: Date
+      },
+      mergedTo: {
+        type: Schema.Types.ObjectId,
+        ref: 'MasterBottle'
+      },
+      mergedFrom: {
+        type: Schema.Types.ObjectId,
+        ref: 'MasterBottle'
+      },
+      mergedAt: {
+        type: Date
+      },
+      isStorePick: {
+        type: Boolean
+      },
+      noFwgsMatch: {
+        type: Boolean
+      },
+      originalUserData: {
+        name: String,
+        createdBy: Schema.Types.Mixed,
+        source: String
       }
     },
     defaultImageUrl: {
@@ -258,6 +290,9 @@ MasterBottleSchema.index({ 'upcCodes.code': 1 });
 // Index for external data lookups
 MasterBottleSchema.index({ 'externalData.fwgsId': 1 });
 MasterBottleSchema.index({ 'externalData.source': 1 });
+MasterBottleSchema.index({ 'externalData.mergedTo': 1 });
+MasterBottleSchema.index({ 'externalData.mergedFrom': 1 });
+MasterBottleSchema.index({ 'externalData.noFwgsMatch': 1 });
 MasterBottleSchema.index({ active: 1 });
 
 // Method to check if a similar bottle exists

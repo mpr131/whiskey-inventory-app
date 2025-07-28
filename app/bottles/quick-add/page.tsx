@@ -153,7 +153,7 @@ export default function QuickAddPage() {
                   placeholder="e.g., Buffalo Trace"
                 />
                 {showDistillerySuggestions && distillerySuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 glass-dark rounded-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-50 w-full mt-1 glass-dark rounded-lg max-h-48 overflow-y-auto">
                     {distillerySuggestions.map((suggestion) => (
                       <button
                         key={suggestion}

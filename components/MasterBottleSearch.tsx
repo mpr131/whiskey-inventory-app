@@ -188,7 +188,7 @@ export default function MasterBottleSearch({
       
       {/* Search Results Dropdown */}
       {showDropdown && searchResults.length > 0 && (
-        <div className="absolute top-full mt-2 w-full glass-dark rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full mt-2 w-full glass-dark rounded-lg shadow-xl z-[9999] max-h-96 overflow-y-auto">
           {searchResults.map((bottle, index) => (
             <button
               key={bottle._id}

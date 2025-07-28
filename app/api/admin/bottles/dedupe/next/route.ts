@@ -2,8 +2,8 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
-import UserBottle from '@/models/UserBottle';
 import MasterBottle from '@/models/MasterBottle';
+import UserBottle from '@/models/UserBottle';
 
 export async function GET() {
   return handleRequest();
@@ -23,91 +23,78 @@ async function handleRequest(request?: NextRequest) {
 
     await dbConnect();
 
-    // Get skipped bottles from request body if provided
-    let skippedBottles: string[] = [];
+    // Get skipped master bottles from request body if provided
+    let skippedMasterBottles: string[] = [];
     if (request) {
       try {
         const body = await request.json();
-        skippedBottles = body.skippedBottles || [];
+        skippedMasterBottles = body.skippedBottles || [];
       } catch (e) {
         // Ignore parse errors
       }
     }
 
-    // First, get all user bottles and check which ones need processing
-    const userBottles = await UserBottle.find({
-      userId: session.user.id
-    })
-    .populate({
-      path: 'masterBottleId',
-      select: 'name producer category subcategory proof statedProof size externalData'
-    })
-    .sort({ createdAt: 1 });
+    // Query MasterBottles with source 'user' or 'manual' (the original 276)
+    // Exclude bottles that have already been merged or marked as no match
+    const masterBottlesQuery = {
+      'externalData.source': { $in: ['user', 'manual'] },
+      'externalData.mergedTo': { $exists: false },
+      'externalData.noFwgsMatch': { $ne: true },
+      _id: { $nin: skippedMasterBottles }
+    };
 
-    // Find the first bottle that either:
-    // 1. Has no masterBottleId
-    // 2. Has a masterBottleId but it's not from FWGS
-    // 3. Is not in the skipped list
-    const nextBottle = userBottles.find(bottle => {
-      // Skip if in skipped list
-      if (skippedBottles.includes((bottle._id as any).toString())) {
-        return false;
-      }
-      
-      if (!bottle.masterBottleId) return true;
-      
-      const masterBottle = bottle.masterBottleId as any;
-      return !masterBottle.externalData?.source || masterBottle.externalData.source !== 'fwgs';
-    });
+    // Get next unprocessed master bottle
+    const nextMasterBottle = await MasterBottle.findOne(masterBottlesQuery)
+      .sort({ createdAt: 1 });
 
-    if (!nextBottle) {
+    if (!nextMasterBottle) {
       return NextResponse.json({ error: 'No more bottles to process' }, { status: 404 });
     }
 
-    // Get stats - count bottles that need processing
-    const totalCount = userBottles.length;
+    // Get total counts for stats
+    const totalCount = await MasterBottle.countDocuments({
+      'externalData.source': { $in: ['user', 'manual'] }
+    });
     
-    const processedCount = userBottles.filter(bottle => {
-      // Count as processed if:
-      // 1. Has FWGS master bottle
-      // 2. Is in skipped list
-      if (skippedBottles.includes((bottle._id as any).toString())) {
-        return true;
-      }
-      
-      if (!bottle.masterBottleId) return false;
-      
-      const masterBottle = bottle.masterBottleId as any;
-      return masterBottle.externalData?.source === 'fwgs';
-    }).length;
+    // Count processed bottles (merged or marked as no match)
+    const processedCount = await MasterBottle.countDocuments({
+      'externalData.source': { $in: ['user', 'manual'] },
+      $or: [
+        { 'externalData.mergedTo': { $exists: true } },
+        { 'externalData.noFwgsMatch': true }
+      ]
+    });
+    
+    const remainingCount = totalCount - processedCount - skippedMasterBottles.length;
 
-    // Convert to plain object to access any additional fields
-    const bottleObj = nextBottle.toObject() as any;
-    const masterBottle = bottleObj.masterBottleId;
+    // Count how many UserBottles will benefit from this match
+    const userBottleCount = await UserBottle.countDocuments({
+      masterBottleId: nextMasterBottle._id
+    });
     
     return NextResponse.json({
       bottle: {
-        _id: bottleObj._id,
-        name: masterBottle?.name || 'Unknown Bottle',
-        producer: masterBottle?.producer,
-        category: masterBottle?.category,
-        subcategory: masterBottle?.subcategory,
-        purchaseDate: bottleObj.purchaseDate,
-        purchasePrice: bottleObj.purchasePrice,
-        purchaseLocation: bottleObj.purchaseLocation || bottleObj.storeName,
-        status: bottleObj.status,
-        notes: bottleObj.notes,
-        location: bottleObj.location?.area ? `${bottleObj.location.area} - ${bottleObj.location.bin || ''}` : undefined,
-        masterBottleId: bottleObj.masterBottleId?._id || bottleObj.masterBottleId
+        _id: nextMasterBottle._id,
+        name: nextMasterBottle.name,
+        producer: nextMasterBottle.producer,
+        brand: nextMasterBottle.brand,
+        category: nextMasterBottle.category,
+        subcategory: nextMasterBottle.subcategory,
+        proof: nextMasterBottle.proof,
+        statedProof: nextMasterBottle.statedProof,
+        size: nextMasterBottle.size,
+        externalData: nextMasterBottle.externalData,
+        userBottleCount: userBottleCount,
+        isMasterBottle: true
       },
       stats: {
         total: totalCount,
         processed: processedCount,
-        remaining: totalCount - processedCount
+        remaining: remainingCount
       }
     });
   } catch (error) {
-    console.error('Error getting next bottle:', error);
+    console.error('Error getting next master bottle:', error);
     return NextResponse.json(
       { error: 'Failed to get next bottle' },
       { status: 500 }

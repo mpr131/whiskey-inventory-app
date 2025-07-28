@@ -29,6 +29,7 @@ export async function findOrCreatePourSession(
     location?: string;
     tags?: string[];
     companions?: string[];
+    companionTags?: any[];
   }
 ): Promise<any> {
   // Calculate session window
@@ -55,6 +56,7 @@ export async function findOrCreatePourSession(
     location: sessionData?.location,
     tags: sessionData?.tags || [],
     companions: sessionData?.companions || [],
+    companionTags: sessionData?.companionTags || [],
     totalPours: 0,
     totalAmount: 0,
     totalCost: 0,
@@ -75,6 +77,7 @@ export async function createPourWithSession(
     rating?: number;
     notes?: string;
     companions?: string[];
+    companionTags?: any[]; // ICompanion[] from Pour model
     tags?: string[];
     location?: string;
     date?: Date;
@@ -105,6 +108,7 @@ export async function createPourWithSession(
           location: pourData.location,
           tags: pourData.tags,
           companions: pourData.companions,
+          companionTags: pourData.companionTags,
         }
       );
     }
