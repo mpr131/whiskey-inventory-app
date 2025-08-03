@@ -32,7 +32,7 @@ services:
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
     env_file:
-      - .env.local
+      - .env.production
     extra_hosts:
       # This allows the container to connect to the host machine
       - "host.docker.internal:host-gateway"
