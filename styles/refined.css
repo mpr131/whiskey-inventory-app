@@ -1,0 +1,104 @@
+/* Refined UI Styles for Premium Whiskey App */
+
+/* Refined Card Styles */
+.card-refined {
+  @apply bg-white/[0.02] border border-white/5 rounded-lg p-6;
+  @apply hover:bg-white/[0.03] hover:border-white/10;
+  @apply transition-all duration-300;
+}
+
+.card-refined-sm {
+  @apply bg-white/[0.02] border border-white/5 rounded-md p-4;
+  @apply hover:bg-white/[0.03] hover:border-white/10;
+  @apply transition-all duration-200;
+}
+
+/* Refined Button Styles */
+.btn-refined {
+  @apply px-4 py-2 rounded-md text-sm font-medium;
+  @apply bg-white/5 text-gray-300 border border-white/10;
+  @apply hover:bg-white/10 hover:text-white hover:border-white/20;
+  @apply transition-all duration-200;
+}
+
+.btn-refined-primary {
+  @apply px-4 py-2 rounded-md text-sm font-medium;
+  @apply bg-copper/20 text-copper border border-copper/30;
+  @apply hover:bg-copper/30 hover:border-copper/40;
+  @apply transition-all duration-200;
+}
+
+.btn-ghost {
+  @apply px-3 py-1.5 rounded-md text-sm;
+  @apply text-gray-400 hover:text-gray-200;
+  @apply hover:bg-white/5;
+  @apply transition-all duration-200;
+}
+
+/* Refined Text Styles */
+.text-label {
+  @apply text-xs font-medium text-gray-600 uppercase tracking-wider;
+}
+
+.text-value {
+  @apply text-sm text-gray-300;
+}
+
+/* Refined Dividers */
+.divider-refined {
+  @apply border-white/5;
+}
+
+/* Refined Inputs */
+.input-refined {
+  @apply bg-white/5 border border-white/10 rounded-md;
+  @apply px-3 py-2 text-sm text-gray-200;
+  @apply placeholder-gray-600;
+  @apply focus:bg-white/[0.07] focus:border-white/20 focus:outline-none;
+  @apply transition-all duration-200;
+}
+
+/* Glass Morphism Effects */
+.glass-refined {
+  @apply bg-white/[0.02] backdrop-blur-sm;
+  @apply border border-white/10;
+  @apply shadow-lg;
+}
+
+/* Subtle Animations */
+@keyframes subtle-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-subtle-pulse {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+/* Premium Scrollbar */
+.refined-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.refined-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.refined-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.refined-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.refined-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}

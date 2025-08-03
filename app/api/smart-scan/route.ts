@@ -15,10 +15,15 @@ import {
 import mongoose from 'mongoose';
 
 // Detect barcode type
-function detectBarcodeType(barcode: string): 'vault' | 'cellartracker' | 'upc' {
-  // Vault barcodes start with WV_
-  if (barcode.startsWith('WV_')) {
+function detectBarcodeType(barcode: string): 'vault' | 'cellartracker' | 'upc' | 'mongodb_id' {
+  // Vault barcodes: WV002-000464 format (PREFIX-SEQUENCE)
+  if (/^[A-Z]{2,3}\d{3}-\d{6}$/.test(barcode)) {
     return 'vault';
+  }
+  
+  // MongoDB ObjectID partial (last 6-8 hex characters)
+  if (/^[a-fA-F0-9]{6,8}$/.test(barcode)) {
+    return 'mongodb_id';
   }
   
   // CellarTracker barcodes are typically 7-8 digits
@@ -50,38 +55,52 @@ export async function POST(request: NextRequest) {
     console.log(`Scanning barcode: ${barcode} (Type: ${barcodeType})`);
 
     // Step 1: Check USER'S bottles first (highest priority)
-    let userBottleQuery: any = { userId: session.user.id };
+    // Build comprehensive query to check ALL barcode fields
+    const cleanedBarcode = barcode.replace(/^0+/, ''); // Remove leading zeros for UPC comparison
+    const paddedBarcode = barcode.padStart(12, '0'); // Pad with zeros for full UPC
+    const partialIdRegex = barcode.length >= 6 ? new RegExp(barcode + '$') : null; // Match end of ID
     
-    if (barcodeType === 'vault') {
-      userBottleQuery.vaultBarcode = barcode;
-    } else if (barcodeType === 'cellartracker') {
-      userBottleQuery.$or = [
-        { barcode: barcode },
-        { cellarTrackerId: barcode },
-        { wineBarcode: barcode }
-      ];
-    } else {
-      // For product UPCs, check multiple fields including the master bottle's UPCs
-      userBottleQuery.$or = [
+    const userBottleQuery: any = {
+      userId: session.user.id,
+      $or: [
+        // Exact matches on all barcode fields
         { vaultBarcode: barcode },
         { barcode: barcode },
         { wineBarcode: barcode },
-        { cellarTrackerId: barcode }
-      ];
-    }
+        { cellarTrackerId: barcode },
+        // Handle UPCs with/without leading zeros
+        { barcode: cleanedBarcode },
+        { barcode: paddedBarcode },
+        { wineBarcode: cleanedBarcode },
+        { wineBarcode: paddedBarcode },
+        // Partial MongoDB ID match (last 6-8 characters)
+        ...(partialIdRegex ? [{ _id: { $regex: partialIdRegex } }] : [])
+      ]
+    };
 
     const userBottle = await UserBottle.findOne(userBottleQuery).populate('masterBottleId');
 
     if (userBottle) {
-      const bottleType = userBottle.vaultBarcode === barcode ? 'Vault Barcode' :
-                        userBottle.barcode === barcode ? 'CellarTracker Barcode' : 
-                        'Product UPC';
+      // Determine which field matched
+      let bottleType = 'Unknown';
+      if (userBottle.vaultBarcode === barcode) {
+        bottleType = 'Vault Barcode';
+      } else if (userBottle.barcode === barcode || userBottle.barcode === cleanedBarcode || userBottle.barcode === paddedBarcode) {
+        bottleType = 'Product UPC';
+      } else if (userBottle.wineBarcode === barcode || userBottle.wineBarcode === cleanedBarcode || userBottle.wineBarcode === paddedBarcode) {
+        bottleType = 'Wine Barcode';
+      } else if (userBottle.cellarTrackerId === barcode) {
+        bottleType = 'CellarTracker ID';
+      } else if (partialIdRegex && partialIdRegex.test(userBottle._id.toString())) {
+        bottleType = 'Bottle ID (partial)';
+      }
       
       return NextResponse.json({
         type: 'user_bottle',
         userBottle,
         message: `Found in your collection (${bottleType})`,
-        barcodeType
+        barcodeType,
+        matchedField: bottleType
       });
     }
 

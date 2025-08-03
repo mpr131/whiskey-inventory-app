@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Wine, Tag, Star } from 'lucide-react';
+import { Upload, Eye, Globe, Package, Trash2, ScanLine, Filter, Wine, Tag, Star, MoreVertical, Share2, Edit, Copy, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import dynamicImport from 'next/dynamic';
@@ -15,8 +15,16 @@ import { haptic } from '@/utils/haptics';
 import NotificationCenter from '@/components/NotificationCenter';
 import BarrelRating from '@/components/BarrelRating';
 import { getUserBottleRating } from '@/utils/ratingCalculations';
+import BottleFillIndicator from '@/components/BottleFillIndicator';
+import FilterSidebar from '@/components/bottles/FilterSidebar';
+import MoreActionsDropdown from '@/components/bottles/MoreActionsDropdown';
+import ViewSwitcherMinimal from '@/components/bottles/ViewSwitcherMinimal';
+import ListView from '@/components/bottles/ListView';
+import GalleryView from '@/components/bottles/GalleryView';
+import ShelfView from '@/components/bottles/ShelfView';
+import CollectionInsights from '@/components/bottles/CollectionInsights';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/EnhancedBarcodeScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/ZXingBarcodeScanner'), {
   ssr: false,
 });
 
@@ -84,16 +92,24 @@ export default function BottlesPage() {
   const [bottles, setBottles] = useState<(UserBottle | MasterBottle | GroupedBottle)[]>([]);
   const [loading, setLoading] = useState(true);
   // Initialize filters from URL parameters immediately
-  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || '');
-  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
-  const [proofFilter, setProofFilter] = useState('');
+  const [filters, setFilters] = useState({
+    category: searchParams.get('category') || '',
+    status: searchParams.get('status') || '',
+    proof: searchParams.get('proof') || '',
+    priceRange: '',
+    age: '',
+    location: '',
+    attributes: [] as string[]
+  });
   const [viewMode, setViewMode] = useState<'my' | 'community' | 'all'>('my');
+  const [viewLayout, setViewLayout] = useState<'grid' | 'list' | 'gallery' | 'shelf'>('grid');
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || '-createdAt');
   const [isMasterBottles, setIsMasterBottles] = useState(false);
   const [isGrouped, setIsGrouped] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  // Show filters if any are pre-applied from URL
+  const [showFilterSidebar, setShowFilterSidebar] = useState(false);
+  // Show old filters if any are pre-applied from URL
   const [showFilters, setShowFilters] = useState(
     !!(searchParams.get('status') || searchParams.get('category') || searchParams.get('proof'))
   );
@@ -116,10 +132,15 @@ export default function BottlesPage() {
     const statusParam = searchParams.get('status');
     const sortParam = searchParams.get('sort');
     const categoryParam = searchParams.get('category');
+    const proofParam = searchParams.get('proof');
     
-    setStatusFilter(statusParam || '');
+    setFilters(prev => ({
+      ...prev,
+      status: statusParam || '',
+      category: categoryParam || '',
+      proof: proofParam || ''
+    }));
     setSortBy(sortParam || '-createdAt');
-    setCategoryFilter(categoryParam || '');
   }, [searchParams, filtersInitialized]);
 
   useEffect(() => {
@@ -135,7 +156,7 @@ export default function BottlesPage() {
       fetchBottles();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter, statusFilter, proofFilter, sortBy, viewMode, status, filtersInitialized]);
+  }, [filters, sortBy, viewMode, status, filtersInitialized]);
 
   useEffect(() => {
     // Only fetch if filters are initialized and session is ready
@@ -150,9 +171,13 @@ export default function BottlesPage() {
       const params = new URLSearchParams();
       const searchParam = searchParams.get('search');
       if (searchParam) params.append('search', searchParam);
-      if (categoryFilter) params.append('category', categoryFilter);
-      if (statusFilter) params.append('status', statusFilter);
-      if (proofFilter) params.append('proof', proofFilter);
+      if (filters.category) params.append('category', filters.category);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.proof) params.append('proof', filters.proof);
+      if (filters.priceRange) params.append('priceRange', filters.priceRange);
+      if (filters.age) params.append('age', filters.age);
+      if (filters.location) params.append('location', filters.location);
+      if (filters.attributes.length > 0) params.append('attributes', filters.attributes.join(','));
       params.append('sort', sortBy);
       params.append('view', viewMode);
       params.append('page', pagination.page.toString());
@@ -244,6 +269,79 @@ export default function BottlesPage() {
     return 'totalCount' in bottle;
   };
 
+  // Calculate insights from bottles data
+  const calculateInsights = () => {
+    const userBottles = bottles.filter(isUserBottle);
+    
+    const fillLevels = {
+      empty: 0,
+      low: 0,
+      medium: 0,
+      high: 0,
+      full: 0
+    };
+    
+    const categories: Record<string, number> = {};
+    let totalValue = 0;
+    let priceCount = 0;
+    let mostExpensive = { name: '', price: 0 };
+    
+    userBottles.forEach((bottle) => {
+      // Fill levels
+      const fillLevel = bottle.fillLevel ?? 100;
+      if (bottle.status === 'unopened') {
+        fillLevels.full++;
+      } else if (fillLevel === 0) {
+        fillLevels.empty++;
+      } else if (fillLevel < 25) {
+        fillLevels.low++;
+      } else if (fillLevel < 50) {
+        fillLevels.medium++;
+      } else if (fillLevel < 75) {
+        fillLevels.high++;
+      } else {
+        fillLevels.full++;
+      }
+      
+      // Categories
+      const category = bottle.masterBottleId.category;
+      categories[category] = (categories[category] || 0) + 1;
+      
+      // Value calculations
+      if (bottle.purchasePrice) {
+        totalValue += bottle.purchasePrice;
+        priceCount++;
+        if (bottle.purchasePrice > mostExpensive.price) {
+          mostExpensive = {
+            name: bottle.masterBottleId.name,
+            price: bottle.purchasePrice
+          };
+        }
+      }
+    });
+    
+    return {
+      fillLevels,
+      categories,
+      growth: {
+        thisMonth: userBottles.filter(b => {
+          const createdDate = new Date(b.createdAt);
+          const now = new Date();
+          return createdDate.getMonth() === now.getMonth() && 
+                 createdDate.getFullYear() === now.getFullYear();
+        }).length,
+        lastMonth: 0 // Would need to fetch this separately
+      },
+      recentActivity: {
+        poursToday: 0, // Would need to fetch from pour data
+        bottlesOpened: 0, // Would need openDate field to track this
+      },
+      totalValue,
+      averagePrice: priceCount > 0 ? totalValue / priceCount : 0,
+      mostExpensive: mostExpensive.price > 0 ? mostExpensive : undefined
+    };
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -304,19 +402,31 @@ export default function BottlesPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+      <div className="flex">
+        {/* Filter Sidebar */}
+        <FilterSidebar 
+          isOpen={showFilterSidebar}
+          onClose={() => setShowFilterSidebar(false)}
+          filters={filters}
+          onFilterChange={setFilters}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          locations={['Main Bar', 'Home Office', 'Basement']} // TODO: Get from actual data
+        />
         
-        {/* Clean Header Section */}
-        <div className="mb-8">
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+        
+        {/* Refined Header Section */}
+        <div className="mb-8 space-y-6">
           {/* Top Row - Title and Search */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
             {/* Title */}
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
+            <h1 className="text-2xl font-light text-white">
               {viewMode === 'my' ? 'My Collection' : 'Community Bottles'}
             </h1>
             
             {/* Centered Search Bar */}
-            <div className="flex-1 md:max-w-xl md:mx-8 flex items-center gap-2">
+            <div className="flex-1 md:max-w-2xl md:mx-auto flex items-center gap-2">
               <div className="flex-1 relative">
                 <MasterBottleSearch 
                   placeholder="Search bottles..."
@@ -326,130 +436,88 @@ export default function BottlesPage() {
               </div>
               <button
                 onClick={() => setShowScanner(true)}
-                className="p-3 md:p-2 hover:bg-gray-700 rounded-lg transition-all bg-gray-800/50 border border-gray-700"
+                className="p-2 text-white/40 hover:text-white/70 transition-colors"
                 title="Scan barcode"
               >
-                <ScanLine className="w-5 h-5 text-gray-400 hover:text-copper" />
+                <ScanLine className="w-4 h-4" />
               </button>
             </div>
             
-            {/* Placeholder for balance - hidden on mobile */}
-            <div className="hidden md:block w-32"></div>
+            {/* Settings/More - hidden on mobile */}
+            <button className="hidden md:block p-2 rounded-md text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">
+              <MoreVertical className="w-5 h-5" />
+            </button>
           </div>
           
-          {/* Bottom Row - View Toggle and Filters */}
-          <div className="flex items-center justify-between">
-            {/* View Toggle */}
-            <div className="flex items-center gap-4">
-              <div className="flex gap-2">
+          {/* Bottom Row - Ultra Minimal */}
+          <div className="flex items-center justify-between pb-6">
+            {/* Left side - Minimal Controls */}
+            <div className="flex items-center gap-8">
+              {/* View Toggle - Minimal Tabs with Underline */}
+              <div className="flex items-center gap-6">
                 <button
                   onClick={() => setViewMode('my')}
-                  className={`px-4 py-2 rounded-lg transition-all ${
+                  className={`relative pb-1 text-sm font-medium transition-colors ${
                     viewMode === 'my'
-                      ? 'bg-copper text-white'
-                      : 'bg-gray-800 text-gray-400 hover:text-white'
+                      ? 'text-amber-500'
+                      : 'text-white/60 hover:text-white'
                   }`}
                 >
                   My Bottles
+                  {viewMode === 'my' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />
+                  )}
                 </button>
                 <button
                   onClick={() => setViewMode('community')}
-                  className={`px-4 py-2 rounded-lg transition-all ${
+                  className={`relative pb-1 text-sm font-medium transition-colors ${
                     viewMode === 'community'
-                      ? 'bg-copper text-white'
-                      : 'bg-gray-800 text-gray-400 hover:text-white'
+                      ? 'text-amber-500'
+                      : 'text-white/60 hover:text-white'
                   }`}
                 >
                   Community
+                  {viewMode === 'community' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />
+                  )}
                 </button>
               </div>
+              
+              {/* View Layout Switcher - Minimal */}
+              <ViewSwitcherMinimal 
+                currentView={viewLayout}
+                onViewChange={setViewLayout}
+              />
             </div>
             
-            {/* Filter Toggle */}
+            {/* Filter Toggle - True Ghost Button */}
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-400 hover:text-white rounded-lg transition-all"
+              onClick={() => setShowFilterSidebar(!showFilterSidebar)}
+              className={`
+                flex items-center gap-1.5 text-xs transition-all duration-200
+                ${showFilterSidebar 
+                  ? 'text-copper' 
+                  : 'text-white/40 hover:text-white/70'
+                }
+              `}
             >
-              <Filter className="w-4 h-4" />
-              Filters
-              {(categoryFilter || statusFilter || proofFilter || sortBy !== '-createdAt') && (
-                <span className="ml-1 px-2 py-0.5 bg-copper text-white text-xs rounded-full">
-                  {[categoryFilter, statusFilter, proofFilter, sortBy !== '-createdAt' && 'sorted'].filter(Boolean).length}
+              <Filter className="w-3.5 h-3.5" />
+              <span>Filters</span>
+              {(filters.category || filters.status || filters.proof || filters.priceRange || filters.age || filters.location || filters.attributes.length > 0) && (
+                <span className="text-copper">
+                  ({[filters.category, filters.status, filters.proof, filters.priceRange, filters.age, filters.location, filters.attributes.length > 0].filter(Boolean).length})
                 </span>
               )}
             </button>
           </div>
-          
-          {/* Collapsible Filters */}
-          {showFilters && (
-            <div className="mt-4 p-4 bg-gray-800/30 rounded-lg border border-gray-700">
-              <div className="flex flex-wrap gap-3">
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer focus:outline-none focus:border-copper"
-                >
-                  <option value="">All Categories</option>
-                  <option value="Bourbon">Bourbon</option>
-                  <option value="Scotch">Scotch</option>
-                  <option value="Irish">Irish</option>
-                  <option value="Rye">Rye</option>
-                  <option value="Japanese">Japanese</option>
-                  <option value="Other">Other</option>
-                </select>
-
-                {viewMode !== 'community' && (
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer focus:outline-none focus:border-copper"
-                  >
-                    <option value="">All Status</option>
-                    <option value="unopened">Unopened</option>
-                    <option value="opened">Opened</option>
-                    <option value="finished">Finished</option>
-                  </select>
-                )}
-
-                <select
-                  value={proofFilter}
-                  onChange={(e) => setProofFilter(e.target.value)}
-                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer focus:outline-none focus:border-copper"
-                >
-                  <option value="">All Proofs</option>
-                  <option value="80-90">80-90 Proof</option>
-                  <option value="90-100">90-100 Proof</option>
-                  <option value="100-110">100-110 Proof</option>
-                  <option value="110-120">110-120 Proof</option>
-                  <option value="120+">120+ Proof</option>
-                  <option value="cask">Cask Strength (110+)</option>
-                </select>
-
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer focus:outline-none focus:border-copper"
-                >
-                  <option value="-createdAt">Newest First</option>
-                  <option value="createdAt">Oldest First</option>
-                  <option value="name">Name (A-Z)</option>
-                  <option value="-name">Name (Z-A)</option>
-                  <option value="-purchasePrice">Price (High to Low)</option>
-                  <option value="purchasePrice">Price (Low to High)</option>
-                  <option value="-proof">Proof (High to Low)</option>
-                  <option value="proof">Proof (Low to High)</option>
-                </select>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Results Summary */}
-        <div className="mb-6 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+        {/* Results Summary - Refined */}
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-xs text-gray-600">
             {pagination.total > 0 ? (
               <>
-                Showing <span className="text-white">{(pagination.page - 1) * pagination.limit + 1}</span> - <span className="text-white">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="text-white">{pagination.total}</span> bottles
+                Showing {(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} bottles
               </>
             ) : (
               'No bottles found'
@@ -457,6 +525,21 @@ export default function BottlesPage() {
           </p>
         </div>
 
+        {/* Collection Insights */}
+        {viewMode === 'my' && bottles.length > 0 && (
+          <CollectionInsights 
+            insights={calculateInsights()}
+            onFilterByInsight={(type, value) => {
+              if (type === 'status') {
+                setFilters(prev => ({ ...prev, status: value }));
+              } else if (type === 'category') {
+                setFilters(prev => ({ ...prev, category: value }));
+              }
+            }}
+          />
+        )}
+
+        {/* Render different views based on viewLayout */}
         {bottles.length === 0 ? (
           <div className="card-premium text-center py-16">
             <svg className="w-24 h-24 text-copper/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -477,7 +560,45 @@ export default function BottlesPage() {
               </Link>
             </div>
           </div>
+        ) : viewLayout === 'list' ? (
+          <ListView
+            bottles={bottles}
+            isUserBottle={isUserBottle}
+            isGroupedBottle={isGroupedBottle}
+            onQuickPour={(bottle) => {
+              haptic.medium();
+              setQuickPourBottle(bottle);
+            }}
+            onQuickRate={(bottle) => {
+              haptic.medium();
+              setQuickRateBottle(bottle);
+            }}
+            onDelete={handleDelete}
+            addToQueue={addToQueue}
+            isInQueue={isInQueue}
+          />
+        ) : viewLayout === 'gallery' ? (
+          <GalleryView
+            bottles={bottles}
+            isUserBottle={isUserBottle}
+            isGroupedBottle={isGroupedBottle}
+            onQuickPour={(bottle) => {
+              haptic.medium();
+              setQuickPourBottle(bottle);
+            }}
+            onQuickRate={(bottle) => {
+              haptic.medium();
+              setQuickRateBottle(bottle);
+            }}
+          />
+        ) : viewLayout === 'shelf' ? (
+          <ShelfView
+            bottles={bottles}
+            isUserBottle={isUserBottle}
+            isGroupedBottle={isGroupedBottle}
+          />
         ) : (
+          // Default Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {bottles.map((bottle) => {
               const isUser = isUserBottle(bottle);
@@ -488,7 +609,7 @@ export default function BottlesPage() {
                 // Grouped bottle view
                 return (
                   <Link key={bottle._id} href={`/bottles/${bottle._id}`} className="block">
-                    <div className="card-premium group hover:border-copper/30 hover:shadow-lg cursor-pointer transition-all duration-300">
+                    <div className="card-refined group cursor-pointer">
                       {/* Show thumbnail if any bottle has photos */}
                       {bottle.userBottles.some(b => b.photos && b.photos.length > 0) && (
                         <div className="relative h-48 -mx-6 -mt-6 mb-4 overflow-hidden rounded-t-lg" style={{ width: 'calc(100% + 3rem)' }}>
@@ -517,14 +638,37 @@ export default function BottlesPage() {
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="glass bg-copper/20 text-copper text-xs px-2 py-1 rounded-full">
-                          {bottle.totalCount} bottles
-                        </span>
-                        {bottle.openedCount > 0 && (
-                          <span className="glass bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-full">
-                            {bottle.openedCount} open
+                      <div className="flex flex-col items-end space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="glass bg-copper/20 text-copper text-xs px-2 py-1 rounded-full">
+                            {bottle.totalCount} bottles
                           </span>
+                          {bottle.openedCount > 0 && (
+                            <span className="glass bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-full">
+                              {bottle.openedCount} open
+                            </span>
+                          )}
+                        </div>
+                        {/* Show fill level if any bottles are opened */}
+                        {bottle.openedCount > 0 && bottle.userBottles && bottle.userBottles.length > 0 && (
+                          <div className="flex items-center space-x-1">
+                            {bottle.userBottles
+                              .filter(b => b.status === 'opened' && b.fillLevel !== undefined)
+                              .slice(0, 3)
+                              .map((b, index) => (
+                                <BottleFillIndicator 
+                                  key={index}
+                                  fillLevel={b.fillLevel || 100} 
+                                  size="sm" 
+                                  showLabel={false}
+                                />
+                              ))}
+                            {bottle.userBottles.filter(b => b.status === 'opened').length > 3 && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                +{bottle.userBottles.filter(b => b.status === 'opened').length - 3}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -630,7 +774,7 @@ export default function BottlesPage() {
                     className="relative group"
                   >
                     <Link href={`/bottles/${bottle._id}`} className="block">
-                      <div className="card-premium hover:border-copper/30 hover:shadow-lg cursor-pointer transition-all duration-300">
+                      <div className="card-refined cursor-pointer">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white group-hover:text-copper-light transition-colors">
@@ -645,14 +789,17 @@ export default function BottlesPage() {
                           </div>
                         )}
                       </div>
-                      {isUser && bottle.status === 'opened' && (
+                      {isUser && (
                         <div className="flex items-center space-x-2">
-                          <span className="glass bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-full">
-                            Open
-                          </span>
-                          {bottle.fillLevel && bottle.fillLevel < 20 && (
-                            <span className="glass bg-red-500/20 text-red-400 text-xs px-2 py-1 rounded-full">
-                              Low Stock
+                          <BottleFillIndicator 
+                            fillLevel={bottle.fillLevel || 100} 
+                            size="sm" 
+                            showLabel={false}
+                            status={bottle.status}
+                          />
+                          {bottle.status === 'opened' && bottle.fillLevel && bottle.fillLevel < 25 && (
+                            <span className="glass bg-red-500/20 text-red-400 text-xs px-2 py-1 rounded-full animate-pulse">
+                              ⚠️ Running Low
                             </span>
                           )}
                         </div>
@@ -751,21 +898,14 @@ export default function BottlesPage() {
                     )}
 
                     {/* Fill Level Indicator */}
-                    {isUser && bottle.status === 'opened' && bottle.fillLevel !== undefined && (
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-gray-500">Fill Level</span>
-                          <span className="text-xs text-gray-300">{bottle.fillLevel.toFixed(2)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-700 rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full transition-all duration-300 ${
-                              bottle.fillLevel > 50 ? 'bg-green-500' : 
-                              bottle.fillLevel > 20 ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${bottle.fillLevel}%` }}
-                          />
-                        </div>
+                    {isUser && (
+                      <div className="mt-4 flex justify-center">
+                        <BottleFillIndicator 
+                          fillLevel={bottle.fillLevel || 100} 
+                          size="md" 
+                          showLabel={true}
+                          status={bottle.status}
+                        />
                       </div>
                     )}
                     
@@ -777,6 +917,35 @@ export default function BottlesPage() {
                     {/* Action buttons positioned absolutely */}
                       {isUser && (
                         <div className="absolute bottom-4 right-4 flex gap-2 z-20" onClick={(e) => e.stopPropagation()}>
+                          {/* Quick Pour */}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              haptic.medium();
+                              setQuickPourBottle(bottle as UserBottle);
+                            }}
+                            className="p-2 text-green-500/70 hover:text-green-400 hover:bg-green-500/10 rounded-md transition-all duration-200"
+                            title="Quick Pour"
+                          >
+                            <Wine className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Quick Rate */}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              haptic.medium();
+                              setQuickRateBottle(bottle as UserBottle);
+                            }}
+                            className="p-2 text-amber-500/70 hover:text-amber-400 hover:bg-amber-500/10 rounded-md transition-all duration-200"
+                            title="Quick Rate"
+                          >
+                            <Star className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Add to Print Queue */}
                           <button
                             onClick={(e) => {
                               e.preventDefault();
@@ -789,27 +958,30 @@ export default function BottlesPage() {
                               });
                             }}
                             disabled={isInQueue(bottle._id)}
-                            className={`glass px-3 py-2 rounded-lg transition-all duration-300 ${
+                            className={`p-2 rounded-md transition-all duration-200 ${
                               isInQueue(bottle._id)
-                                ? 'border-gray-600 text-gray-500 cursor-not-allowed'
-                                : 'border-copper/30 text-copper hover:bg-copper/10 hover:border-copper/50'
+                                ? 'text-gray-600 cursor-not-allowed'
+                                : 'text-copper/70 hover:text-copper hover:bg-copper/10'
                             }`}
                             title={isInQueue(bottle._id) ? 'Already in queue' : 'Add to print queue'}
                           >
                             <Tag className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleDelete(bottle._id);
+                          
+                          {/* More Actions */}
+                          <MoreActionsDropdown
+                            bottleId={bottle._id}
+                            bottleName={masterData.name}
+                            onShare={() => {
+                              toast.success('Share feature coming soon!');
                             }}
-                            className="glass border-red-500/30 text-red-400 px-3 py-2 rounded-lg hover:bg-red-500/10 hover:border-red-500/50 transition-all duration-300"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                            onDuplicate={() => {
+                              toast.success('Duplicate feature coming soon!');
+                            }}
+                            onMoveLocation={() => {
+                              toast.success('Move location feature coming soon!');
+                            }}
+                          />
                         </div>
                       )}
                   </SwipeableBottleCard>
@@ -882,36 +1054,37 @@ export default function BottlesPage() {
             )}
           </div>
         )}
+        {/* Minimal Floating Action Buttons */}
+        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 flex flex-col gap-2 pb-safe">
+          {/* Quick Pour Button */}
+          <Link
+            href="/pour/quick"
+            className="w-10 h-10 bg-black/40 backdrop-blur-sm text-copper/80 hover:text-copper rounded-full transition-all duration-200 flex items-center justify-center group"
+          >
+            <Wine className="w-4 h-4" />
+            <span className="absolute right-full mr-2 bg-black/80 backdrop-blur-sm text-white text-[11px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Pour
+            </span>
+          </Link>
+          
+          {/* Quick Add Button */}
+          <Link
+            href="/bottles/quick-add"
+            className="w-10 h-10 bg-black/40 backdrop-blur-sm text-white/40 hover:text-white/70 rounded-full transition-all duration-200 flex items-center justify-center group"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span className="absolute right-full mr-2 bg-black/80 backdrop-blur-sm text-white text-[11px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Add
+            </span>
+          </Link>
+        </div>
       </main>
-
-      {/* Floating Action Buttons */}
-      <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 flex flex-col gap-4 pb-safe">
-        {/* Quick Pour Button */}
-        <Link
-          href="/pour/quick"
-          className="w-14 h-14 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
-        >
-          <Wine className="w-6 h-6" />
-          <span className="absolute right-full mr-3 bg-black/90 text-white text-sm px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-            Quick Pour
-          </span>
-        </Link>
-        
-        {/* Quick Add Button */}
-        <Link
-          href="/bottles/quick-add"
-          className="w-14 h-14 bg-gradient-to-r from-copper to-copper-light text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          <span className="absolute right-full mr-3 bg-black/90 text-white text-sm px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-            Quick Add
-          </span>
-        </Link>
       </div>
 
       {/* Barcode Scanner Modal */}
+
       {showScanner && (
         <BarcodeScanner
           onScan={handleBarcodeScanned}

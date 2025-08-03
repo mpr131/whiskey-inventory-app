@@ -134,56 +134,64 @@ export function generateDymoLabelXmlWithBarcode(labelSize: DymoLabelSize, data: 
   
   // For Code 128 barcodes, we need to split the label into text and barcode sections
   const margin = 72; // 0.05 inch vertical margin
-  const leftMargin = 350; // Large left margin to prevent text cutoff
+  const leftMargin = 350; // Updated for better text positioning
   const rightMargin = 100; // Right margin
   
-  // Calculate barcode dimensions - MUCH bigger for reliable scanning
-  let barcodeHeight = 600; // Minimum 100px height for scanning
-  let barcodeWidth = 1800; // Proportional width
+  // Calculate QR code dimensions - square format for better scanning
+  let qrCodeSize = 600; // QR codes are square
   
   if (labelSize === '30336') {
-    barcodeHeight = 500; // Good scanning height for small label
-    barcodeWidth = 1600; // About 50% of label width
+    qrCodeSize = 500; // Compact for small label but still scannable
   } else if (labelSize === '30252' || labelSize === '30256') {
-    barcodeHeight = 700; // Larger for bigger labels
-    barcodeWidth = 2200; // Proportionally bigger
+    qrCodeSize = 700; // Larger for bigger labels
   }
   
-  // Position barcode in bottom-right corner
-  const barcodeX = labelInfo.width - barcodeWidth - margin; // Right-aligned with margin
-  const barcodeY = labelInfo.height - barcodeHeight - margin; // Bottom-aligned with margin
+  // Position QR code in bottom-right corner
+  const qrCodeX = labelInfo.width - qrCodeSize - rightMargin; // Right-aligned with margin
+  const qrCodeY = labelInfo.height - qrCodeSize - margin; // Bottom-aligned with margin
   
-  // Calculate text area - avoid overlap with barcode
-  // Text can use the area above the barcode and to the left of it
-  const textWidth = barcodeX - leftMargin - margin; // Stop where barcode starts
-  const textHeight = labelInfo.height - (margin * 2); // Full height available
+  // Calculate text areas
+  // Area 1: Full width for title/name - uses entire label width
+  const titleWidth = labelInfo.width - leftMargin - rightMargin;
+  const titleHeight = 400; // Space for wine name
   
-  // Build text lines - CORE fields always shown
-  const textLines: string[] = [];
-  textLines.push(data.name);
-  textLines.push(data.distillery);
-  if (data.age) textLines.push(`${data.age}${typeof data.age === 'number' ? ' Year' : ''}`);
-  if (data.proof) textLines.push(`${data.proof}° proof`);
+  // Area 2: Details area - only needs to avoid the barcode in bottom-right
+  // Details can use full width above the barcode, and left side beside the barcode
+  const detailsWidth = labelInfo.width - leftMargin - rightMargin; // Full width available
+  const detailsHeight = labelInfo.height - titleHeight - (margin * 2); // Remaining height
+  
+  // Split content into title and details
+  const titleText = data.name; // Wine name gets full width
+  
+  // Build detail lines - everything else
+  const detailLines: string[] = [];
+  detailLines.push(data.distillery);
+  if (data.age) detailLines.push(`${data.age}${typeof data.age === 'number' ? ' Year' : ''}`);
+  if (data.proof) detailLines.push(`${data.proof}° proof`);
   
   // OPTIONAL fields
-  if (data.price) textLines.push(`$${data.price}`);
-  if (data.store) textLines.push(data.store);
+  if (data.price) detailLines.push(`$${data.price}`);
+  if (data.store) detailLines.push(data.store);
   if (data.location) {
-    textLines.push(data.location.area + (data.location.bin ? `-${data.location.bin}` : ''));
+    detailLines.push(data.location.area + (data.location.bin ? `-${data.location.bin}` : ''));
   }
   
-  const textContent = textLines.join('\n');
+  const detailsContent = detailLines.join('\n');
   
-  // Dynamic font sizing based on content
-  let fontSize = 10;
+  // Dynamic font sizing
+  let titleFontSize = 12;
+  let detailsFontSize = 10;
+  
   if (labelSize === '30336') {
-    const lineCount = textLines.length;
-    if (lineCount <= 4) fontSize = 10;      // Just core fields
-    else if (lineCount <= 5) fontSize = 9;   // +1 optional field
-    else if (lineCount <= 6) fontSize = 8;   // +2 optional fields
-    else fontSize = 7;                       // All fields
+    titleFontSize = 11;
+    const lineCount = detailLines.length;
+    if (lineCount <= 3) detailsFontSize = 10;
+    else if (lineCount <= 4) detailsFontSize = 9;
+    else if (lineCount <= 5) detailsFontSize = 8;
+    else detailsFontSize = 7;
   } else if (labelSize === '30252' || labelSize === '30256') {
-    fontSize = 12;
+    titleFontSize = 14;
+    detailsFontSize = 11;
   }
   
   // Use standard DYMO paper names
@@ -203,7 +211,7 @@ export function generateDymoLabelXmlWithBarcode(labelSize: DymoLabelSize, data: 
   </DrawCommands>
   <ObjectInfo>
     <TextObject>
-      <Name>Text</Name>
+      <Name>Title</Name>
       <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
       <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
       <LinkedObjectName></LinkedObjectName>
@@ -213,21 +221,49 @@ export function generateDymoLabelXmlWithBarcode(labelSize: DymoLabelSize, data: 
       <GroupID>-1</GroupID>
       <IsOutlined>False</IsOutlined>
       <HorizontalAlignment>Left</HorizontalAlignment>
-      <VerticalAlignment>Middle</VerticalAlignment>
-      <TextFitMode>None</TextFitMode>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>ShrinkToFit</TextFitMode>
       <UseFullFontHeight>True</UseFullFontHeight>
       <Verticalized>False</Verticalized>
       <StyledText>
         <Element>
-          <String xml:space="preserve">${textContent}</String>
+          <String xml:space="preserve">${titleText}</String>
           <Attributes>
-            <Font Family="Arial" Size="${fontSize}" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <Font Family="Arial" Size="${titleFontSize}" Bold="True" Italic="False" Underline="False" Strikeout="False" />
             <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
           </Attributes>
         </Element>
       </StyledText>
     </TextObject>
-    <Bounds X="${leftMargin}" Y="${margin}" Width="${textWidth}" Height="${textHeight}" />
+    <Bounds X="${leftMargin}" Y="${margin}" Width="${titleWidth}" Height="${titleHeight}" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>Details</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <GroupID>-1</GroupID>
+      <IsOutlined>False</IsOutlined>
+      <HorizontalAlignment>Left</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>AlwaysFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          <String xml:space="preserve">${detailsContent}</String>
+          <Attributes>
+            <Font Family="Arial" Size="${detailsFontSize}" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="${leftMargin}" Y="${titleHeight + margin}" Width="${detailsWidth}" Height="${detailsHeight}" />
   </ObjectInfo>
   <ObjectInfo>
     <BarcodeObject>
@@ -241,17 +277,45 @@ export function generateDymoLabelXmlWithBarcode(labelSize: DymoLabelSize, data: 
       <GroupID>-1</GroupID>
       <IsOutlined>False</IsOutlined>
       <Text>${data.barcode}</Text>
-      <Type>Code128Auto</Type>
-      <Size>Medium</Size>
-      <TextPosition>Bottom</TextPosition>
-      <TextFont Family="Arial" Size="6" Bold="False" Italic="False" Underline="False" Strikeout="False" />
-      <CheckSumFont Family="Arial" Size="6" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+      <Type>QRCode</Type>
+      <Size>Large</Size>
+      <TextPosition>None</TextPosition>
+      <TextFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+      <CheckSumFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
       <TextEmbedding>None</TextEmbedding>
-      <ECLevel>0</ECLevel>
+      <ECLevel>2</ECLevel>
       <HorizontalAlignment>Center</HorizontalAlignment>
       <QuietZonesPadding Left="0" Top="0" Right="0" Bottom="0" />
     </BarcodeObject>
-    <Bounds X="${barcodeX}" Y="${barcodeY}" Width="${barcodeWidth}" Height="${barcodeHeight}" />
+    <Bounds X="${qrCodeX}" Y="${qrCodeY}" Width="${qrCodeSize}" Height="${qrCodeSize}" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>BarcodeText</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <GroupID>-1</GroupID>
+      <IsOutlined>False</IsOutlined>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>None</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          <String xml:space="preserve">${data.barcode}</String>
+          <Attributes>
+            <Font Family="Arial" Size="7" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="${qrCodeX}" Y="${qrCodeY + qrCodeSize + 20}" Width="${qrCodeSize}" Height="150" />
   </ObjectInfo>
 </DieCutLabel>`;
 }

@@ -137,7 +137,12 @@ export default function EnhancedBarcodeScanner({ onScan, onClose }: EnhancedBarc
             'ean_reader',
             'ean_8_reader',
             'code_128_reader',
-            'code_39_reader'
+            'code_39_reader',
+            'code_39_vin_reader',
+            'codabar_reader',
+            'i2of5_reader',
+            '2of5_reader',
+            'code_93_reader'
           ],
           debug: {
             drawBoundingBox: true,
@@ -284,7 +289,16 @@ export default function EnhancedBarcodeScanner({ onScan, onClose }: EnhancedBarc
               size: canvas.width > 1280 ? 1280 : canvas.width
             },
             decoder: {
-              readers: ['upc_reader', 'upc_e_reader', 'ean_reader', 'code_128_reader']
+              readers: [
+                'upc_reader', 
+                'upc_e_reader', 
+                'ean_reader', 
+                'ean_8_reader',
+                'code_128_reader',
+                'code_39_reader',
+                'code_39_vin_reader',
+                'codabar_reader'
+              ]
             }
           }, (result: any) => {
             if (result && result.codeResult) {

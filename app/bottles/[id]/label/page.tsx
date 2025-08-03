@@ -405,7 +405,7 @@ export default function BottleLabelPage() {
       const dimensions = getDimensions();
       const barcodeValue = bottle.vaultBarcode || `WV${bottle._id}`;
       
-      // Build optimized HTML for label printing
+      // Build optimized HTML for label printing with improved layout
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -428,56 +428,73 @@ export default function BottleLabelPage() {
               height: ${dimensions.height};
               padding: ${format === 'dymo' ? '0.05in' : '0.1in'};
               box-sizing: border-box;
-              display: flex;
-              align-items: center;
-              gap: 0.1in;
+              position: relative;
               page-break-after: always;
             }
+            .barcode-container {
+              position: absolute;
+              right: 0.05in;
+              bottom: 0.05in;
+              text-align: center;
+            }
+            .qr {
+              width: ${format === 'dymo' ? '0.6in' : '0.8in'};
+              height: ${format === 'dymo' ? '0.6in' : '0.8in'};
+              display: block;
+            }
+            .barcode-text {
+              font-size: 6pt;
+              font-family: monospace;
+              margin-top: 2px;
+            }
             .content {
-              flex: 1;
+              /* No padding needed - title uses full width */
             }
             .name {
-              font-size: ${format === 'dymo' ? '10pt' : '12pt'};
+              font-size: ${format === 'dymo' ? '11pt' : '13pt'};
               font-weight: bold;
-              margin-bottom: 2px;
+              margin-bottom: 3px;
               line-height: 1.1;
+              /* Title can use full width */
             }
             .distillery {
-              font-size: ${format === 'dymo' ? '8pt' : '10pt'};
+              font-size: ${format === 'dymo' ? '9pt' : '11pt'};
               color: #333;
-              margin-bottom: 2px;
+              margin-bottom: 4px;
             }
             .details {
               font-size: ${format === 'dymo' ? '8pt' : '9pt'};
-              line-height: 1.2;
+              line-height: 1.3;
+              /* Details need to wrap around bottom-right barcode */
+              margin-right: ${format === 'dymo' ? '0.65in' : '0.85in'};
             }
-            .qr {
-              width: ${format === 'dymo' ? '0.9in' : '1in'};
-              height: ${format === 'dymo' ? '0.9in' : '1in'};
+            .detail-line {
+              margin-bottom: 1px;
             }
-            .barcode {
-              font-size: 7pt;
-              font-family: monospace;
-              text-align: center;
-              margin-top: 2px;
+            /* Last few detail lines need more right margin to avoid barcode */
+            .detail-line:nth-last-child(-n+2) {
+              margin-right: ${format === 'dymo' ? '0.7in' : '0.9in'};
             }
           </style>
         </head>
         <body>
           <div class="label">
+            <div class="barcode-container">
+              <canvas class="qr" id="qr-code"></canvas>
+              <div class="barcode-text">${barcodeValue}</div>
+            </div>
             <div class="content">
               <div class="name">${bottle.masterBottleId.name}</div>
               <div class="distillery">${bottle.masterBottleId.distillery}</div>
               <div class="details">
-                ${bottle.masterBottleId.proof ? `${bottle.masterBottleId.proof}° proof<br>` : ''}
-                ${bottle.location ? `${bottle.location.area}${bottle.location.bin ? `-${bottle.location.bin}` : ''}<br>` : ''}
-                ${bottle.t8keRating ? `t8ke: ${bottle.t8keRating}/10<br>` : ''}
-                ${showPurchaseDate && bottle.purchaseDate ? `${formatDate(bottle.purchaseDate)}` : ''}
+                ${bottle.masterBottleId.age ? `<div class="detail-line">${bottle.masterBottleId.age} Year</div>` : ''}
+                ${bottle.masterBottleId.proof ? `<div class="detail-line">${bottle.masterBottleId.proof}° proof</div>` : ''}
+                ${optionalFields.price && bottle.purchasePrice ? `<div class="detail-line">$${bottle.purchasePrice}</div>` : ''}
+                ${optionalFields.store && bottle.purchaseStore ? `<div class="detail-line">${bottle.purchaseStore}</div>` : ''}
+                ${optionalFields.location && bottle.location ? `<div class="detail-line">${bottle.location.area}${bottle.location.bin ? `-${bottle.location.bin}` : ''}</div>` : ''}
+                ${bottle.t8keRating ? `<div class="detail-line">t8ke: ${bottle.t8keRating}/10</div>` : ''}
+                ${showPurchaseDate && bottle.purchaseDate ? `<div class="detail-line">${formatDate(bottle.purchaseDate)}</div>` : ''}
               </div>
-            </div>
-            <div>
-              <canvas class="qr" id="qr-code"></canvas>
-              <div class="barcode">${barcodeValue}</div>
             </div>
           </div>
         </body>
@@ -486,7 +503,7 @@ export default function BottleLabelPage() {
           QRCode.toCanvas(
             document.getElementById('qr-code'), 
             '${barcodeValue}',
-            { width: ${format === 'dymo' ? 90 : 100}, margin: 0 },
+            { width: ${format === 'dymo' ? 60 : 80}, margin: 0 },
             function (error) {
               if (error) console.error(error);
               // Print after QR code is generated
@@ -767,29 +784,55 @@ export default function BottleLabelPage() {
             <h2 className="text-xl font-semibold text-white mb-4">Label Preview</h2>
             
             <div 
-              className="bg-white text-black p-4 rounded-lg"
+              className="bg-white text-black p-4 rounded-lg overflow-hidden"
               style={{
                 width: dimensions.width,
                 height: dimensions.height,
                 maxWidth: '100%',
               }}
             >
-              <div className="h-full flex items-center justify-between p-2 border-2 border-gray-800">
-                <div className="flex-1 pr-2">
+              <div className="h-full relative p-2 border-2 border-gray-800">
+                {/* Barcode positioned in bottom-right corner */}
+                <div className="absolute right-2 bottom-2 flex flex-col items-center">
+                  <div className="bg-white p-1 qr-code-container">
+                    {mounted && (
+                      <QRCode
+                        value={bottle.vaultBarcode || `WV${bottle._id}`}
+                        size={format === 'dymo' ? 50 : 60}
+                        level="M"
+                      />
+                    )}
+                  </div>
+                  <div className="text-[8px] font-mono mt-1">
+                    {bottle.vaultBarcode || `WV${bottle._id.slice(-8)}`}
+                  </div>
+                </div>
+                
+                {/* Content - title uses full width, details wrap around barcode */}
+                <div>
                   <div className="font-bold text-sm leading-tight mb-1">
                     {bottle.masterBottleId.name}
                   </div>
-                  <div className="text-xs text-gray-700 mb-1">
+                  <div className="text-xs text-gray-700 mb-2">
                     {bottle.masterBottleId.distillery}
                   </div>
-                  <div className="text-xs space-y-0.5">
-                    {bottle.masterBottleId.proof && (
-                      <div>Proof: {bottle.masterBottleId.proof}°</div>
+                  <div className="text-xs space-y-0.5" style={{ marginRight: format === 'dymo' ? '55px' : '70px' }}>
+                    {bottle.masterBottleId.age && (
+                      <div>{bottle.masterBottleId.age} Year</div>
                     )}
-                    {bottle.location && (
+                    {bottle.masterBottleId.proof && (
+                      <div>{bottle.masterBottleId.proof}° proof</div>
+                    )}
+                    {optionalFields.price && bottle.purchasePrice && (
+                      <div>${bottle.purchasePrice}</div>
+                    )}
+                    {optionalFields.store && bottle.purchaseStore && (
+                      <div>{bottle.purchaseStore}</div>
+                    )}
+                    {optionalFields.location && bottle.location && (
                       <div className="font-medium">
                         {bottle.location.area}
-                        {bottle.location.bin && ` - ${bottle.location.bin}`}
+                        {bottle.location.bin && `-${bottle.location.bin}`}
                       </div>
                     )}
                     {bottle.t8keRating && (
@@ -798,21 +841,6 @@ export default function BottleLabelPage() {
                     {showPurchaseDate && bottle.purchaseDate && (
                       <div>{formatDate(bottle.purchaseDate)}</div>
                     )}
-                  </div>
-                </div>
-                
-                <div className="flex flex-col items-center justify-center">
-                  <div className="bg-white p-1 qr-code-container">
-                    {mounted && (
-                      <QRCode
-                        value={bottle.vaultBarcode || `WV${bottle._id}`}
-                        size={60}
-                        level="M"
-                      />
-                    )}
-                  </div>
-                  <div className="text-[10px] font-mono mt-1">
-                    {bottle.vaultBarcode || `WV${bottle._id.slice(-8)}`}
                   </div>
                 </div>
               </div>

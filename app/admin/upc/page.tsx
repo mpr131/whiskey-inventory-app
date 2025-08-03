@@ -10,7 +10,7 @@ import MasterBottleSearch from '@/components/MasterBottleSearch';
 import UPCBackfillTool from '@/components/admin/UPCBackfillTool';
 import FWGSImportDashboard from '@/components/admin/FWGSImportDashboard';
 
-const EnhancedBarcodeScanner = dynamic(() => import('@/components/EnhancedBarcodeScanner'), {
+const ZXingBarcodeScanner = dynamic(() => import('@/components/ZXingBarcodeScanner'), {
   ssr: false,
 });
 
@@ -595,7 +595,7 @@ Buffalo Trace, 080244009167
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <EnhancedBarcodeScanner
+              <ZXingBarcodeScanner
                 onScan={handleBarcodeScan}
                 onClose={() => setShowScanner(false)}
               />
