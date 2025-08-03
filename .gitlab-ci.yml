@@ -84,16 +84,15 @@ deploy-production:
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client git
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | ssh-add -
     - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 192.168.1.71 >> ~/.ssh/known_hosts
   script:
     - |
       echo "Deploying to production on Big NUC..."
       
-      ssh $PROD_USER@$PROD_HOST << 'EOF'
+      ssh -i ~/.ssh/id_rsa $SSH_USER@192.168.1.71 << 'EOF'
         set -e
         
         # Set variables
@@ -205,14 +204,13 @@ rollback-production:
   image: alpine:latest
   before_script:
     - apk add --no-cache openssh-client
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | ssh-add -
     - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 192.168.1.71 >> ~/.ssh/known_hosts
   script:
     - |
-      ssh $PROD_USER@$PROD_HOST << 'EOF'
+      ssh -i ~/.ssh/id_rsa $SSH_USER@192.168.1.71 << 'EOF'
         set -e
         
         APP_DIR="/home/ams237/webapps/whiskey-inventory"
