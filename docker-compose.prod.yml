@@ -31,11 +31,16 @@ services:
 
   # Whiskey Inventory Application
   whiskey-inventory:
-    image: ${CI_REGISTRY_IMAGE:-whiskey-inventory}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
     container_name: whiskey-inventory
     restart: unless-stopped
     ports:
       - "3005:3005"
+    env_file:
+      - .env.production
     environment:
       # Application settings
       NODE_ENV: production
