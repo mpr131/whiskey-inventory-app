@@ -4,12 +4,13 @@
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
-  # Production settings (Big NUC)
-  PROD_HOST: "192.168.1.71"
-  PROD_PORT: "3005"
-  PROD_MONGODB_URI: "mongodb://mongodb-web:27017/whiskey"
-  PROD_USER: "ams237"
-  PROD_APP_DIR: "/home/ams237/webapps/whiskey-inventory"
+  # Production deployment settings
+  DEPLOY_HOST: "192.168.1.71"
+  DEPLOY_PORT: "3005"
+  DEPLOY_USER: "$SSH_USER"  # Uses SSH_USER from GitLab CI variables
+  DEPLOY_APP_DIR: "/home/ams237/webapps/whiskey-inventory"
+  DEPLOY_LOGS_DIR: "/home/ams237/logs/webapps/whiskey-inventory"
+  DEPLOY_MONGODB_URI: "mongodb://mongodb-web:27017/whiskey"
   # Dev settings (Mac Mini)
   DEV_PORT: "3000"
   DEV_MONGODB_URI: "mongodb://localhost:27017/whiskey-inventory"
@@ -87,31 +88,35 @@ deploy-production:
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
-    - ssh-keyscan -H 192.168.1.71 >> ~/.ssh/known_hosts
+    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
   script:
     - |
       echo "Deploying to production on Big NUC..."
+      echo "Target: $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT"
       
-      ssh -i ~/.ssh/id_rsa $SSH_USER@192.168.1.71 << 'EOF'
+      ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST << EOF
         set -e
         
-        # Set variables
-        APP_DIR="/home/ams237/webapps/whiskey-inventory"
-        APP_NAME="whiskey-inventory"
-        PORT="3005"
-        NETWORK="infrastructure_infrastructure"
+        # Set variables from CI environment
+        APP_DIR="$DEPLOY_APP_DIR"
+        APP_NAME="$APP_NAME"
+        PORT="$DEPLOY_PORT"
+        NETWORK="$NETWORK_NAME"
         IMAGE_NAME="whiskey-inventory:production"
+        CI_PROJECT_PATH="$CI_PROJECT_PATH"
+        DEPLOY_HOST="$DEPLOY_HOST"
+        DEPLOY_LOGS_DIR="$DEPLOY_LOGS_DIR"
         
         echo "=== Setting up application directory ==="
         
         # Create app directory if it doesn't exist
-        mkdir -p $APP_DIR
-        cd $APP_DIR
+        mkdir -p \$APP_DIR
+        cd \$APP_DIR
         
         # Clone or update repository
         if [ ! -d ".git" ]; then
           echo "Cloning repository..."
-          git clone https://gitlab.com/$CI_PROJECT_PATH.git .
+          git clone https://gitlab.com/\$CI_PROJECT_PATH.git .
         else
           echo "Updating repository..."
           git fetch origin
@@ -119,68 +124,68 @@ deploy-production:
           git clean -fd
         fi
         
-        echo "Current commit: $(git rev-parse --short HEAD)"
+        echo "Current commit: \$(git rev-parse --short HEAD)"
         
         echo "=== Building Docker image ==="
         
         # Create .env file for build args
         cat > .env.build << EOL
-        PORT=$PORT
-        MONGODB_URI=mongodb://mongodb-web:27017/whiskey
-        NEXTAUTH_URL=http://192.168.1.71:$PORT
-        NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT
+        PORT=\$PORT
+        MONGODB_URI=$DEPLOY_MONGODB_URI
+        NEXTAUTH_URL=http://\$DEPLOY_HOST:\$PORT
+        NEXT_PUBLIC_APP_URL=http://\$DEPLOY_HOST:\$PORT
         EOL
         
         # Build the Docker image
         docker build \
-          --build-arg PORT=$PORT \
-          --build-arg MONGODB_URI=mongodb://mongodb-web:27017/whiskey \
-          --build-arg NEXTAUTH_URL=http://192.168.1.71:$PORT \
-          --build-arg NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT \
+          --build-arg PORT=\$PORT \
+          --build-arg MONGODB_URI=$DEPLOY_MONGODB_URI \
+          --build-arg NEXTAUTH_URL=http://\$DEPLOY_HOST:\$PORT \
+          --build-arg NEXT_PUBLIC_APP_URL=http://\$DEPLOY_HOST:\$PORT \
           --target runner \
-          -t $IMAGE_NAME \
+          -t \$IMAGE_NAME \
           .
         
         echo "=== Stopping old container ==="
-        docker stop $APP_NAME || true
-        docker rm $APP_NAME || true
+        docker stop \$APP_NAME || true
+        docker rm \$APP_NAME || true
         
         echo "=== Starting new container ==="
         docker run -d \
-          --name $APP_NAME \
+          --name \$APP_NAME \
           --restart unless-stopped \
-          --network $NETWORK \
-          -p $PORT:$PORT \
+          --network \$NETWORK \
+          -p \$PORT:\$PORT \
           -e NODE_ENV=production \
-          -e PORT=$PORT \
-          -e MONGODB_URI=mongodb://mongodb-web:27017/whiskey \
-          -e NEXTAUTH_URL=http://192.168.1.71:$PORT \
+          -e PORT=\$PORT \
+          -e MONGODB_URI=$DEPLOY_MONGODB_URI \
+          -e NEXTAUTH_URL=http://\$DEPLOY_HOST:\$PORT \
           -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
-          -e NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT \
+          -e NEXT_PUBLIC_APP_URL=http://\$DEPLOY_HOST:\$PORT \
           -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
           -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
           -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
-          -v /home/ams237/logs/webapps/whiskey-inventory:/app/logs \
-          $IMAGE_NAME
+          -v \$DEPLOY_LOGS_DIR:/app/logs \
+          \$IMAGE_NAME
         
         echo "=== Verifying deployment ==="
         sleep 10
         
         # Check if container is running
-        if docker ps | grep -q $APP_NAME; then
+        if docker ps | grep -q \$APP_NAME; then
           echo "✓ Container is running"
         else
           echo "✗ Container failed to start"
-          docker logs $APP_NAME
+          docker logs \$APP_NAME
           exit 1
         fi
         
         # Health check
-        if curl -f http://localhost:$PORT/api/health > /dev/null 2>&1; then
+        if curl -f http://localhost:\$PORT/api/health > /dev/null 2>&1; then
           echo "✓ Health check passed"
         else
           echo "✗ Health check failed"
-          docker logs $APP_NAME
+          docker logs \$APP_NAME
           exit 1
         fi
         
@@ -189,14 +194,14 @@ deploy-production:
         
         echo ""
         echo "✓ Deployment complete!"
-        echo "Application is running at: http://192.168.1.71:$PORT"
-        echo "Logs are available at: /home/ams237/logs/webapps/whiskey-inventory/"
+        echo "Application is running at: http://\$DEPLOY_HOST:\$PORT"
+        echo "Logs are available at: \$DEPLOY_LOGS_DIR"
       EOF
   only:
     - main
   environment:
     name: production
-    url: http://$PROD_HOST:$PROD_PORT
+    url: http://$DEPLOY_HOST:$DEPLOY_PORT
 
 # Manual rollback job for production
 rollback-production:
@@ -207,68 +212,71 @@ rollback-production:
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
-    - ssh-keyscan -H 192.168.1.71 >> ~/.ssh/known_hosts
+    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
   script:
     - |
-      ssh -i ~/.ssh/id_rsa $SSH_USER@192.168.1.71 << 'EOF'
+      ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST << EOF
         set -e
         
-        APP_DIR="/home/ams237/webapps/whiskey-inventory"
-        APP_NAME="whiskey-inventory"
-        PORT="3005"
-        NETWORK="infrastructure_infrastructure"
+        # Set variables from CI environment
+        APP_DIR="$DEPLOY_APP_DIR"
+        APP_NAME="$APP_NAME"
+        PORT="$DEPLOY_PORT"
+        NETWORK="$NETWORK_NAME"
+        DEPLOY_HOST="$DEPLOY_HOST"
+        DEPLOY_LOGS_DIR="$DEPLOY_LOGS_DIR"
         
         echo "=== Rolling back to previous commit ==="
         
-        cd $APP_DIR
+        cd \$APP_DIR
         
         # Get current and previous commit
-        CURRENT_COMMIT=$(git rev-parse --short HEAD)
+        CURRENT_COMMIT=\$(git rev-parse --short HEAD)
         git reset --hard HEAD~1
-        PREVIOUS_COMMIT=$(git rev-parse --short HEAD)
+        PREVIOUS_COMMIT=\$(git rev-parse --short HEAD)
         
-        echo "Rolling back from $CURRENT_COMMIT to $PREVIOUS_COMMIT"
+        echo "Rolling back from \$CURRENT_COMMIT to \$PREVIOUS_COMMIT"
         
         # Rebuild with previous commit
         docker build \
-          --build-arg PORT=$PORT \
-          --build-arg MONGODB_URI=mongodb://mongodb-web:27017/whiskey \
-          --build-arg NEXTAUTH_URL=http://192.168.1.71:$PORT \
-          --build-arg NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT \
+          --build-arg PORT=\$PORT \
+          --build-arg MONGODB_URI=$DEPLOY_MONGODB_URI \
+          --build-arg NEXTAUTH_URL=http://\$DEPLOY_HOST:\$PORT \
+          --build-arg NEXT_PUBLIC_APP_URL=http://\$DEPLOY_HOST:\$PORT \
           --target runner \
           -t whiskey-inventory:rollback \
           .
         
         # Stop current container
-        docker stop $APP_NAME || true
-        docker rm $APP_NAME || true
+        docker stop \$APP_NAME || true
+        docker rm \$APP_NAME || true
         
         # Start rollback container
         docker run -d \
-          --name $APP_NAME \
+          --name \$APP_NAME \
           --restart unless-stopped \
-          --network $NETWORK \
-          -p $PORT:$PORT \
+          --network \$NETWORK \
+          -p \$PORT:\$PORT \
           -e NODE_ENV=production \
-          -e PORT=$PORT \
-          -e MONGODB_URI=mongodb://mongodb-web:27017/whiskey \
-          -e NEXTAUTH_URL=http://192.168.1.71:$PORT \
+          -e PORT=\$PORT \
+          -e MONGODB_URI=$DEPLOY_MONGODB_URI \
+          -e NEXTAUTH_URL=http://\$DEPLOY_HOST:\$PORT \
           -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
-          -e NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT \
+          -e NEXT_PUBLIC_APP_URL=http://\$DEPLOY_HOST:\$PORT \
           -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
           -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
           -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
-          -v /home/ams237/logs/webapps/whiskey-inventory:/app/logs \
+          -v \$DEPLOY_LOGS_DIR:/app/logs \
           whiskey-inventory:rollback
         
         sleep 10
         
         # Verify rollback
-        if docker ps | grep -q $APP_NAME && curl -f http://localhost:$PORT/api/health > /dev/null 2>&1; then
-          echo "✓ Rollback successful to commit $PREVIOUS_COMMIT"
+        if docker ps | grep -q \$APP_NAME && curl -f http://localhost:\$PORT/api/health > /dev/null 2>&1; then
+          echo "✓ Rollback successful to commit \$PREVIOUS_COMMIT"
         else
           echo "✗ Rollback failed"
-          docker logs $APP_NAME
+          docker logs \$APP_NAME
           exit 1
         fi
       EOF
@@ -277,4 +285,4 @@ rollback-production:
     - main
   environment:
     name: production
-    url: http://$PROD_HOST:$PROD_PORT
+    url: http://$DEPLOY_HOST:$DEPLOY_PORT
