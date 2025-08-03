@@ -86,7 +86,9 @@ deploy-production:
   before_script:
     - apt-get update && apt-get install -y openssh-client git
     - mkdir -p ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - echo "First line of key:" && head -1 ~/.ssh/id_rsa
+    - echo "Key file size:" && wc -c ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
   script:
@@ -210,7 +212,9 @@ rollback-production:
   before_script:
     - apt-get update && apt-get install -y openssh-client
     - mkdir -p ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - echo "First line of key:" && head -1 ~/.ssh/id_rsa
+    - echo "Key file size:" && wc -c ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
   script:
