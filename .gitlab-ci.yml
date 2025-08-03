@@ -1,14 +1,20 @@
 # GitLab CI/CD Pipeline for Whiskey Inventory App
-# Deploy to Big NUC (192.168.1.71) from main branch only
+# Deploy to Mac Mini (.119) from dev branch, Big NUC (.71) from main branch
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
   IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
   IMAGE_LATEST: $CI_REGISTRY_IMAGE:latest
-  DEPLOY_HOST: "192.168.1.71"
-  DEPLOY_PORT: "3005"
-  MONGODB_URI: "mongodb://mongodb-web:27017/whiskey"
+  IMAGE_DEV: $CI_REGISTRY_IMAGE:dev
+  # Production settings (Big NUC)
+  PROD_HOST: "192.168.1.71"
+  PROD_PORT: "3005"
+  PROD_MONGODB_URI: "mongodb://mongodb-web:27017/whiskey"
+  # Dev settings (Mac Mini)
+  DEV_PORT: "3000"
+  DEV_MONGODB_URI: "mongodb://localhost:27017/whiskey-inventory"
+  # App settings
   APP_NAME: "whiskey-inventory"
   NETWORK_NAME: "infrastructure_infrastructure"
 
@@ -28,6 +34,7 @@ stages:
     policy: pull-push
 
 # Test stage - runs on all branches
+# No tags requirement to avoid stuck jobs
 test:
   stage: test
   image: node:18-alpine
@@ -46,8 +53,8 @@ test:
   except:
     - tags
 
-# Build Docker image - only on main branch
-build:
+# Build Docker image for dev branch
+build-dev:
   stage: build
   image: docker:24.0.7-dind
   services:
@@ -56,11 +63,37 @@ build:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
     - |
+      echo "Building development image..."
       docker build \
-        --build-arg PORT=$DEPLOY_PORT \
-        --build-arg MONGODB_URI=$MONGODB_URI \
-        --build-arg NEXTAUTH_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
-        --build-arg NEXT_PUBLIC_APP_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+        --build-arg PORT=$DEV_PORT \
+        --build-arg MONGODB_URI=$DEV_MONGODB_URI \
+        --build-arg NEXTAUTH_URL=http://localhost:$DEV_PORT \
+        --build-arg NEXT_PUBLIC_APP_URL=http://localhost:$DEV_PORT \
+        --target runner \
+        -t $IMAGE_TAG \
+        -t $IMAGE_DEV \
+        .
+    - docker push $IMAGE_TAG
+    - docker push $IMAGE_DEV
+  only:
+    - dev
+
+# Build Docker image for main branch
+build-production:
+  stage: build
+  image: docker:24.0.7-dind
+  services:
+    - docker:24.0.7-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - |
+      echo "Building production image..."
+      docker build \
+        --build-arg PORT=$PROD_PORT \
+        --build-arg MONGODB_URI=$PROD_MONGODB_URI \
+        --build-arg NEXTAUTH_URL=http://$PROD_HOST:$PROD_PORT \
+        --build-arg NEXT_PUBLIC_APP_URL=http://$PROD_HOST:$PROD_PORT \
         --target runner \
         -t $IMAGE_TAG \
         -t $IMAGE_LATEST \
@@ -70,8 +103,42 @@ build:
   only:
     - main
 
-# Deploy to production - only on main branch
-deploy:
+# Deploy to development (Mac Mini) - dev branch only
+# This job just ensures the image is available - actual running is manual
+deploy-dev:
+  stage: deploy
+  image: docker:24.0.7-dind
+  services:
+    - docker:24.0.7-dind
+  script:
+    - |
+      echo "Development image is available at: $IMAGE_DEV"
+      echo ""
+      echo "To run locally on Mac Mini (.119), use:"
+      echo ""
+      echo "docker pull $IMAGE_DEV"
+      echo ""
+      echo "docker run -d \\"
+      echo "  --name whiskey-inventory-dev \\"
+      echo "  --restart unless-stopped \\"
+      echo "  -p $DEV_PORT:$DEV_PORT \\"
+      echo "  -e NODE_ENV=development \\"
+      echo "  -e PORT=$DEV_PORT \\"
+      echo "  -e MONGODB_URI=$DEV_MONGODB_URI \\"
+      echo "  -e NEXTAUTH_URL=http://localhost:$DEV_PORT \\"
+      echo "  -e NEXTAUTH_SECRET=\"\$NEXTAUTH_SECRET\" \\"
+      echo "  -e NEXT_PUBLIC_APP_URL=http://localhost:$DEV_PORT \\"
+      echo "  $IMAGE_DEV"
+      echo ""
+      echo "Or use docker-compose with the existing docker-compose.yml file"
+  only:
+    - dev
+  environment:
+    name: development
+    url: http://localhost:$DEV_PORT
+
+# Deploy to production (Big NUC) - main branch only
+deploy-production:
   stage: deploy
   image: alpine:latest
   before_script:
@@ -80,10 +147,12 @@ deploy:
     - echo "$SSH_PRIVATE_KEY" | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+    - ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
   script:
     - |
-      ssh $SSH_USER@$DEPLOY_HOST << EOF
+      ssh $SSH_USER@$PROD_HOST << EOF
+        echo "Deploying to production on Big NUC..."
+        
         # Pull the latest image
         docker pull $IMAGE_LATEST
         
@@ -96,13 +165,13 @@ deploy:
           --name $APP_NAME \
           --restart unless-stopped \
           --network $NETWORK_NAME \
-          -p $DEPLOY_PORT:$DEPLOY_PORT \
+          -p $PROD_PORT:$PROD_PORT \
           -e NODE_ENV=production \
-          -e PORT=$DEPLOY_PORT \
-          -e MONGODB_URI=$MONGODB_URI \
-          -e NEXTAUTH_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+          -e PORT=$PROD_PORT \
+          -e MONGODB_URI=$PROD_MONGODB_URI \
+          -e NEXTAUTH_URL=http://$PROD_HOST:$PROD_PORT \
           -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
-          -e NEXT_PUBLIC_APP_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+          -e NEXT_PUBLIC_APP_URL=http://$PROD_HOST:$PROD_PORT \
           -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
           -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
           -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
@@ -111,16 +180,18 @@ deploy:
         # Health check
         sleep 10
         docker ps | grep $APP_NAME
-        curl -f http://localhost:$DEPLOY_PORT/api/health || exit 1
+        curl -f http://localhost:$PROD_PORT/api/health || exit 1
+        
+        echo "Production deployment complete!"
       EOF
   only:
     - main
   environment:
     name: production
-    url: http://$DEPLOY_HOST:$DEPLOY_PORT
+    url: http://$PROD_HOST:$PROD_PORT
 
-# Optional: Manual rollback job
-rollback:
+# Optional: Manual rollback job for production
+rollback-production:
   stage: deploy
   image: alpine:latest
   before_script:
@@ -129,14 +200,16 @@ rollback:
     - echo "$SSH_PRIVATE_KEY" | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+    - ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
   script:
     - |
-      ssh $SSH_USER@$DEPLOY_HOST << EOF
+      ssh $SSH_USER@$PROD_HOST << EOF
         # Get the previous image
-        PREVIOUS_IMAGE=$(docker images $CI_REGISTRY_IMAGE --format "{{.Tag}}" | grep -v latest | head -n 2 | tail -n 1)
+        PREVIOUS_IMAGE=$(docker images $CI_REGISTRY_IMAGE --format "{{.Tag}}" | grep -v -E 'latest|dev' | head -n 2 | tail -n 1)
         
         if [ -n "$PREVIOUS_IMAGE" ]; then
+          echo "Rolling back to image: $CI_REGISTRY_IMAGE:$PREVIOUS_IMAGE"
+          
           # Stop current container
           docker stop $APP_NAME || true
           docker rm $APP_NAME || true
@@ -146,13 +219,13 @@ rollback:
             --name $APP_NAME \
             --restart unless-stopped \
             --network $NETWORK_NAME \
-            -p $DEPLOY_PORT:$DEPLOY_PORT \
+            -p $PROD_PORT:$PROD_PORT \
             -e NODE_ENV=production \
-            -e PORT=$DEPLOY_PORT \
-            -e MONGODB_URI=$MONGODB_URI \
-            -e NEXTAUTH_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+            -e PORT=$PROD_PORT \
+            -e MONGODB_URI=$PROD_MONGODB_URI \
+            -e NEXTAUTH_URL=http://$PROD_HOST:$PROD_PORT \
             -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
-            -e NEXT_PUBLIC_APP_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+            -e NEXT_PUBLIC_APP_URL=http://$PROD_HOST:$PROD_PORT \
             -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
             -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
             -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
@@ -169,4 +242,4 @@ rollback:
     - main
   environment:
     name: production
-    url: http://$DEPLOY_HOST:$DEPLOY_PORT
+    url: http://$PROD_HOST:$PROD_PORT
