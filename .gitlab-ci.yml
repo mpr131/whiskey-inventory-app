@@ -82,14 +82,11 @@ deploy-dev:
 # Deploy to production (Big NUC) - main branch only
 deploy-production:
   stage: deploy
-  image: docker:24-dind
+  image: docker:24
   only:
     - main
   variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  before_script:
-    - docker info
+    DOCKER_HOST: unix:///var/run/docker.sock
   script:
     - echo "Deploying using Docker Compose on Big NUC..."
     - cd $CI_PROJECT_DIR
