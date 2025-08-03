@@ -82,21 +82,22 @@ deploy-dev:
 # Deploy to production (Big NUC) - main branch only
 deploy-production:
   stage: deploy
-  tags:
-    - shell
+  image: docker:24-dind
   only:
     - main
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - docker info
   script:
     - echo "Deploying using Docker Compose on Big NUC..."
     - cd $CI_PROJECT_DIR
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
-    - docker compose -f docker-compose.yml -f docker-compose.prod.yml down --rmi all || true
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
     - echo "Deployment complete! Checking container status..."
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
-    - echo "Recent logs:"
-    - docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail 30
   environment:
     name: production
     url: http://$DEPLOY_HOST:$DEPLOY_PORT
