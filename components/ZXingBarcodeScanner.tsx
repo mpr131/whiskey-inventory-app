@@ -30,6 +30,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
   const fileInputRef = useRef<HTMLInputElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const scanningRef = useRef(false);
+  const scanAttemptsRef = useRef(0);
   
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('checking');
   const [isScanning, setIsScanning] = useState(false);
@@ -40,6 +41,17 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const [currentCamera, setCurrentCamera] = useState<string>('');
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  
+  // Debug state for UI display
+  const [debugInfo, setDebugInfo] = useState({
+    scanAttempts: 0,
+    lastResult: 'None',
+    scannerStatus: 'Initializing',
+    lastError: '',
+    fps: 0,
+    lastScanTime: ''
+  });
+  const fpsCounterRef = useRef({ count: 0, lastTime: Date.now() });
 
   // Initialize ZXing reader with all barcode formats
   useEffect(() => {
@@ -47,10 +59,13 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
     console.log('ZXing library loaded:', !!BrowserMultiFormatReader);
     console.log('BarcodeFormat available:', !!BarcodeFormat);
     
+    setDebugInfo(prev => ({ ...prev, scannerStatus: 'Loading ZXing library...' }));
+    
     // Check for native BarcodeDetector API
     if ('BarcodeDetector' in window) {
       (window as any).BarcodeDetector.getSupportedFormats().then((formats: string[]) => {
         console.log('Native BarcodeDetector available! Supported formats:', formats);
+        setDebugInfo(prev => ({ ...prev, scannerStatus: 'Native scanner available' }));
       }).catch((err: any) => {
         console.log('Native BarcodeDetector error:', err);
       });
@@ -85,8 +100,14 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
       readerRef.current = new BrowserMultiFormatReader(hints);
       console.log('✅ Scanner instance created:', readerRef.current);
       console.log('Scanner methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(readerRef.current)));
+      setDebugInfo(prev => ({ ...prev, scannerStatus: 'Scanner initialized' }));
     } catch (err) {
       console.error('❌ Failed to create scanner:', err);
+      setDebugInfo(prev => ({ 
+        ...prev, 
+        scannerStatus: 'Failed to initialize', 
+        lastError: (err as Error).message 
+      }));
     }
     
     return () => {
@@ -134,6 +155,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
         // Permission granted - clean up stream
         stream.getTracks().forEach(track => track.stop());
         setPermissionStatus('granted');
+        setDebugInfo(prev => ({ ...prev, scannerStatus: 'Camera permission granted' }));
         
         // Set default camera (prefer back camera)
         const backCamera = videoDevices.find(device => 
@@ -147,9 +169,19 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
         
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
           setPermissionStatus('denied');
+          setDebugInfo(prev => ({ 
+            ...prev, 
+            scannerStatus: 'Permission denied',
+            lastError: 'Camera access denied' 
+          }));
         } else {
           setPermissionStatus('denied');
           toast.error('Camera access failed');
+          setDebugInfo(prev => ({ 
+            ...prev, 
+            scannerStatus: 'Camera failed',
+            lastError: err.message 
+          }));
         }
       }
     } catch (err) {
@@ -179,6 +211,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
     scanningRef.current = false;
     setIsScanning(false);
     console.log('Scanner stopped');
+    setDebugInfo(prev => ({ ...prev, scannerStatus: 'Stopped', fps: 0 }));
   }, []);
 
   // Start scanning
@@ -204,6 +237,13 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
       console.log('- videoHeight:', videoRef.current.videoHeight);
       console.log('- srcObject:', !!videoRef.current.srcObject);
       
+      setDebugInfo(prev => ({ 
+        ...prev, 
+        scannerStatus: 'Starting camera...',
+        scanAttempts: 0
+      }));
+      scanAttemptsRef.current = 0;
+      
       // Configure video constraints for better scanning
       const videoConstraints = {
         facingMode: { ideal: 'environment' },
@@ -224,6 +264,17 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
         videoRef.current,
         (result, error) => {
           callbackCount++;
+          scanAttemptsRef.current++;
+          
+          // Update FPS counter
+          fpsCounterRef.current.count++;
+          const now = Date.now();
+          if (now - fpsCounterRef.current.lastTime > 1000) {
+            const fps = Math.round(fpsCounterRef.current.count * 1000 / (now - fpsCounterRef.current.lastTime));
+            setDebugInfo(prev => ({ ...prev, fps, scanAttempts: scanAttemptsRef.current }));
+            fpsCounterRef.current = { count: 0, lastTime: now };
+          }
+          
           if (callbackCount % 30 === 1) { // Log every 30th callback to reduce noise
             console.log(`=== DECODE CALLBACK #${callbackCount} ===`);
             console.log('Result:', result);
@@ -246,6 +297,14 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
               
               // Prevent duplicate scans and ensure valid code
               if (code && code.trim().length > 0) {
+                // Update debug info with scan result
+                setDebugInfo(prev => ({ 
+                  ...prev, 
+                  lastResult: `${format}: ${code}`,
+                  lastScanTime: new Date().toLocaleTimeString(),
+                  scannerStatus: 'Processing scan...'
+                }));
+                
                 // Check if this is a new scan
                 if (code !== lastScannedCode) {
                   console.log('✅ Valid new scan detected - processing...');
@@ -260,6 +319,9 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
                   console.log('Showing toast notification...');
                   toast.success(`Scanned ${format}: ${code}`);
                   
+                  // Update status
+                  setDebugInfo(prev => ({ ...prev, scannerStatus: 'Scan complete!' }));
+                  
                   // Stop scanning immediately
                   console.log('Stopping scanner...');
                   stopScanning();
@@ -272,6 +334,11 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
                   }, 100);
                 } else {
                   console.log('Duplicate scan ignored:', code);
+                  setDebugInfo(prev => ({ 
+                    ...prev, 
+                    scannerStatus: 'Duplicate ignored',
+                    lastResult: `${format}: ${code} (duplicate)`
+                  }));
                 }
               } else {
                 console.log('Invalid code - empty or no length');
@@ -290,6 +357,11 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
               }
             } else {
               console.warn('Scan error:', error.message);
+              setDebugInfo(prev => ({ 
+                ...prev, 
+                lastError: error.message,
+                scannerStatus: 'Scan error'
+              }));
             }
           }
         }
@@ -321,6 +393,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
       }
       
       console.log('✅ Scanner started successfully');
+      setDebugInfo(prev => ({ ...prev, scannerStatus: 'Scanning active' }));
       
     } catch (err) {
       console.error('❌ Failed to start scanning:', err);
@@ -328,6 +401,11 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
       toast.error('Failed to start camera');
       setIsScanning(false);
       scanningRef.current = false;
+      setDebugInfo(prev => ({ 
+        ...prev, 
+        scannerStatus: 'Failed to start',
+        lastError: (err as Error).message
+      }));
     }
   }, [currentCamera, lastScannedCode, onScan, stopScanning]);
 
@@ -468,6 +546,22 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
               autoPlay
               muted
             />
+            
+            {/* Debug overlay */}
+            <div className="absolute top-20 left-4 right-4 bg-black/80 backdrop-blur-sm rounded-lg p-4 text-white text-sm font-mono">
+              <div className="grid grid-cols-2 gap-2">
+                <div>Attempts: <span className="text-copper">{debugInfo.scanAttempts}</span></div>
+                <div>FPS: <span className="text-copper">{debugInfo.fps}</span></div>
+                <div className="col-span-2">Status: <span className="text-green-400">{debugInfo.scannerStatus}</span></div>
+                <div className="col-span-2">Last: <span className="text-blue-400">{debugInfo.lastResult}</span></div>
+                {debugInfo.lastScanTime && (
+                  <div className="col-span-2">Time: <span className="text-gray-400">{debugInfo.lastScanTime}</span></div>
+                )}
+                {debugInfo.lastError && (
+                  <div className="col-span-2 text-red-400">Error: {debugInfo.lastError}</div>
+                )}
+              </div>
+            </div>
             
             {/* Scan overlay */}
             <div className="absolute inset-0 pointer-events-none">
