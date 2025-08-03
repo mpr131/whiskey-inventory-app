@@ -55,7 +55,7 @@ test:
 # Deploy to development (Mac Mini) - dev branch only
 deploy-dev:
   stage: deploy
-  image: alpine:latest
+  image: ubuntu:22.04
   script:
     - |
       echo "=== Development Deployment Instructions ==="
@@ -82,9 +82,9 @@ deploy-dev:
 # Deploy to production (Big NUC) - main branch only
 deploy-production:
   stage: deploy
-  image: alpine:latest
+  image: ubuntu:22.04
   before_script:
-    - apk add --no-cache openssh-client git
+    - apt-get update && apt-get install -y openssh-client git
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
@@ -206,9 +206,9 @@ deploy-production:
 # Manual rollback job for production
 rollback-production:
   stage: deploy
-  image: alpine:latest
+  image: ubuntu:22.04
   before_script:
-    - apk add --no-cache openssh-client
+    - apt-get update && apt-get install -y openssh-client
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
