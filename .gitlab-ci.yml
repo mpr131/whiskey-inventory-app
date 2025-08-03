@@ -4,13 +4,12 @@
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
-  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
-  IMAGE_LATEST: $CI_REGISTRY_IMAGE:latest
-  IMAGE_DEV: $CI_REGISTRY_IMAGE:dev
   # Production settings (Big NUC)
   PROD_HOST: "192.168.1.71"
   PROD_PORT: "3005"
   PROD_MONGODB_URI: "mongodb://mongodb-web:27017/whiskey"
+  PROD_USER: "ams237"
+  PROD_APP_DIR: "/home/ams237/webapps/whiskey-inventory"
   # Dev settings (Mac Mini)
   DEV_PORT: "3000"
   DEV_MONGODB_URI: "mongodb://localhost:27017/whiskey-inventory"
@@ -20,7 +19,6 @@ variables:
 
 stages:
   - test
-  - build
   - deploy
 
 # Cache node_modules between jobs
@@ -53,84 +51,27 @@ test:
   except:
     - tags
 
-# Build Docker image for dev branch
-build-dev:
-  stage: build
-  image: docker:24.0.7-dind
-  services:
-    - docker:24.0.7-dind
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-  script:
-    - |
-      echo "Building development image..."
-      docker build \
-        --build-arg PORT=$DEV_PORT \
-        --build-arg MONGODB_URI=$DEV_MONGODB_URI \
-        --build-arg NEXTAUTH_URL=http://localhost:$DEV_PORT \
-        --build-arg NEXT_PUBLIC_APP_URL=http://localhost:$DEV_PORT \
-        --target runner \
-        -t $IMAGE_TAG \
-        -t $IMAGE_DEV \
-        .
-    - docker push $IMAGE_TAG
-    - docker push $IMAGE_DEV
-  only:
-    - dev
-
-# Build Docker image for main branch
-build-production:
-  stage: build
-  image: docker:24.0.7-dind
-  services:
-    - docker:24.0.7-dind
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-  script:
-    - |
-      echo "Building production image..."
-      docker build \
-        --build-arg PORT=$PROD_PORT \
-        --build-arg MONGODB_URI=$PROD_MONGODB_URI \
-        --build-arg NEXTAUTH_URL=http://$PROD_HOST:$PROD_PORT \
-        --build-arg NEXT_PUBLIC_APP_URL=http://$PROD_HOST:$PROD_PORT \
-        --target runner \
-        -t $IMAGE_TAG \
-        -t $IMAGE_LATEST \
-        .
-    - docker push $IMAGE_TAG
-    - docker push $IMAGE_LATEST
-  only:
-    - main
-
 # Deploy to development (Mac Mini) - dev branch only
-# This job just ensures the image is available - actual running is manual
 deploy-dev:
   stage: deploy
-  image: docker:24.0.7-dind
-  services:
-    - docker:24.0.7-dind
+  image: alpine:latest
   script:
     - |
-      echo "Development image is available at: $IMAGE_DEV"
+      echo "=== Development Deployment Instructions ==="
       echo ""
-      echo "To run locally on Mac Mini (.119), use:"
+      echo "For local development on Mac Mini (.119):"
       echo ""
-      echo "docker pull $IMAGE_DEV"
+      echo "1. Pull the latest code:"
+      echo "   git pull origin dev"
       echo ""
-      echo "docker run -d \\"
-      echo "  --name whiskey-inventory-dev \\"
-      echo "  --restart unless-stopped \\"
-      echo "  -p $DEV_PORT:$DEV_PORT \\"
-      echo "  -e NODE_ENV=development \\"
-      echo "  -e PORT=$DEV_PORT \\"
-      echo "  -e MONGODB_URI=$DEV_MONGODB_URI \\"
-      echo "  -e NEXTAUTH_URL=http://localhost:$DEV_PORT \\"
-      echo "  -e NEXTAUTH_SECRET=\"\$NEXTAUTH_SECRET\" \\"
-      echo "  -e NEXT_PUBLIC_APP_URL=http://localhost:$DEV_PORT \\"
-      echo "  $IMAGE_DEV"
+      echo "2. Build and run with docker-compose:"
+      echo "   docker-compose up --build -d"
       echo ""
-      echo "Or use docker-compose with the existing docker-compose.yml file"
+      echo "3. Or build manually:"
+      echo "   docker build -t whiskey-inventory:dev ."
+      echo "   docker run -d --name whiskey-inventory-dev -p $DEV_PORT:$DEV_PORT whiskey-inventory:dev"
+      echo ""
+      echo "The app will be available at: http://localhost:$DEV_PORT"
   only:
     - dev
   environment:
@@ -142,7 +83,7 @@ deploy-production:
   stage: deploy
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client
+    - apk add --no-cache openssh-client git
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | ssh-add -
     - mkdir -p ~/.ssh
@@ -150,39 +91,107 @@ deploy-production:
     - ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
   script:
     - |
-      ssh $SSH_USER@$PROD_HOST << EOF
-        echo "Deploying to production on Big NUC..."
+      echo "Deploying to production on Big NUC..."
+      
+      ssh $PROD_USER@$PROD_HOST << 'EOF'
+        set -e
         
-        # Pull the latest image
-        docker pull $IMAGE_LATEST
+        # Set variables
+        APP_DIR="/home/ams237/webapps/whiskey-inventory"
+        APP_NAME="whiskey-inventory"
+        PORT="3005"
+        NETWORK="infrastructure_infrastructure"
+        IMAGE_NAME="whiskey-inventory:production"
         
-        # Stop and remove existing container
+        echo "=== Setting up application directory ==="
+        
+        # Create app directory if it doesn't exist
+        mkdir -p $APP_DIR
+        cd $APP_DIR
+        
+        # Clone or update repository
+        if [ ! -d ".git" ]; then
+          echo "Cloning repository..."
+          git clone https://gitlab.com/$CI_PROJECT_PATH.git .
+        else
+          echo "Updating repository..."
+          git fetch origin
+          git reset --hard origin/main
+          git clean -fd
+        fi
+        
+        echo "Current commit: $(git rev-parse --short HEAD)"
+        
+        echo "=== Building Docker image ==="
+        
+        # Create .env file for build args
+        cat > .env.build << EOL
+        PORT=$PORT
+        MONGODB_URI=mongodb://mongodb-web:27017/whiskey
+        NEXTAUTH_URL=http://192.168.1.71:$PORT
+        NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT
+        EOL
+        
+        # Build the Docker image
+        docker build \
+          --build-arg PORT=$PORT \
+          --build-arg MONGODB_URI=mongodb://mongodb-web:27017/whiskey \
+          --build-arg NEXTAUTH_URL=http://192.168.1.71:$PORT \
+          --build-arg NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT \
+          --target runner \
+          -t $IMAGE_NAME \
+          .
+        
+        echo "=== Stopping old container ==="
         docker stop $APP_NAME || true
         docker rm $APP_NAME || true
         
-        # Run the new container
+        echo "=== Starting new container ==="
         docker run -d \
           --name $APP_NAME \
           --restart unless-stopped \
-          --network $NETWORK_NAME \
-          -p $PROD_PORT:$PROD_PORT \
+          --network $NETWORK \
+          -p $PORT:$PORT \
           -e NODE_ENV=production \
-          -e PORT=$PROD_PORT \
-          -e MONGODB_URI=$PROD_MONGODB_URI \
-          -e NEXTAUTH_URL=http://$PROD_HOST:$PROD_PORT \
+          -e PORT=$PORT \
+          -e MONGODB_URI=mongodb://mongodb-web:27017/whiskey \
+          -e NEXTAUTH_URL=http://192.168.1.71:$PORT \
           -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
-          -e NEXT_PUBLIC_APP_URL=http://$PROD_HOST:$PROD_PORT \
+          -e NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT \
           -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
           -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
           -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
-          $IMAGE_LATEST
+          -v /home/ams237/logs/webapps/whiskey-inventory:/app/logs \
+          $IMAGE_NAME
+        
+        echo "=== Verifying deployment ==="
+        sleep 10
+        
+        # Check if container is running
+        if docker ps | grep -q $APP_NAME; then
+          echo "✓ Container is running"
+        else
+          echo "✗ Container failed to start"
+          docker logs $APP_NAME
+          exit 1
+        fi
         
         # Health check
-        sleep 10
-        docker ps | grep $APP_NAME
-        curl -f http://localhost:$PROD_PORT/api/health || exit 1
+        if curl -f http://localhost:$PORT/api/health > /dev/null 2>&1; then
+          echo "✓ Health check passed"
+        else
+          echo "✗ Health check failed"
+          docker logs $APP_NAME
+          exit 1
+        fi
         
-        echo "Production deployment complete!"
+        echo "=== Cleaning up old images ==="
+        docker image prune -f
+        
+        echo ""
+        echo "✓ Deployment complete!"
+        echo "Application is running at: http://192.168.1.71:$PORT"
+        echo "Logs are available at: /home/ams237/logs/webapps/whiskey-inventory/"
       EOF
   only:
     - main
@@ -190,7 +199,7 @@ deploy-production:
     name: production
     url: http://$PROD_HOST:$PROD_PORT
 
-# Optional: Manual rollback job for production
+# Manual rollback job for production
 rollback-production:
   stage: deploy
   image: alpine:latest
@@ -203,37 +212,65 @@ rollback-production:
     - ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
   script:
     - |
-      ssh $SSH_USER@$PROD_HOST << EOF
-        # Get the previous image
-        PREVIOUS_IMAGE=$(docker images $CI_REGISTRY_IMAGE --format "{{.Tag}}" | grep -v -E 'latest|dev' | head -n 2 | tail -n 1)
+      ssh $PROD_USER@$PROD_HOST << 'EOF'
+        set -e
         
-        if [ -n "$PREVIOUS_IMAGE" ]; then
-          echo "Rolling back to image: $CI_REGISTRY_IMAGE:$PREVIOUS_IMAGE"
-          
-          # Stop current container
-          docker stop $APP_NAME || true
-          docker rm $APP_NAME || true
-          
-          # Run previous version
-          docker run -d \
-            --name $APP_NAME \
-            --restart unless-stopped \
-            --network $NETWORK_NAME \
-            -p $PROD_PORT:$PROD_PORT \
-            -e NODE_ENV=production \
-            -e PORT=$PROD_PORT \
-            -e MONGODB_URI=$PROD_MONGODB_URI \
-            -e NEXTAUTH_URL=http://$PROD_HOST:$PROD_PORT \
-            -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
-            -e NEXT_PUBLIC_APP_URL=http://$PROD_HOST:$PROD_PORT \
-            -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
-            -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
-            -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
-            $CI_REGISTRY_IMAGE:$PREVIOUS_IMAGE
-          
-          echo "Rolled back to $CI_REGISTRY_IMAGE:$PREVIOUS_IMAGE"
+        APP_DIR="/home/ams237/webapps/whiskey-inventory"
+        APP_NAME="whiskey-inventory"
+        PORT="3005"
+        NETWORK="infrastructure_infrastructure"
+        
+        echo "=== Rolling back to previous commit ==="
+        
+        cd $APP_DIR
+        
+        # Get current and previous commit
+        CURRENT_COMMIT=$(git rev-parse --short HEAD)
+        git reset --hard HEAD~1
+        PREVIOUS_COMMIT=$(git rev-parse --short HEAD)
+        
+        echo "Rolling back from $CURRENT_COMMIT to $PREVIOUS_COMMIT"
+        
+        # Rebuild with previous commit
+        docker build \
+          --build-arg PORT=$PORT \
+          --build-arg MONGODB_URI=mongodb://mongodb-web:27017/whiskey \
+          --build-arg NEXTAUTH_URL=http://192.168.1.71:$PORT \
+          --build-arg NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT \
+          --target runner \
+          -t whiskey-inventory:rollback \
+          .
+        
+        # Stop current container
+        docker stop $APP_NAME || true
+        docker rm $APP_NAME || true
+        
+        # Start rollback container
+        docker run -d \
+          --name $APP_NAME \
+          --restart unless-stopped \
+          --network $NETWORK \
+          -p $PORT:$PORT \
+          -e NODE_ENV=production \
+          -e PORT=$PORT \
+          -e MONGODB_URI=mongodb://mongodb-web:27017/whiskey \
+          -e NEXTAUTH_URL=http://192.168.1.71:$PORT \
+          -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
+          -e NEXT_PUBLIC_APP_URL=http://192.168.1.71:$PORT \
+          -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
+          -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
+          -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
+          -v /home/ams237/logs/webapps/whiskey-inventory:/app/logs \
+          whiskey-inventory:rollback
+        
+        sleep 10
+        
+        # Verify rollback
+        if docker ps | grep -q $APP_NAME && curl -f http://localhost:$PORT/api/health > /dev/null 2>&1; then
+          echo "✓ Rollback successful to commit $PREVIOUS_COMMIT"
         else
-          echo "No previous image found for rollback"
+          echo "✗ Rollback failed"
+          docker logs $APP_NAME
           exit 1
         fi
       EOF
