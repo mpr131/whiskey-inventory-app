@@ -75,24 +75,34 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
     
     const hints = new Map();
     // Enable specific barcode formats we need
+    // Temporarily limiting to most common formats to debug
     const formats = [
-      BarcodeFormat.QR_CODE,      // QR codes
-      BarcodeFormat.CODE_128,     // DYMO/CellarTracker barcodes
+      BarcodeFormat.CODE_128,     // DYMO/CellarTracker barcodes (PRIORITY)
       BarcodeFormat.EAN_13,       // Standard barcodes
-      BarcodeFormat.EAN_8,
       BarcodeFormat.UPC_A,        // US product barcodes
-      BarcodeFormat.UPC_E,
-      BarcodeFormat.CODE_39,      // Older formats
-      BarcodeFormat.CODABAR,
-      BarcodeFormat.ITF,
-      BarcodeFormat.CODE_93
+      BarcodeFormat.QR_CODE,      // QR codes
+      // Commenting out less common formats that might cause misreading
+      // BarcodeFormat.CODE_39,      // This might be causing the issue!
+      // BarcodeFormat.EAN_8,
+      // BarcodeFormat.UPC_E,
+      // BarcodeFormat.CODABAR,
+      // BarcodeFormat.ITF,
+      // BarcodeFormat.CODE_93
     ];
+    
+    console.log('=== BARCODE FORMAT DEBUG ===');
+    console.log('CODE_128 enum value:', BarcodeFormat.CODE_128);
+    console.log('CODE_39 enum value:', BarcodeFormat.CODE_39);
+    console.log('EAN_13 enum value:', BarcodeFormat.EAN_13);
+    console.log('Enabled formats:', formats);
     
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
     // Try harder mode for difficult scans
     hints.set(DecodeHintType.TRY_HARDER, true);
     // Character set for better decoding
     hints.set(DecodeHintType.CHARACTER_SET, 'UTF-8');
+    // Also try ISO-8859-1 for some barcodes
+    // hints.set(DecodeHintType.CHARACTER_SET, 'ISO-8859-1');
     
     console.log('Initializing ZXing with formats:', formats.map(f => BarcodeFormat[f]));
     
@@ -283,15 +293,37 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
           
           if (result) {
             try {
+              console.log('=== DETAILED SCAN RESULT ===');
               console.log('Result object:', result);
               console.log('Result methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(result)));
               
+              // Get all possible data from the result
               const code = result.getText();
-              const format = BarcodeFormat[result.getBarcodeFormat()];
+              const format = result.getBarcodeFormat();
+              const formatName = BarcodeFormat[format];
               
-              console.log('✅ SCANNED:', code, 'Format:', format);
+              console.log('Format enum value:', format);
+              console.log('Format name:', formatName);
+              console.log('getText():', code);
+              
+              // Try to get raw data
+              try {
+                const rawBytes = result.getRawBytes();
+                console.log('Raw bytes:', rawBytes);
+                console.log('Raw bytes as array:', Array.from(rawBytes || []));
+                console.log('Raw bytes as hex:', Array.from(rawBytes || []).map(b => b.toString(16).padStart(2, '0')).join(' '));
+                console.log('Raw bytes as string:', new TextDecoder().decode(new Uint8Array(rawBytes || [])));
+              } catch (e) {
+                console.log('Could not get raw bytes:', e);
+              }
+              
+              // Try other possible properties
+              console.log('All result properties:', Object.keys(result));
+              console.log('Result toString():', result.toString());
+              
+              console.log('✅ SCANNED:', code, 'Format:', formatName);
               console.log('Code length:', code?.length);
-              console.log('Code trimmed length:', code?.trim().length);
+              console.log('Code as char codes:', Array.from(code || '').map(c => c.charCodeAt(0)));
               console.log('Last scanned code:', lastScannedCode);
               console.log('Codes match?', code === lastScannedCode);
               
@@ -300,7 +332,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
                 // Update debug info with scan result
                 setDebugInfo(prev => ({ 
                   ...prev, 
-                  lastResult: `${format}: ${code}`,
+                  lastResult: `${formatName}: ${code}`,
                   lastScanTime: new Date().toLocaleTimeString(),
                   scannerStatus: 'Processing scan...'
                 }));
@@ -337,7 +369,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
                   setDebugInfo(prev => ({ 
                     ...prev, 
                     scannerStatus: 'Duplicate ignored',
-                    lastResult: `${format}: ${code} (duplicate)`
+                    lastResult: `${formatName}: ${code} (duplicate)`
                   }));
                 }
               } else {
