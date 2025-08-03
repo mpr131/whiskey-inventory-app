@@ -1,60 +1,102 @@
 version: '3.8'
 
 services:
-  whiskey-vault-app:
-    container_name: whiskey-vault-prod
-    image: whiskey-vault:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runner
-      args:
-        # Build-time environment variables
-        - PORT=${PORT:-3000}
-        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-        - MONGODB_URI=${MONGODB_URI}
-        - NEXTAUTH_URL=${NEXTAUTH_URL}
-        - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+  # MongoDB service for web applications on Big NUC
+  mongodb-web:
+    image: mongo:7.0
+    container_name: mongodb-web
+    restart: unless-stopped
     ports:
-      # Map to custom port if needed
-      - "${PORT:-3000}:${PORT:-3000}"
+      - "27017:27017"
     volumes:
-      # Volume for uploaded images
-      - whiskey-uploads:/app/uploads
+      # Persistent storage for MongoDB data
+      - /data/mongodb-web:/data/db
+      # MongoDB configuration
+      - ./scripts/mongod.conf:/etc/mongod.conf:ro
+      # Initialization scripts
+      - ./scripts/init-mongodb.js:/docker-entrypoint-initdb.d/init-mongodb.js:ro
     environment:
-      - NODE_ENV=production
-      - PORT=${PORT:-3000}
-      # MongoDB connection for production
-      - MONGODB_URI=${MONGODB_URI}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-      # Cloudinary environment variables
-      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-    env_file:
-      - .env.production
-    restart: always
+      # Remove authentication for local network use
+      # Add MONGO_INITDB_ROOT_USERNAME and MONGO_INITDB_ROOT_PASSWORD if needed
+      MONGO_INITDB_DATABASE: whiskey
+    command: mongod --bind_ip_all
     networks:
-      - whiskey-network
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
-        reservations:
-          cpus: '0.5'
-          memory: 256M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      - infrastructure_infrastructure
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/whiskey --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Whiskey Inventory Application
+  whiskey-inventory:
+    image: ${CI_REGISTRY_IMAGE:-whiskey-inventory}:${IMAGE_TAG:-latest}
+    container_name: whiskey-inventory
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      # Application settings
+      NODE_ENV: production
+      PORT: 3005
+      
+      # Database connection - using service name for internal communication
+      MONGODB_URI: mongodb://mongodb-web:27017/whiskey
+      
+      # NextAuth configuration
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://192.168.1.71:3005}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      
+      # Public URL for the application
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://192.168.1.71:3005}
+      
+      # Cloudinary configuration (optional)
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    
+    volumes:
+      # Volume for uploaded images (if not using Cloudinary)
+      - whiskey-uploads:/app/uploads
+    
+    depends_on:
+      mongodb-web:
+        condition: service_healthy
+    
+    networks:
+      - infrastructure_infrastructure
+    
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3005/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: MongoDB Express for database management UI
+  mongo-express:
+    image: mongo-express:1.0.2-20
+    container_name: mongo-express-web
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongodb-web:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-changeme}
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+    depends_on:
+      - mongodb-web
+    networks:
+      - infrastructure_infrastructure
+    profiles:
+      - tools
 
 networks:
-  whiskey-network:
-    driver: bridge
+  # Use external network that should already exist on Big NUC
+  infrastructure_infrastructure:
+    external: true
 
 volumes:
   whiskey-uploads:

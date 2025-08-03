@@ -1,0 +1,170 @@
+# GitLab CI/CD Pipeline for Whiskey Inventory App
+# Deploy to Big NUC (192.168.1.71) from main branch only
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  IMAGE_LATEST: $CI_REGISTRY_IMAGE:latest
+  DEPLOY_HOST: "192.168.1.71"
+  DEPLOY_PORT: "3005"
+  MONGODB_URI: "mongodb://mongodb-web:27017/whiskey"
+  APP_NAME: "whiskey-inventory"
+  NETWORK_NAME: "infrastructure_infrastructure"
+
+stages:
+  - test
+  - build
+  - deploy
+
+# Cache node_modules between jobs
+.node_cache:
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+    policy: pull-push
+
+# Test stage - runs on all branches
+test:
+  stage: test
+  image: node:18-alpine
+  extends: .node_cache
+  before_script:
+    - npm ci --prefer-offline
+  script:
+    - npm run lint
+    - npm run build
+  artifacts:
+    paths:
+      - .next/
+    expire_in: 1 hour
+  except:
+    - tags
+
+# Build Docker image - only on main branch
+build:
+  stage: build
+  image: docker:24.0.7-dind
+  services:
+    - docker:24.0.7-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - |
+      docker build \
+        --build-arg PORT=$DEPLOY_PORT \
+        --build-arg MONGODB_URI=$MONGODB_URI \
+        --build-arg NEXTAUTH_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+        --build-arg NEXT_PUBLIC_APP_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+        --target runner \
+        -t $IMAGE_TAG \
+        -t $IMAGE_LATEST \
+        .
+    - docker push $IMAGE_TAG
+    - docker push $IMAGE_LATEST
+  only:
+    - main
+
+# Deploy to production - only on main branch
+deploy:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $SSH_USER@$DEPLOY_HOST << EOF
+        # Pull the latest image
+        docker pull $IMAGE_LATEST
+        
+        # Stop and remove existing container
+        docker stop $APP_NAME || true
+        docker rm $APP_NAME || true
+        
+        # Run the new container
+        docker run -d \
+          --name $APP_NAME \
+          --restart unless-stopped \
+          --network $NETWORK_NAME \
+          -p $DEPLOY_PORT:$DEPLOY_PORT \
+          -e NODE_ENV=production \
+          -e PORT=$DEPLOY_PORT \
+          -e MONGODB_URI=$MONGODB_URI \
+          -e NEXTAUTH_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+          -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
+          -e NEXT_PUBLIC_APP_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+          -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
+          -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
+          -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
+          $IMAGE_LATEST
+        
+        # Health check
+        sleep 10
+        docker ps | grep $APP_NAME
+        curl -f http://localhost:$DEPLOY_PORT/api/health || exit 1
+      EOF
+  only:
+    - main
+  environment:
+    name: production
+    url: http://$DEPLOY_HOST:$DEPLOY_PORT
+
+# Optional: Manual rollback job
+rollback:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $SSH_USER@$DEPLOY_HOST << EOF
+        # Get the previous image
+        PREVIOUS_IMAGE=$(docker images $CI_REGISTRY_IMAGE --format "{{.Tag}}" | grep -v latest | head -n 2 | tail -n 1)
+        
+        if [ -n "$PREVIOUS_IMAGE" ]; then
+          # Stop current container
+          docker stop $APP_NAME || true
+          docker rm $APP_NAME || true
+          
+          # Run previous version
+          docker run -d \
+            --name $APP_NAME \
+            --restart unless-stopped \
+            --network $NETWORK_NAME \
+            -p $DEPLOY_PORT:$DEPLOY_PORT \
+            -e NODE_ENV=production \
+            -e PORT=$DEPLOY_PORT \
+            -e MONGODB_URI=$MONGODB_URI \
+            -e NEXTAUTH_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+            -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
+            -e NEXT_PUBLIC_APP_URL=http://$DEPLOY_HOST:$DEPLOY_PORT \
+            -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
+            -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
+            -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
+            $CI_REGISTRY_IMAGE:$PREVIOUS_IMAGE
+          
+          echo "Rolled back to $CI_REGISTRY_IMAGE:$PREVIOUS_IMAGE"
+        else
+          echo "No previous image found for rollback"
+          exit 1
+        fi
+      EOF
+  when: manual
+  only:
+    - main
+  environment:
+    name: production
+    url: http://$DEPLOY_HOST:$DEPLOY_PORT

@@ -2,7 +2,7 @@
 # Optimized for both development and production builds
 
 # Default port argument
-ARG PORT=3000
+ARG PORT=3005
 
 # Stage 1: Dependencies
 FROM node:18-alpine AS deps
@@ -39,7 +39,7 @@ FROM node:18-alpine AS runner
 WORKDIR /app
 
 # Accept port as build argument
-ARG PORT=3000
+ARG PORT=3005
 
 # Set NODE_ENV to production
 ENV NODE_ENV production
@@ -78,15 +78,15 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD /app/healthcheck.sh
 
-# Start the Next.js application
-CMD ["node", "server.js"]
+# Start the Next.js application using the start script from package.json
+CMD ["node", "scripts/start.js"]
 
 # Development stage (optional, use with docker-compose)
 FROM node:18-alpine AS dev
 WORKDIR /app
 
 # Accept port as build argument
-ARG PORT=3000
+ARG PORT=3005
 
 # Install dependencies
 COPY package.json package-lock.json* ./
