@@ -7,7 +7,7 @@ variables:
   # Production deployment settings
   DEPLOY_HOST: "192.168.1.71"
   DEPLOY_PORT: "3005"
-  DEPLOY_USER: "$SSH_USER"  # Uses SSH_USER from GitLab CI variables
+  DEPLOY_USER: "ams237"
   DEPLOY_APP_DIR: "/home/ams237/webapps/whiskey-inventory"
   DEPLOY_LOGS_DIR: "/home/ams237/logs/webapps/whiskey-inventory"
   DEPLOY_MONGODB_URI: "mongodb://mongodb-web:27017/whiskey"
