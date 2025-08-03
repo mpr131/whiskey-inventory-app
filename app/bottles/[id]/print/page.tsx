@@ -196,6 +196,7 @@ export default function PrintLabelPage() {
               <div className="flex flex-col items-end space-y-2">
                 {/* Barcode */}
                 <div className="border border-gray-300 p-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Dynamic QR code from external API */}
                   <img 
                     src={generateQRCode(`${window.location.origin}/bottles/${bottle._id}`)}
                     alt="Barcode"
@@ -252,6 +253,7 @@ export default function PrintLabelPage() {
               </div>
               
               <div className="flex items-center space-x-2">
+                {/* eslint-disable-next-line @next/next/no-img-element -- Dynamic QR code from external API */}
                 <img 
                   src={generateQRCode(`${window.location.origin}/bottles/${bottle._id}`)}
                   alt="Barcode"

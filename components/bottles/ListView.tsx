@@ -55,10 +55,10 @@ export default function ListView({
                 <tr key={bottle._id} className="hover:bg-gray-800/30 transition-colors">
                   <td className="px-4 py-3">
                     <Link href={`/bottles/${bottle._id}`} className="flex items-center gap-3">
-                      {bottle.userBottles.some(b => b.photos && b.photos.length > 0) && (
+                      {bottle.userBottles.some((b: any) => b.photos && b.photos.length > 0) && (
                         <div className="relative w-12 h-12 flex-shrink-0">
                           <Image
-                            src={bottle.userBottles.find(b => b.photos && b.photos.length > 0)?.photos[0] || ''}
+                            src={bottle.userBottles.find((b: any) => b.photos && b.photos.length > 0)?.photos[0] || ''}
                             alt={masterData.name}
                             fill
                             className="object-cover rounded"
@@ -83,9 +83,9 @@ export default function ListView({
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       {bottle.userBottles
-                        .filter(b => b.status === 'opened' && b.fillLevel !== undefined)
+                        .filter((b: any) => b.status === 'opened' && b.fillLevel !== undefined)
                         .slice(0, 3)
-                        .map((b, index) => (
+                        .map((b: any, index: number) => (
                           <BottleFillIndicator 
                             key={index}
                             fillLevel={b.fillLevel || 100} 

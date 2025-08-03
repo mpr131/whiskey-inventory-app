@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import MasterBottle from '@/models/MasterBottle';
-import UserBottle from '@/models/UserBottle';
+import UserBottle, { type IUserBottle } from '@/models/UserBottle';
 import { connectToExternalDB } from '@/lib/external-db';
 import { 
   mapCategory, 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         bottleType = 'Wine Barcode';
       } else if (userBottle.cellarTrackerId === barcode) {
         bottleType = 'CellarTracker ID';
-      } else if (partialIdRegex && partialIdRegex.test(userBottle._id.toString())) {
+      } else if (partialIdRegex && partialIdRegex.test((userBottle as any)._id.toString())) {
         bottleType = 'Bottle ID (partial)';
       }
       

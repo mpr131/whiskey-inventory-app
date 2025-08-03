@@ -139,6 +139,20 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
     }
   }, []);
 
+  // Stop scanning
+  const stopScanning = useCallback(() => {
+    console.log('Stopping scanner...');
+    try {
+      if (readerRef.current) {
+        readerRef.current.reset();
+      }
+    } catch (err) {
+      console.error('Error stopping scanner:', err);
+    }
+    scanningRef.current = false;
+    setIsScanning(false);
+  }, []);
+
   // Start scanning
   const startScanning = useCallback(async () => {
     if (!readerRef.current || !videoRef.current || scanningRef.current) return;
@@ -159,7 +173,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
       
       // Start continuous scanning with better error handling
       const controls = await readerRef.current.decodeFromVideoDevice(
-        currentCamera || undefined,
+        currentCamera || null,
         videoRef.current,
         (result, error) => {
           if (result) {
@@ -228,21 +242,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
       setIsScanning(false);
       scanningRef.current = false;
     }
-  }, [currentCamera, lastScannedCode, onScan]);
-
-  // Stop scanning
-  const stopScanning = useCallback(() => {
-    console.log('Stopping scanner...');
-    try {
-      if (readerRef.current) {
-        readerRef.current.reset();
-      }
-    } catch (err) {
-      console.error('Error stopping scanner:', err);
-    }
-    scanningRef.current = false;
-    setIsScanning(false);
-  }, []);
+  }, [currentCamera, lastScannedCode, onScan, stopScanning]);
 
   // Toggle torch/flashlight
   const toggleTorch = useCallback(async () => {
@@ -325,7 +325,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
     return () => {
       stopScanning();
     };
-  }, []);
+  }, [requestCameraPermission, stopScanning]);
 
   // Start scanning when permission granted
   useEffect(() => {
@@ -335,7 +335,7 @@ export default function ZXingBarcodeScanner({ onScan, onClose }: ZXingBarcodeSca
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [permissionStatus, startScanning]);
+  }, [permissionStatus, startScanning, isScanning]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black">

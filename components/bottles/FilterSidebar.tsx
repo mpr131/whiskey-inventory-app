@@ -90,7 +90,11 @@ export default function FilterSidebar({
         newFilters.attributes = [...currentAttributes, value];
       }
     } else {
-      newFilters[filterType as keyof typeof filters] = filters[filterType as keyof typeof filters] === value ? '' : value;
+      // Handle non-array filter types
+      const key = filterType as keyof typeof filters;
+      if (key !== 'attributes') {
+        (newFilters as any)[key] = filters[key] === value ? '' : value;
+      }
     }
     
     onFilterChange(newFilters);

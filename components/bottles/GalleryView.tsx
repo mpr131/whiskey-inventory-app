@@ -31,8 +31,8 @@ export default function GalleryView({
         let photoUrl = null;
         if (isUser && bottle.photos && bottle.photos.length > 0) {
           photoUrl = bottle.photos[0];
-        } else if (isGrouped && bottle.userBottles.some(b => b.photos && b.photos.length > 0)) {
-          photoUrl = bottle.userBottles.find(b => b.photos && b.photos.length > 0)?.photos[0];
+        } else if (isGrouped && bottle.userBottles.some((b: any) => b.photos && b.photos.length > 0)) {
+          photoUrl = bottle.userBottles.find((b: any) => b.photos && b.photos.length > 0)?.photos[0];
         }
         
         return (

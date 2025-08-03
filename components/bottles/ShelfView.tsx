@@ -38,14 +38,14 @@ export default function ShelfView({
             <span className="text-copper">📍</span>
             {location}
             <span className="text-sm text-gray-400 font-normal ml-2">
-              ({locationBottles.length} bottles)
+              ({(locationBottles as any[]).length} bottles)
             </span>
           </h3>
           
           {/* Shelf visualization */}
           <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg p-4 overflow-x-auto">
             <div className="flex gap-3 min-w-fit pb-2">
-              {locationBottles.map((bottle) => {
+              {(locationBottles as any[]).map((bottle: any) => {
                 const isUser = isUserBottle(bottle);
                 const isGrouped = isGroupedBottle(bottle);
                 const masterData = isUser ? bottle.masterBottleId : (isGrouped ? bottle.masterBottleId : bottle);
