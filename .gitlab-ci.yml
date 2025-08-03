@@ -82,125 +82,22 @@ deploy-dev:
 # Deploy to production (Big NUC) - main branch only
 deploy-production:
   stage: deploy
-  image: ubuntu:22.04
-  before_script:
-    - apt-get update && apt-get install -y openssh-client git
-    - mkdir -p ~/.ssh
-    - printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-    - echo "First line of key:" && head -1 ~/.ssh/id_rsa
-    - echo "Key file size:" && wc -c ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
-    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
-  script:
-    - |
-      echo "Deploying to production on Big NUC..."
-      echo "Target: $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PORT"
-      
-      ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST << EOF
-        set -e
-        
-        # Set variables from CI environment
-        APP_DIR="$DEPLOY_APP_DIR"
-        APP_NAME="$APP_NAME"
-        PORT="$DEPLOY_PORT"
-        NETWORK="$NETWORK_NAME"
-        IMAGE_NAME="whiskey-inventory:production"
-        CI_PROJECT_PATH="$CI_PROJECT_PATH"
-        DEPLOY_HOST="$DEPLOY_HOST"
-        DEPLOY_LOGS_DIR="$DEPLOY_LOGS_DIR"
-        
-        echo "=== Setting up application directory ==="
-        
-        # Create app directory if it doesn't exist
-        mkdir -p \$APP_DIR
-        cd \$APP_DIR
-        
-        # Clone or update repository
-        if [ ! -d ".git" ]; then
-          echo "Cloning repository..."
-          git clone https://gitlab.com/\$CI_PROJECT_PATH.git .
-        else
-          echo "Updating repository..."
-          git fetch origin
-          git reset --hard origin/main
-          git clean -fd
-        fi
-        
-        echo "Current commit: \$(git rev-parse --short HEAD)"
-        
-        echo "=== Building Docker image ==="
-        
-        # Create .env file for build args
-        cat > .env.build << EOL
-        PORT=\$PORT
-        MONGODB_URI=$DEPLOY_MONGODB_URI
-        NEXTAUTH_URL=http://\$DEPLOY_HOST:\$PORT
-        NEXT_PUBLIC_APP_URL=http://\$DEPLOY_HOST:\$PORT
-        EOL
-        
-        # Build the Docker image
-        docker build \
-          --build-arg PORT=\$PORT \
-          --build-arg MONGODB_URI=$DEPLOY_MONGODB_URI \
-          --build-arg NEXTAUTH_URL=http://\$DEPLOY_HOST:\$PORT \
-          --build-arg NEXT_PUBLIC_APP_URL=http://\$DEPLOY_HOST:\$PORT \
-          --target runner \
-          -t \$IMAGE_NAME \
-          .
-        
-        echo "=== Stopping old container ==="
-        docker stop \$APP_NAME || true
-        docker rm \$APP_NAME || true
-        
-        echo "=== Starting new container ==="
-        docker run -d \
-          --name \$APP_NAME \
-          --restart unless-stopped \
-          --network \$NETWORK \
-          -p \$PORT:\$PORT \
-          -e NODE_ENV=production \
-          -e PORT=\$PORT \
-          -e MONGODB_URI=$DEPLOY_MONGODB_URI \
-          -e NEXTAUTH_URL=http://\$DEPLOY_HOST:\$PORT \
-          -e NEXTAUTH_SECRET="$NEXTAUTH_SECRET" \
-          -e NEXT_PUBLIC_APP_URL=http://\$DEPLOY_HOST:\$PORT \
-          -e CLOUDINARY_CLOUD_NAME="$CLOUDINARY_CLOUD_NAME" \
-          -e CLOUDINARY_API_KEY="$CLOUDINARY_API_KEY" \
-          -e CLOUDINARY_API_SECRET="$CLOUDINARY_API_SECRET" \
-          -v \$DEPLOY_LOGS_DIR:/app/logs \
-          \$IMAGE_NAME
-        
-        echo "=== Verifying deployment ==="
-        sleep 10
-        
-        # Check if container is running
-        if docker ps | grep -q \$APP_NAME; then
-          echo "✓ Container is running"
-        else
-          echo "✗ Container failed to start"
-          docker logs \$APP_NAME
-          exit 1
-        fi
-        
-        # Health check
-        if curl -f http://localhost:\$PORT/api/health > /dev/null 2>&1; then
-          echo "✓ Health check passed"
-        else
-          echo "✗ Health check failed"
-          docker logs \$APP_NAME
-          exit 1
-        fi
-        
-        echo "=== Cleaning up old images ==="
-        docker image prune -f
-        
-        echo ""
-        echo "✓ Deployment complete!"
-        echo "Application is running at: http://\$DEPLOY_HOST:\$PORT"
-        echo "Logs are available at: \$DEPLOY_LOGS_DIR"
-      EOF
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
   only:
     - main
+  script:
+    - echo "Building and deploying on Big NUC..."
+    - docker build -t whiskey-inventory .
+    - docker stop whiskey-inventory || true
+    - docker rm whiskey-inventory || true
+    - docker run -d --name whiskey-inventory -p 3005:3005 --env-file .env.production --network host whiskey-inventory
+    - echo "Deployment complete! Check logs:"
+    - docker logs --tail 30 whiskey-inventory
   environment:
     name: production
     url: http://$DEPLOY_HOST:$DEPLOY_PORT
