@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --experimental-https",
+    "dev": "next dev",
     "dev:http": "node scripts/dev.js",
     "build": "next build",
     "start": "node scripts/start.js",

@@ -315,7 +315,7 @@ UserBottleSchema.methods.adjustFillLevel = function(newLevel: number, reason: 'm
 // Method to update fill level based on pours
 UserBottleSchema.methods.updateFillLevel = function() {
   if (this.status === 'opened' && this.pours.length > 0) {
-    const bottleSize = 750; // Standard 750ml bottle
+    const bottleSize = 25.36; // Standard 750ml bottle in ounces
     
     // Find the last manual adjustment or bottle opening
     let baseLevel = 100;
@@ -342,7 +342,7 @@ UserBottleSchema.methods.updateFillLevel = function() {
     
     // Only update if the fill level has changed
     if (Math.abs(newFillLevel - (this.fillLevel || 100)) > 0.01) {
-      this.adjustFillLevel(newFillLevel, 'pour', `Calculated from ${poursSinceAdjustment}ml poured since last adjustment`);
+      this.adjustFillLevel(newFillLevel, 'pour', `Calculated from ${poursSinceAdjustment.toFixed(1)}oz poured since last adjustment`);
     }
   }
 };
