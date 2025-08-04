@@ -78,8 +78,8 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD /app/healthcheck.sh
 
-# Start the Next.js application using the start script from package.json
-CMD ["node", "scripts/start.js"]
+# Start the Next.js application using the standalone server
+CMD ["node", "server.js"]
 
 # Development stage (optional, use with docker-compose)
 FROM node:18-alpine AS dev
