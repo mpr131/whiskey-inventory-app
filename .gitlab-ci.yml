@@ -87,16 +87,24 @@ deploy-production:
     - main
   variables:
     DOCKER_HOST: unix:///var/run/docker.sock
+    DEPLOY_PATH: /tmp/whiskey-inventory-deploy
   script:
-    - echo "Deploying to /home/ams237/webapps/whiskey-inventory..."
-    - mkdir -p /home/ams237/webapps/whiskey-inventory
-    - cp -r $CI_PROJECT_DIR/* /home/ams237/webapps/whiskey-inventory/
-    - cd /home/ams237/webapps/whiskey-inventory
-    - docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
+    - echo "Building and deploying on Big NUC..."
+    - cd $CI_PROJECT_DIR
+    
+    # Build the images
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
+    
+    # Stop any existing containers
+    - docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
+    
+    # Start the new containers
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-    - echo "Deployment complete!"
+    
+    # Show status
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+    - echo "Recent logs:"
+    - docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail 30
   environment:
     name: production
     url: http://$DEPLOY_HOST:$DEPLOY_PORT
