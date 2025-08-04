@@ -276,6 +276,7 @@ export default function BottleDetailPage() {
           status: 'opened',
           openDate: new Date().toISOString(),
           fillLevel: fillLevel,
+          fillLevelNote: fillLevel !== 100 ? `Bottle opened at ${fillLevel}% fill level` : undefined,
         }),
       });
 

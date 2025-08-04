@@ -108,11 +108,11 @@ export default function BottlesPage() {
   const [isGrouped, setIsGrouped] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [showFilterSidebar, setShowFilterSidebar] = useState(false);
+  // Show filter sidebar if any filters are pre-applied from URL
+  const hasPreAppliedFilters = !!(searchParams.get('status') || searchParams.get('category') || searchParams.get('proof'));
+  const [showFilterSidebar, setShowFilterSidebar] = useState(hasPreAppliedFilters);
   // Show old filters if any are pre-applied from URL
-  const [showFilters, setShowFilters] = useState(
-    !!(searchParams.get('status') || searchParams.get('category') || searchParams.get('proof'))
-  );
+  const [showFilters, setShowFilters] = useState(hasPreAppliedFilters);
   const [quickPourBottle, setQuickPourBottle] = useState<UserBottle | null>(null);
   const [quickRateBottle, setQuickRateBottle] = useState<UserBottle | null>(null);
   const [filtersInitialized, setFiltersInitialized] = useState(true); // True since we initialize from URL

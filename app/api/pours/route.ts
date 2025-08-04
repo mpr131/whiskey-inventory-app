@@ -120,10 +120,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Update fill level (assuming 750ml = 25.36 oz)
-    const totalPoured = bottle.pours.reduce((sum: number, p: any) => sum + p.amount, 0) + body.amount;
-    bottle.fillLevel = Math.max(0, 100 - (totalPoured / 25.36 * 100));
-
     // Add to legacy pours array for backward compatibility
     bottle.pours.push({
       date: pour.date,
@@ -131,6 +127,9 @@ export async function POST(req: NextRequest) {
       notes: pour.notes,
       rating: pour.rating,
     });
+
+    // Update fill level using the model method that respects manual adjustments
+    bottle.updateFillLevel();
 
     // Check if bottle is finished
     if (bottle.fillLevel <= 0) {
