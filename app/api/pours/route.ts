@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
     bottle.updateFillLevel();
 
     // Check if bottle is finished
-    if (bottle.fillLevel <= 0) {
+    if (bottle.fillLevel !== undefined && bottle.fillLevel <= 0) {
       bottle.status = 'finished';
     }
 
