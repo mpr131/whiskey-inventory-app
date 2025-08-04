@@ -13,26 +13,6 @@ services:
       - "3005:3005"
     env_file:
       - .env.production
-    environment:
-      # Application settings
-      NODE_ENV: production
-      PORT: 3005
-      
-      # Database connection - using service name for internal communication
-      MONGODB_URI: mongodb://mongodb-web:27017/whiskey-inventory
-      
-      # NextAuth configuration
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://192.168.1.71:3005}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      
-      # Public URL for the application
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://192.168.1.71:3005}
-      
-      # Cloudinary configuration (optional)
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
-    
     volumes:
       # Volume for uploaded images (if not using Cloudinary)
       - whiskey-uploads:/app/uploads
