@@ -120,6 +120,16 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Ensure fillLevelHistory exists
+    if (!bottle.fillLevelHistory) {
+      bottle.fillLevelHistory = [];
+    }
+
+    // Ensure bottle.pours is an array
+    if (!bottle.pours || !Array.isArray(bottle.pours)) {
+      bottle.pours = [];
+    }
+
     // Add to legacy pours array for backward compatibility
     bottle.pours.push({
       date: pour.date,
@@ -128,8 +138,19 @@ export async function POST(req: NextRequest) {
       rating: pour.rating,
     });
 
-    // Update fill level using the model method that respects manual adjustments
-    bottle.updateFillLevel();
+    // Update fill level with error handling
+    try {
+      bottle.updateFillLevel();
+    } catch (updateError: any) {
+      console.error('updateFillLevel error:', updateError);
+      console.error('Stack:', updateError.stack);
+      
+      // Fallback calculation if updateFillLevel fails
+      const totalPoured = bottle.pours.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      bottle.fillLevel = Math.max(0, 100 - (totalPoured / 25.36 * 100));
+      
+      console.log('Used fallback fill level calculation:', bottle.fillLevel);
+    }
 
     // Check if bottle is finished
     if (bottle.fillLevel !== undefined && bottle.fillLevel <= 0) {
@@ -198,8 +219,16 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ pour: populatedPour }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating pour:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Pour API Error:', error);
+    console.error('Stack:', error.stack);
+    return NextResponse.json(
+      { 
+        error: 'Failed to log pour', 
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
+      { status: 500 }
+    );
   }
 }
