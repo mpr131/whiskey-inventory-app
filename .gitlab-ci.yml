@@ -88,12 +88,14 @@ deploy-production:
   variables:
     DOCKER_HOST: unix:///var/run/docker.sock
   script:
-    - echo "Deploying using Docker Compose on Big NUC..."
-    - cd $CI_PROJECT_DIR
+    - echo "Deploying to /home/ams237/webapps/whiskey-inventory..."
+    - mkdir -p /home/ams237/webapps/whiskey-inventory
+    - cp -r $CI_PROJECT_DIR/* /home/ams237/webapps/whiskey-inventory/
+    - cd /home/ams237/webapps/whiskey-inventory
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml down || true
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-    - echo "Deployment complete! Checking container status..."
+    - echo "Deployment complete!"
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
   environment:
     name: production
