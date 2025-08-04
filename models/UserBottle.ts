@@ -314,48 +314,67 @@ UserBottleSchema.methods.adjustFillLevel = function(newLevel: number, reason: 'm
 
 // Method to update fill level based on pours
 UserBottleSchema.methods.updateFillLevel = function() {
+  console.log('[updateFillLevel] Method called');
   try {
     // Initialize if needed
     if (!this.fillLevelHistory) {
+      console.log('[updateFillLevel] fillLevelHistory not found - initializing');
       this.fillLevelHistory = [];
     }
     if (!this.pours || !Array.isArray(this.pours)) {
+      console.log('[updateFillLevel] pours not found or not array - initializing');
       this.pours = [];
     }
+    
+    console.log('[updateFillLevel] Status:', this.status, 'Pours length:', this.pours.length);
     
     if (this.status === 'opened' && this.pours.length > 0) {
       const bottleSize = 25.36; // Standard 750ml bottle in ounces
     
-    // Find the last manual adjustment or bottle opening
-    let baseLevel = 100;
-    let calculateFromDate = this.openDate || new Date(0);
-    
-    if (this.lastManualAdjustment && this.fillLevelHistory.length > 0) {
-      // Find the most recent manual adjustment
-      const lastManualAdj = this.fillLevelHistory
-        .filter((adj: IFillLevelAdjustment) => adj.reason === 'manual')
-        .sort((a: IFillLevelAdjustment, b: IFillLevelAdjustment) => b.date.getTime() - a.date.getTime())[0];
+      // Find the last manual adjustment or bottle opening
+      let baseLevel = 100;
+      let calculateFromDate = this.openDate || new Date(0);
       
-      if (lastManualAdj) {
-        baseLevel = lastManualAdj.newLevel;
-        calculateFromDate = lastManualAdj.date;
+      console.log('[updateFillLevel] Initial baseLevel:', baseLevel, 'openDate:', this.openDate);
+      console.log('[updateFillLevel] lastManualAdjustment:', this.lastManualAdjustment, 'fillLevelHistory length:', this.fillLevelHistory.length);
+      
+      if (this.lastManualAdjustment && this.fillLevelHistory.length > 0) {
+        // Find the most recent manual adjustment
+        console.log('[updateFillLevel] Looking for manual adjustments...');
+        const lastManualAdj = this.fillLevelHistory
+          .filter((adj: IFillLevelAdjustment) => adj.reason === 'manual')
+          .sort((a: IFillLevelAdjustment, b: IFillLevelAdjustment) => b.date.getTime() - a.date.getTime())[0];
+        
+        if (lastManualAdj) {
+          console.log('[updateFillLevel] Found manual adjustment:', lastManualAdj);
+          baseLevel = lastManualAdj.newLevel;
+          calculateFromDate = lastManualAdj.date;
+        }
       }
-    }
-    
-    // Calculate pours since the last manual adjustment
-    const poursSinceAdjustment = this.getTotalPoursSince(calculateFromDate);
-    
-    // Calculate new fill level
-    const fillLevelDecrease = (poursSinceAdjustment / bottleSize) * 100;
-    const newFillLevel = Math.max(0, baseLevel - fillLevelDecrease);
-    
+      
+      // Calculate pours since the last manual adjustment
+      console.log('[updateFillLevel] Calculating pours since:', calculateFromDate);
+      const poursSinceAdjustment = this.getTotalPoursSince(calculateFromDate);
+      console.log('[updateFillLevel] Pours since adjustment:', poursSinceAdjustment, 'oz');
+      
+      // Calculate new fill level
+      const fillLevelDecrease = (poursSinceAdjustment / bottleSize) * 100;
+      const newFillLevel = Math.max(0, baseLevel - fillLevelDecrease);
+      console.log('[updateFillLevel] Fill level decrease:', fillLevelDecrease, '%, New fill level:', newFillLevel, '%');
+      
       // Only update if the fill level has changed
       if (Math.abs(newFillLevel - (this.fillLevel || 100)) > 0.01) {
+        console.log('[updateFillLevel] Updating fill level from', this.fillLevel, 'to', newFillLevel);
         this.adjustFillLevel(newFillLevel, 'pour', `Calculated from ${poursSinceAdjustment.toFixed(1)}oz poured since last adjustment`);
+      } else {
+        console.log('[updateFillLevel] No significant change - keeping fill level at', this.fillLevel);
       }
+    } else {
+      console.log('[updateFillLevel] Skipping - bottle not opened or no pours');
     }
-  } catch (error) {
-    console.error('Error in updateFillLevel:', error);
+  } catch (error: any) {
+    console.error('[updateFillLevel] Error:', error);
+    console.error('[updateFillLevel] Error stack:', error.stack);
     // Don't throw - just leave fill level as is
   }
 };
