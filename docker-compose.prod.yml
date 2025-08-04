@@ -1,34 +1,6 @@
 version: '3.8'
 
 services:
-  # MongoDB service for web applications on Big NUC
-  mongodb-web:
-    image: mongo:7.0
-    container_name: mongodb-web
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      # Persistent storage for MongoDB data
-      - /data/mongodb-web:/data/db
-      # MongoDB configuration
-      - ./scripts/mongod.conf:/etc/mongod.conf:ro
-      # Initialization scripts
-      - ./scripts/init-mongodb.js:/docker-entrypoint-initdb.d/init-mongodb.js:ro
-    environment:
-      # Remove authentication for local network use
-      # Add MONGO_INITDB_ROOT_USERNAME and MONGO_INITDB_ROOT_PASSWORD if needed
-      MONGO_INITDB_DATABASE: whiskey
-    command: mongod --bind_ip_all
-    networks:
-      - infrastructure_infrastructure
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/whiskey --quiet
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
-
   # Whiskey Inventory Application
   whiskey-inventory:
     build:
@@ -65,10 +37,6 @@ services:
       # Volume for uploaded images (if not using Cloudinary)
       - whiskey-uploads:/app/uploads
     
-    depends_on:
-      mongodb-web:
-        condition: service_healthy
-    
     networks:
       - infrastructure_infrastructure
     
@@ -78,25 +46,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-
-  # Optional: MongoDB Express for database management UI
-  mongo-express:
-    image: mongo-express:1.0.2-20
-    container_name: mongo-express-web
-    restart: unless-stopped
-    ports:
-      - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_URL: mongodb://mongodb-web:27017/
-      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
-      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-changeme}
-      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
-    depends_on:
-      - mongodb-web
-    networks:
-      - infrastructure_infrastructure
-    profiles:
-      - tools
 
 networks:
   # Use external network that should already exist on Big NUC
