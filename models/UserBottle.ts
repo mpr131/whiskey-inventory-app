@@ -61,6 +61,7 @@ export interface IUserBottle extends Document {
   getTotalPours(): number;
   getTotalPoursSince(date: Date): number;
   updateFillLevel(): void;
+  updateFillLevelForNewPour(pourAmount: number): void;
   adjustFillLevel(newLevel: number, reason: 'manual' | 'pour' | 'recalculation', notes?: string): void;
   updatePourStats(): Promise<IUserBottle>;
 }
@@ -313,8 +314,18 @@ UserBottleSchema.methods.adjustFillLevel = function(newLevel: number, reason: 'm
 };
 
 // Method to update fill level based on pours
+// IMPORTANT: This assumes pours have already been added to the array
+// For new pours, use updateFillLevelForNewPour() instead
 UserBottleSchema.methods.updateFillLevel = function() {
-  console.log('[updateFillLevel] Method called');
+  console.log('[updateFillLevel] === START ===');
+  console.log('[updateFillLevel] Current state:', {
+    fillLevel: this.fillLevel,
+    status: this.status,
+    poursLength: this.pours?.length,
+    fillLevelHistoryLength: this.fillLevelHistory?.length,
+    lastManualAdjustment: this.lastManualAdjustment
+  });
+  
   try {
     // Initialize if needed
     if (!this.fillLevelHistory) {
@@ -326,7 +337,11 @@ UserBottleSchema.methods.updateFillLevel = function() {
       this.pours = [];
     }
     
-    console.log('[updateFillLevel] Status:', this.status, 'Pours length:', this.pours.length);
+    // Log all pours for debugging
+    console.log('[updateFillLevel] All pours in array:');
+    this.pours.forEach((p: IPour, i: number) => {
+      console.log(`  [${i}] ${p.date} - ${p.amount}oz`);
+    });
     
     if (this.status === 'opened' && this.pours.length > 0) {
       const bottleSize = 25.36; // Standard 750ml bottle in ounces
@@ -335,34 +350,69 @@ UserBottleSchema.methods.updateFillLevel = function() {
       let baseLevel = 100;
       let calculateFromDate = this.openDate || new Date(0);
       
-      console.log('[updateFillLevel] Initial baseLevel:', baseLevel, 'openDate:', this.openDate);
-      console.log('[updateFillLevel] lastManualAdjustment:', this.lastManualAdjustment, 'fillLevelHistory length:', this.fillLevelHistory.length);
+      console.log('[updateFillLevel] Initial values:');
+      console.log('  baseLevel:', baseLevel);
+      console.log('  openDate:', this.openDate);
+      console.log('  lastManualAdjustment:', this.lastManualAdjustment);
+      
+      // Log all fill level history
+      console.log('[updateFillLevel] Fill level history:');
+      if (this.fillLevelHistory && this.fillLevelHistory.length > 0) {
+        this.fillLevelHistory.forEach((adj: IFillLevelAdjustment, i: number) => {
+          console.log(`  [${i}] ${adj.date} - ${adj.reason}: ${adj.previousLevel}% -> ${adj.newLevel}%`);
+        });
+      } else {
+        console.log('  (empty)');
+      }
       
       if (this.lastManualAdjustment && this.fillLevelHistory.length > 0) {
         // Find the most recent manual adjustment
         console.log('[updateFillLevel] Looking for manual adjustments...');
-        const lastManualAdj = this.fillLevelHistory
-          .filter((adj: IFillLevelAdjustment) => adj.reason === 'manual')
+        const manualAdjustments = this.fillLevelHistory
+          .filter((adj: IFillLevelAdjustment) => adj.reason === 'manual');
+        
+        console.log('[updateFillLevel] Found', manualAdjustments.length, 'manual adjustments');
+        
+        const lastManualAdj = manualAdjustments
           .sort((a: IFillLevelAdjustment, b: IFillLevelAdjustment) => b.date.getTime() - a.date.getTime())[0];
         
         if (lastManualAdj) {
-          console.log('[updateFillLevel] Found manual adjustment:', lastManualAdj);
+          console.log('[updateFillLevel] Using last manual adjustment:', {
+            date: lastManualAdj.date,
+            newLevel: lastManualAdj.newLevel,
+            notes: lastManualAdj.notes
+          });
           baseLevel = lastManualAdj.newLevel;
           calculateFromDate = lastManualAdj.date;
         }
+      } else if (this.fillLevel !== undefined && this.fillLevel !== null && this.fillLevel !== 100) {
+        // If no manual adjustment but fill level is not 100%, use current fill level
+        console.log('[updateFillLevel] No manual adjustment found, but fill level is', this.fillLevel);
+        console.log('[updateFillLevel] WARNING: This might indicate missing fill level history!');
       }
       
       // Calculate pours since the last manual adjustment
       console.log('[updateFillLevel] Calculating pours since:', calculateFromDate);
+      const poursSinceDate = this.pours.filter((pour: IPour) => pour.date > calculateFromDate);
+      console.log('[updateFillLevel] Pours since date:', poursSinceDate.length);
+      poursSinceDate.forEach((p: IPour, i: number) => {
+        console.log(`  [${i}] ${p.date} - ${p.amount}oz`);
+      });
+      
       const poursSinceAdjustment = this.getTotalPoursSince(calculateFromDate);
-      console.log('[updateFillLevel] Pours since adjustment:', poursSinceAdjustment, 'oz');
+      console.log('[updateFillLevel] Total oz poured since adjustment:', poursSinceAdjustment);
       
       // Calculate new fill level
       const fillLevelDecrease = (poursSinceAdjustment / bottleSize) * 100;
       const newFillLevel = Math.max(0, baseLevel - fillLevelDecrease);
-      console.log('[updateFillLevel] Fill level decrease:', fillLevelDecrease, '%, New fill level:', newFillLevel, '%');
       
-      // Only update if the fill level has changed
+      console.log('[updateFillLevel] Calculation:');
+      console.log(`  Base level: ${baseLevel}%`);
+      console.log(`  Pours: ${poursSinceAdjustment}oz`);
+      console.log(`  Decrease: ${fillLevelDecrease.toFixed(2)}%`);
+      console.log(`  New level: ${newFillLevel.toFixed(2)}%`);
+      
+      // Only update if the fill level has changed significantly
       if (Math.abs(newFillLevel - (this.fillLevel || 100)) > 0.01) {
         console.log('[updateFillLevel] Updating fill level from', this.fillLevel, 'to', newFillLevel);
         this.adjustFillLevel(newFillLevel, 'pour', `Calculated from ${poursSinceAdjustment.toFixed(1)}oz poured since last adjustment`);
@@ -373,10 +423,77 @@ UserBottleSchema.methods.updateFillLevel = function() {
       console.log('[updateFillLevel] Skipping - bottle not opened or no pours');
     }
   } catch (error: any) {
-    console.error('[updateFillLevel] Error:', error);
+    console.error('[updateFillLevel] ERROR:', error.message);
     console.error('[updateFillLevel] Error stack:', error.stack);
     // Don't throw - just leave fill level as is
   }
+  
+  console.log('[updateFillLevel] === END ===');
+  console.log('[updateFillLevel] Final fill level:', this.fillLevel);
+};
+
+// New method specifically for updating fill level when adding a new pour
+UserBottleSchema.methods.updateFillLevelForNewPour = function(pourAmount: number) {
+  console.log('[updateFillLevelForNewPour] === START ===');
+  console.log('[updateFillLevelForNewPour] Pour amount:', pourAmount, 'oz');
+  console.log('[updateFillLevelForNewPour] Current fill level:', this.fillLevel);
+  
+  try {
+    const bottleSize = 25.36; // Standard 750ml bottle in ounces
+    
+    // Initialize if needed
+    if (!this.fillLevelHistory) {
+      this.fillLevelHistory = [];
+    }
+    
+    // Start from current fill level or find the last manual adjustment
+    let currentLevel = this.fillLevel || 100;
+    
+    // If we have a manual adjustment, verify we're using the right base
+    if (this.lastManualAdjustment && this.fillLevelHistory.length > 0) {
+      const lastManualAdj = this.fillLevelHistory
+        .filter((adj: IFillLevelAdjustment) => adj.reason === 'manual')
+        .sort((a: IFillLevelAdjustment, b: IFillLevelAdjustment) => b.date.getTime() - a.date.getTime())[0];
+      
+      if (lastManualAdj) {
+        console.log('[updateFillLevelForNewPour] Found last manual adjustment:', {
+          date: lastManualAdj.date,
+          level: lastManualAdj.newLevel
+        });
+        
+        // Calculate pours since that adjustment (not including the new one)
+        const poursSinceAdj = this.pours
+          .filter((p: IPour) => p.date > lastManualAdj.date)
+          .reduce((sum: number, p: IPour) => sum + p.amount, 0);
+        
+        // Recalculate current level from the manual adjustment
+        currentLevel = lastManualAdj.newLevel - (poursSinceAdj / bottleSize * 100);
+        console.log('[updateFillLevelForNewPour] Recalculated current level from manual adjustment:', currentLevel);
+      }
+    }
+    
+    // Calculate the decrease from this pour
+    const pourPercentage = (pourAmount / bottleSize) * 100;
+    const newFillLevel = Math.max(0, currentLevel - pourPercentage);
+    
+    console.log('[updateFillLevelForNewPour] Calculation:');
+    console.log(`  Current level: ${currentLevel.toFixed(2)}%`);
+    console.log(`  Pour: ${pourAmount}oz = ${pourPercentage.toFixed(2)}%`);
+    console.log(`  New level: ${newFillLevel.toFixed(2)}%`);
+    
+    // Update the fill level
+    this.adjustFillLevel(newFillLevel, 'pour', `Pour of ${pourAmount}oz`);
+    
+  } catch (error: any) {
+    console.error('[updateFillLevelForNewPour] ERROR:', error.message);
+    console.error('[updateFillLevelForNewPour] Error stack:', error.stack);
+    // Fallback: just subtract from current level
+    const pourPercentage = (pourAmount / 25.36) * 100;
+    this.fillLevel = Math.max(0, (this.fillLevel || 100) - pourPercentage);
+  }
+  
+  console.log('[updateFillLevelForNewPour] === END ===');
+  console.log('[updateFillLevelForNewPour] Final fill level:', this.fillLevel);
 };
 
 // Method to update pour statistics from the new Pour model

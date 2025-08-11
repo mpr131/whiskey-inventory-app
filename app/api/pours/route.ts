@@ -175,7 +175,59 @@ export async function POST(req: NextRequest) {
       console.log('pours array exists with', bottle.pours.length, 'entries');
     }
 
-    // Add to legacy pours array for backward compatibility
+    // CRITICAL FIX: Update fill level BEFORE adding the pour to the array
+    // This prevents double-counting the pour in the calculation
+    console.log('=== FILL LEVEL UPDATE SEQUENCE ===');
+    console.log('Current fill level before update:', bottle.fillLevel);
+    console.log('Current pours in array:', bottle.pours.length);
+    console.log('New pour amount to be added:', pour.amount, 'oz');
+    
+    // Store the current fill level for verification
+    const currentFillLevel = bottle.fillLevel || 100;
+    const bottleSize = 25.36; // 750ml in ounces
+    const pourPercentage = (pour.amount / bottleSize) * 100;
+    const expectedNewFillLevel = Math.max(0, currentFillLevel - pourPercentage);
+    
+    console.log('Expected calculation:');
+    console.log(`  Current: ${currentFillLevel.toFixed(2)}%`);
+    console.log(`  Pour: ${pour.amount}oz = ${pourPercentage.toFixed(2)}% of bottle`);
+    console.log(`  Expected new: ${expectedNewFillLevel.toFixed(2)}%`);
+    
+    // Update fill level FIRST (before adding pour to array)
+    console.log('Updating fill level with new pour method...');
+    try {
+      if (typeof bottle.updateFillLevelForNewPour !== 'function') {
+        console.error('WARNING: updateFillLevelForNewPour not found, using legacy method');
+        // Legacy approach: calculate manually
+        const newLevel = Math.max(0, currentFillLevel - pourPercentage);
+        bottle.adjustFillLevel(newLevel, 'pour', `Pour of ${pour.amount}oz`);
+      } else {
+        // Use the new method that handles the pour correctly
+        bottle.updateFillLevelForNewPour(pour.amount);
+      }
+      console.log('Fill level updated successfully');
+      console.log('New fill level after update:', bottle.fillLevel);
+      
+      // Verify the calculation is correct
+      if (Math.abs((bottle.fillLevel || 0) - expectedNewFillLevel) > 0.1) {
+        console.error('WARNING: Fill level calculation mismatch!');
+        console.error(`  Expected: ${expectedNewFillLevel.toFixed(2)}%`);
+        console.error(`  Actual: ${bottle.fillLevel}%`);
+        console.error('fillLevelHistory:', JSON.stringify(bottle.fillLevelHistory, null, 2));
+      } else {
+        console.log('Fill level calculation verified - matches expected value');
+      }
+    } catch (updateError: any) {
+      console.error('Fill level update error:', updateError);
+      console.error('Stack:', updateError.stack);
+      
+      // Fallback: Simple calculation from current level
+      console.log('Using simple fallback calculation...');
+      bottle.fillLevel = Math.max(0, currentFillLevel - pourPercentage);
+      console.log('Fallback fill level:', bottle.fillLevel);
+    }
+    
+    // NOW add to legacy pours array for backward compatibility
     console.log('Adding pour to legacy array...');
     const pourData = {
       date: pour.date,
@@ -183,35 +235,10 @@ export async function POST(req: NextRequest) {
       notes: pour.notes,
       rating: pour.rating,
     };
-    console.log('Pour data to add:', pourData);
     bottle.pours.push(pourData);
     console.log('Pour added to array. New length:', bottle.pours.length);
-
-    // Update fill level with error handling
-    console.log('Updating fill level...');
-    console.log('Current fill level before update:', bottle.fillLevel);
-    try {
-      console.log('Calling bottle.updateFillLevel()...');
-      if (typeof bottle.updateFillLevel !== 'function') {
-        console.error('ERROR: updateFillLevel is not a function!');
-        console.log('bottle methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(bottle)));
-        throw new Error('updateFillLevel method not found on bottle');
-      }
-      bottle.updateFillLevel();
-      console.log('updateFillLevel completed successfully');
-      console.log('New fill level after update:', bottle.fillLevel);
-    } catch (updateError: any) {
-      console.error('updateFillLevel error:', updateError);
-      console.error('Stack:', updateError.stack);
-      
-      // Fallback calculation if updateFillLevel fails
-      console.log('Using fallback calculation...');
-      const totalPoured = bottle.pours.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-      console.log('Total poured:', totalPoured, 'oz');
-      bottle.fillLevel = Math.max(0, 100 - (totalPoured / 25.36 * 100));
-      
-      console.log('Used fallback fill level calculation:', bottle.fillLevel);
-    }
+    
+    console.log('=== END FILL LEVEL UPDATE ===');
 
     // Check if bottle is finished
     console.log('Checking if bottle is finished...');
