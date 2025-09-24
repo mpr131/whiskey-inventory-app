@@ -10,7 +10,7 @@ import MasterBottleSearch from '@/components/MasterBottleSearch';
 import UPCBackfillTool from '@/components/admin/UPCBackfillTool';
 import FWGSImportDashboard from '@/components/admin/FWGSImportDashboard';
 
-const ZXingBarcodeScanner = dynamic(() => import('@/components/ZXingBarcodeScanner'), {
+const Html5QrScanner = dynamic(() => import('@/components/Html5QrScanner'), {
   ssr: false,
 });
 
@@ -595,7 +595,7 @@ Buffalo Trace, 080244009167
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <ZXingBarcodeScanner
+              <Html5QrScanner
                 onScan={handleBarcodeScan}
                 onClose={() => setShowScanner(false)}
               />

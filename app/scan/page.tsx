@@ -6,7 +6,7 @@ import { ArrowLeft, ScanLine, Package, Wine } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
-const ZXingBarcodeScanner = dynamic(() => import('@/components/ZXingBarcodeScanner'), {
+const Html5QrScanner = dynamic(() => import('@/components/Html5QrScanner'), {
   ssr: false,
 });
 
@@ -82,7 +82,7 @@ export default function ScanPage() {
 
           {isScanning && (
             <div className="card-premium">
-              <ZXingBarcodeScanner
+              <Html5QrScanner
                 onScan={handleBarcodeScan}
                 onClose={() => setIsScanning(false)}
               />

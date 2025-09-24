@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { ScanLine, Search, X, ChevronLeft, Wine, Users, MapPin, Tag, Camera, Star } from 'lucide-react';
 import FriendSelector, { Companion } from '@/components/FriendSelector';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/ZXingBarcodeScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/Html5QrScanner'), {
   ssr: false,
 });
 
@@ -107,7 +107,37 @@ export default function QuickPourPage() {
     
     setSearching(true);
     try {
-      // Search all bottles, not just opened ones, but prefer opened
+      // First check if this looks like a barcode - if so, use smart-scan logic
+      const isBarcode = /^[0-9]{6,}$/.test(query.trim());
+      
+      if (isBarcode) {
+        // Use smart-scan API for barcode searches (checks everything!)
+        const smartScanResponse = await fetch('/api/smart-scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ barcode: query })
+        });
+        
+        if (smartScanResponse.ok) {
+          const smartResult = await smartScanResponse.json();
+          
+          if (smartResult.type === 'user_bottle') {
+            // Found exact bottle - show it as exact match
+            setSearchResults([{ ...smartResult.userBottle, isExactMatch: true }]);
+            return;
+          } else if (smartResult.type === 'master_bottle' && smartResult.userBottleCount > 0) {
+            // Found product with user bottles - get all user bottles of this product
+            const userBottlesResponse = await fetch(`/api/user-bottles?masterBottleId=${smartResult.masterBottle._id}`);
+            if (userBottlesResponse.ok) {
+              const { bottles } = await userBottlesResponse.json();
+              setSearchResults(bottles.map((b: any) => ({ ...b, isExactMatch: true })));
+              return;
+            }
+          }
+        }
+      }
+      
+      // Fallback to regular text search
       const response = await fetch(`/api/user-bottles?search=${encodeURIComponent(query)}`);
       if (response.ok) {
         const data = await response.json();
@@ -129,15 +159,26 @@ export default function QuickPourPage() {
           return 0;
         });
         
-        setSearchResults(bottles);
+        // Check for exact barcode matches (check ALL barcode fields like smart-scan)
+        const cleanedQuery = query.replace(/^0+/, ''); // Remove leading zeros
+        const paddedQuery = query.padStart(12, '0'); // Pad with zeros
         
-        // If exact barcode match, auto-select
-        const exactMatch = bottles.find((b: any) => 
-          b.barcode === query || b.vaultBarcode === query
+        const exactMatches = bottles.filter((b: any) => 
+          b.vaultBarcode === query ||
+          b.barcode === query || b.barcode === cleanedQuery || b.barcode === paddedQuery ||
+          b.wineBarcode === query || b.wineBarcode === cleanedQuery || b.wineBarcode === paddedQuery ||
+          b.cellarTrackerId === query
         );
-        if (exactMatch) {
-          selectBottle(exactMatch);
-        }
+        
+        const otherBottles = bottles.filter((b: any) => !exactMatches.includes(b));
+        
+        // Sort: exact matches first, then others
+        const sortedBottles = [
+          ...exactMatches.map((b: any) => ({ ...b, isExactMatch: true })),
+          ...otherBottles.map((b: any) => ({ ...b, isExactMatch: false }))
+        ];
+        
+        setSearchResults(sortedBottles);
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -328,8 +369,19 @@ export default function QuickPourPage() {
                   <button
                     key={bottle._id}
                     onClick={() => selectBottle(bottle)}
-                    className="w-full p-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-left transition-all"
+                    className={`w-full p-4 rounded-lg text-left transition-all ${
+                      bottle.isExactMatch 
+                        ? 'bg-copper/20 border-2 border-copper hover:bg-copper/30' 
+                        : 'bg-gray-800 hover:bg-gray-700'
+                    }`}
                   >
+                    {bottle.isExactMatch && (
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-xs bg-copper/30 text-copper px-2 py-1 rounded-full font-semibold">
+                          🎯 Exact Barcode Match
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="font-semibold">{bottle.masterBottleId?.name || 'Unknown Bottle'}</div>

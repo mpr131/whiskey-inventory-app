@@ -43,6 +43,9 @@
   "permissions": [
     "camera"
   ],
+  "features": [
+    "camera"
+  ],
   "prefer_related_applications": false,
   "categories": ["lifestyle", "productivity"],
   "shortcuts": [

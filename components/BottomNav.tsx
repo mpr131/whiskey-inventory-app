@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Users, Activity, Wine, User } from 'lucide-react';
+import { Home, Users, Activity, Wine, User, ScanLine } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
@@ -37,7 +37,7 @@ export default function BottomNav() {
 
   const navItems: NavItem[] = [
     { path: '/dashboard', icon: Home, label: 'Home' },
-    { path: '/feed', icon: Activity, label: 'Feed' },
+    { path: '/scan', icon: ScanLine, label: 'Scan' },
     { path: '/pour/quick', icon: Wine, label: 'Pour' },
     { path: '/friends', icon: Users, label: 'Friends' },
     { 

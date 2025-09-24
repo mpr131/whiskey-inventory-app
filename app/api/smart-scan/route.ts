@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
     // Build comprehensive query to check ALL barcode fields
     const cleanedBarcode = barcode.replace(/^0+/, ''); // Remove leading zeros for UPC comparison
     const paddedBarcode = barcode.padStart(12, '0'); // Pad with zeros for full UPC
-    const partialIdRegex = barcode.length >= 6 ? new RegExp(barcode + '$') : null; // Match end of ID
     
     const userBottleQuery: any = {
       userId: session.user.id,
@@ -72,9 +71,7 @@ export async function POST(request: NextRequest) {
         { barcode: cleanedBarcode },
         { barcode: paddedBarcode },
         { wineBarcode: cleanedBarcode },
-        { wineBarcode: paddedBarcode },
-        // Partial MongoDB ID match (last 6-8 characters)
-        ...(partialIdRegex ? [{ _id: { $regex: partialIdRegex } }] : [])
+        { wineBarcode: paddedBarcode }
       ]
     };
 
@@ -91,8 +88,6 @@ export async function POST(request: NextRequest) {
         bottleType = 'Wine Barcode';
       } else if (userBottle.cellarTrackerId === barcode) {
         bottleType = 'CellarTracker ID';
-      } else if (partialIdRegex && partialIdRegex.test((userBottle as any)._id.toString())) {
-        bottleType = 'Bottle ID (partial)';
       }
       
       return NextResponse.json({
@@ -117,7 +112,7 @@ export async function POST(request: NextRequest) {
         const userBottlesOfMaster = await UserBottle.find({
           userId: session.user.id,
           masterBottleId: masterByUPC._id
-        });
+        }).populate('masterBottleId');
 
         if (userBottlesOfMaster.length > 0) {
           return NextResponse.json({

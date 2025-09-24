@@ -202,7 +202,7 @@ function ScanResultContent() {
                 <div className="relative w-40 h-48 mb-4">
                   <Image
                     src={masterBottle.defaultImageUrl}
-                    alt={bottle.name}
+                    alt={masterBottle?.name || bottle.name || 'Bottle'}
                     fill
                     className="object-contain rounded-lg"
                   />
@@ -213,10 +213,14 @@ function ScanResultContent() {
                 </div>
               )}
 
-              <h1 className="text-2xl font-bold text-white mb-2">{bottle.name}</h1>
-              <p className="text-lg text-gray-300 mb-1">{bottle.distillery}</p>
+              <h1 className="text-2xl font-bold text-white mb-2">{masterBottle?.name || bottle.name || 'Unknown Bottle'}</h1>
+              <p className="text-lg text-gray-300 mb-1">{masterBottle?.distillery || bottle.distillery || masterBottle?.brand || ''}</p>
               <p className="text-gray-400 mb-4">
-                {bottle.category} • {bottle.proof || bottle.statedProof}° • {bottle.size || '750 ml'}
+                {masterBottle?.category || bottle.category || ''}
+                {(masterBottle?.category || bottle.category) && (masterBottle?.proof || masterBottle?.statedProof || bottle.actualProof || bottle.statedProof) ? ' • ' : ''}
+                {masterBottle?.proof || masterBottle?.statedProof || bottle.actualProof || bottle.statedProof ? `${masterBottle?.proof || masterBottle?.statedProof || bottle.actualProof || bottle.statedProof}°` : ''}
+                {((masterBottle?.category || bottle.category) || (masterBottle?.proof || masterBottle?.statedProof || bottle.actualProof || bottle.statedProof)) && (masterBottle?.size || bottle.size) ? ' • ' : ''}
+                {masterBottle?.size || bottle.size || '750 ml'}
               </p>
             </div>
             
@@ -228,7 +232,9 @@ function ScanResultContent() {
                 </div>
                 <div>
                   <p className="text-gray-400">Location</p>
-                  <p className="font-medium text-white">{bottle.location}</p>
+                  <p className="font-medium text-white">
+                    {bottle.location?.area || 'Unknown'}{bottle.location?.bin ? ` - ${bottle.location.bin}` : ''}
+                  </p>
                 </div>
                 {bottle.personalRating && (
                   <div className="col-span-2">
@@ -248,7 +254,7 @@ function ScanResultContent() {
               </button>
 
               <button
-                onClick={() => router.push('/scan')}
+                onClick={() => window.location.href = '/scan'}
                 className="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-4 px-6 rounded-lg transition-all"
               >
                 Scan Another
@@ -292,9 +298,13 @@ function ScanResultContent() {
               )}
 
               <h1 className="text-2xl font-bold text-white mb-2">{bottle.name}</h1>
-              <p className="text-lg text-gray-300 mb-1">{bottle.distillery}</p>
+              <p className="text-lg text-gray-300 mb-1">{bottle.distillery || bottle.brand || ''}</p>
               <p className="text-gray-400 mb-4">
-                {bottle.category} • {bottle.proof || bottle.statedProof}° • {bottle.size || '750 ml'}
+                {bottle.category || ''}
+                {bottle.category && (bottle.proof || bottle.statedProof) ? ' • ' : ''}
+                {bottle.proof || bottle.statedProof ? `${bottle.proof || bottle.statedProof}°` : ''}
+                {(bottle.category || bottle.proof || bottle.statedProof) && bottle.size ? ' • ' : ''}
+                {bottle.size || '750 ml'}
               </p>
             </div>
 
@@ -318,7 +328,7 @@ function ScanResultContent() {
               </button>
 
               <button
-                onClick={() => router.push('/scan')}
+                onClick={() => window.location.href = '/scan'}
                 className="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-4 px-6 rounded-lg transition-all"
               >
                 Scan Another
@@ -393,7 +403,7 @@ function ScanResultContent() {
               </button>
 
               <button
-                onClick={() => router.push('/scan')}
+                onClick={() => window.location.href = '/scan'}
                 className="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-4 px-6 rounded-lg transition-all"
               >
                 Scan Another

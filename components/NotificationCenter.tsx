@@ -191,7 +191,7 @@ export default function NotificationCenter({ userId }: NotificationCenterProps) 
           />
           
           {/* Dropdown Panel */}
-          <div className="absolute right-0 mt-2 w-96 max-h-[600px] bg-gray-900 border border-gray-800 rounded-lg shadow-2xl z-[9999] overflow-hidden flex flex-col">
+          <div className="fixed md:absolute left-0 md:left-auto right-0 md:right-0 mt-2 md:w-96 max-h-[600px] bg-gray-900 border border-gray-800 rounded-lg shadow-2xl z-[9999] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="p-4 border-b border-gray-800 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Notifications</h2>

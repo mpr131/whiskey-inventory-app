@@ -24,10 +24,17 @@ export async function GET(req: NextRequest) {
     let totalBottles = 0;
     let totalValue = 0;
     let openBottles = 0;
+    let finishedBottles = 0;
     const uniqueLocationAreas = new Set<string>();
     const uniqueMasterBottles = new Set<string>();
 
     for (const bottle of userBottles) {
+      // Count finished bottles separately
+      if (bottle.status === 'finished') {
+        finishedBottles += bottle.quantity || 1;
+        continue;
+      }
+
       // Count total bottles (considering quantity)
       totalBottles += bottle.quantity || 1;
 
@@ -88,6 +95,7 @@ export async function GET(req: NextRequest) {
         totalBottles,
         totalValue,
         openBottles,
+        finishedBottles,
         uniqueBottles: uniqueMasterBottles.size,
         locations: uniqueLocationAreas.size,
         lowStockBottles: lowStockBottles.length,

@@ -24,7 +24,7 @@ import GalleryView from '@/components/bottles/GalleryView';
 import ShelfView from '@/components/bottles/ShelfView';
 import CollectionInsights from '@/components/bottles/CollectionInsights';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/ZXingBarcodeScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/Html5QrScanner'), {
   ssr: false,
 });
 
@@ -414,7 +414,7 @@ export default function BottlesPage() {
           locations={['Main Bar', 'Home Office', 'Basement']} // TODO: Get from actual data
         />
         
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8 overflow-x-hidden">
         
         {/* Refined Header Section */}
         <div className="mb-8 space-y-6">
@@ -599,7 +599,7 @@ export default function BottlesPage() {
           />
         ) : (
           // Default Grid View
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {bottles.map((bottle) => {
               const isUser = isUserBottle(bottle);
               const isGrouped = isGroupedBottle(bottle);
@@ -623,11 +623,11 @@ export default function BottlesPage() {
                         </div>
                       )}
                     <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white group-hover:text-copper-light transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xl font-bold text-white group-hover:text-copper-light transition-colors truncate">
                           {masterData.name}
                         </h3>
-                        <p className="text-gray-400">{masterData.distillery}</p>
+                        <p className="text-gray-400 truncate">{masterData.distillery}</p>
                         {bottle.userBottles && bottle.userBottles.length > 0 && bottle.userBottles[0].vaultBarcode && (
                           <div className="mt-2">
                             <span className="inline-flex items-center px-2 py-0.5 bg-copper/10 text-copper text-xs font-mono rounded">
@@ -776,11 +776,11 @@ export default function BottlesPage() {
                     <Link href={`/bottles/${bottle._id}`} className="block">
                       <div className="card-refined cursor-pointer">
                     <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white group-hover:text-copper-light transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xl font-bold text-white group-hover:text-copper-light transition-colors truncate">
                           {masterData.name}
                         </h3>
-                        <p className="text-gray-400">{masterData.distillery}</p>
+                        <p className="text-gray-400 truncate">{masterData.distillery}</p>
                         {isUser && bottle.vaultBarcode && (
                           <div className="mt-2">
                             <span className="inline-flex items-center px-2 py-0.5 bg-copper/10 text-copper text-xs font-mono rounded">

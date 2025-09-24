@@ -110,22 +110,35 @@ export async function GET(req: NextRequest) {
       if (search || brand) {
         // Search both barcode fields and text fields simultaneously
         if (search) {
-          // First, search UserBottles by barcode fields
+          // First, search UserBottles by barcode fields (like smart-scan)
+          const cleanedSearch = search.replace(/^0+/, ''); // Remove leading zeros
+          const paddedSearch = search.padStart(12, '0'); // Pad with zeros
+          
           const barcodeQuery = {
             $and: [
               { userId: session.user.id },
               {
                 $or: [
-                  { barcode: search },
-                  { cellarTrackerId: search },
-                  { wineBarcode: search },
+                  // Exact matches
                   { vaultBarcode: search },
+                  { barcode: search },
+                  { wineBarcode: search },
+                  { cellarTrackerId: search },
+                  // Handle UPCs with/without leading zeros
+                  { barcode: cleanedSearch },
+                  { barcode: paddedSearch },
+                  { wineBarcode: cleanedSearch },
+                  { wineBarcode: paddedSearch },
                 ]
               }
             ]
           };
           
-          const bottlesWithBarcode = await UserBottle.find(barcodeQuery).select('masterBottleId');
+          const bottlesWithBarcode = await UserBottle.find(barcodeQuery).populate('masterBottleId');
+          console.log(`🔍 Barcode search for "${search}": found ${bottlesWithBarcode.length} bottles`);
+          bottlesWithBarcode.forEach(b => {
+            console.log(`  - ${b.masterBottleId?.name}: barcode=${b.barcode}, wineBarcode=${b.wineBarcode}, vaultBarcode=${b.vaultBarcode}`);
+          });
           const barcodeMatchIds = Array.from(new Set(bottlesWithBarcode.map(b => b.masterBottleId)));
           
           // Then, search MasterBottles by name/brand/distillery

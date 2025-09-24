@@ -10,7 +10,7 @@ import MasterBottleSearch from '@/components/MasterBottleSearch';
 import TopNav from '@/components/TopNav';
 // import TestNotifications from '@/components/TestNotifications';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/ZXingBarcodeScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/Html5QrScanner'), {
   ssr: false,
 });
 
@@ -18,6 +18,7 @@ interface DashboardStats {
   totalBottles: number;
   totalValue: number;
   openBottles: number;
+  finishedBottles: number;
   uniqueBottles: number;
   locations: number;
   lowStockBottles: number;
@@ -48,6 +49,7 @@ export default function DashboardPage() {
     totalBottles: 0,
     totalValue: 0,
     openBottles: 0,
+    finishedBottles: 0,
     uniqueBottles: 0,
     locations: 0,
     lowStockBottles: 0,
@@ -172,6 +174,20 @@ export default function DashboardPage() {
             </div>
             <p className="text-3xl font-bold text-white group-hover:text-copper transition-colors">{stats.locations.toLocaleString()}</p>
             <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">Storage areas</p>
+          </Link>
+        </div>
+
+        {/* Second row of stats cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <Link href="/bottles?status=finished" className="card-premium hover:border-copper/50 hover:bg-gray-800/50 transition-all duration-300 cursor-pointer group">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-300 group-hover:text-copper transition-colors">Finished Bottles</h3>
+              <svg className="w-8 h-8 text-copper group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-3xl font-bold text-white group-hover:text-copper transition-colors">{stats.finishedBottles.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">Bottles killed</p>
           </Link>
         </div>
 

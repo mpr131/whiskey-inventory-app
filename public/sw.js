@@ -1,4 +1,4 @@
-const CACHE_NAME = 'whiskey-vault-v1';
+const CACHE_NAME = 'whiskey-vault-v3-html5-scanner';
 const urlsToCache = [
   '/',
   '/offline.html',
@@ -17,37 +17,21 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/')) {
+  // Skip caching for API requests and development
+  if (event.request.url.includes('/api/') || 
+      event.request.url.includes('/_next/') ||
+      event.request.url.includes('/scan') || // Don't cache scan pages during development
+      event.request.url.includes('ngrok')) {
     return;
   }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-
-        const responseToCache = response.clone();
-
-        caches.open(CACHE_NAME)
-          .then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
         return response;
       })
       .catch(() => {
-        return caches.match(event.request)
-          .then((response) => {
-            if (response) {
-              return response;
-            }
-
-            if (event.request.mode === 'navigate') {
-              return caches.match('/offline.html');
-            }
-          });
+        return caches.match(event.request);
       })
   );
 });
