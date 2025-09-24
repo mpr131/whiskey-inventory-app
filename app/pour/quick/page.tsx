@@ -370,12 +370,12 @@ export default function QuickPourPage() {
                     key={bottle._id}
                     onClick={() => selectBottle(bottle)}
                     className={`w-full p-4 rounded-lg text-left transition-all ${
-                      bottle.isExactMatch 
-                        ? 'bg-copper/20 border-2 border-copper hover:bg-copper/30' 
+                      (bottle as any).isExactMatch
+                        ? 'bg-copper/20 border-2 border-copper hover:bg-copper/30'
                         : 'bg-gray-800 hover:bg-gray-700'
                     }`}
                   >
-                    {bottle.isExactMatch && (
+                    {(bottle as any).isExactMatch && (
                       <div className="mb-2 flex items-center gap-2">
                         <span className="text-xs bg-copper/30 text-copper px-2 py-1 rounded-full font-semibold">
                           🎯 Exact Barcode Match

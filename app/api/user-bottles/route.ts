@@ -137,7 +137,8 @@ export async function GET(req: NextRequest) {
           const bottlesWithBarcode = await UserBottle.find(barcodeQuery).populate('masterBottleId');
           console.log(`🔍 Barcode search for "${search}": found ${bottlesWithBarcode.length} bottles`);
           bottlesWithBarcode.forEach(b => {
-            console.log(`  - ${b.masterBottleId?.name}: barcode=${b.barcode}, wineBarcode=${b.wineBarcode}, vaultBarcode=${b.vaultBarcode}`);
+            const masterName = (b.masterBottleId as any)?.name || 'Unknown';
+            console.log(`  - ${masterName}: barcode=${b.barcode}, wineBarcode=${b.wineBarcode}, vaultBarcode=${b.vaultBarcode}`);
           });
           const barcodeMatchIds = Array.from(new Set(bottlesWithBarcode.map(b => b.masterBottleId)));
           
