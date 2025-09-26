@@ -113,15 +113,17 @@ export default function AutoStartScanner({ onScan, onClose }: AutoStartScannerPr
         const onScanSuccess = (decodedText: string, decodedResult: any) => {
           setStatus('Barcode detected!');
 
-          // Stop scanning
-          html5Qrcode.stop().then(() => {
-            if (scannerRef.current) {
-              scannerRef.current.innerHTML = '';
-            }
-          }).catch(console.error);
-
-          // Trigger callback
+          // Trigger callback first (before cleanup)
           onScan(decodedText);
+
+          // Stop scanning after a small delay to allow navigation to start
+          setTimeout(() => {
+            html5Qrcode.stop().then(() => {
+              if (scannerRef.current) {
+                scannerRef.current.innerHTML = '';
+              }
+            }).catch(console.error);
+          }, 100);
         };
 
         // Error callback

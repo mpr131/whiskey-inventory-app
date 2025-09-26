@@ -4,10 +4,9 @@
 
 ### 1. Pull Latest Changes
 ```bash
-# Pull from both remotes
-git pull origin dev
+# Always pull from main branch for consistency
+git checkout main
 git pull origin main
-git pull gitlab dev
 git pull gitlab main
 ```
 
@@ -82,13 +81,19 @@ git commit -m "Your commit message"
 
 ### 2. Push to Both Remotes
 ```bash
-# Push to GitHub
-git push origin dev
+# Always push to both remotes for both branches
+# First ensure main is updated
 git push origin main
-
-# Push to GitLab (auto-connected)
-git push gitlab dev
 git push gitlab main
+
+# Then merge main into dev and push dev
+git checkout dev
+git merge main
+git push origin dev
+git push gitlab dev
+
+# Return to main branch
+git checkout main
 ```
 
 ### 3. Deploy to Production (Beelink Server)
@@ -99,7 +104,8 @@ ssh ams237beelink
 # Navigate to project directory
 cd /home/ams237/webapps/whiskey-inventory-app
 
-# Pull latest changes
+# IMPORTANT: Switch to main branch and pull latest changes
+git checkout main
 git pull
 
 # Rebuild and restart Docker containers (use production compose file)
@@ -135,6 +141,21 @@ The service worker caches static assets. After deployment, users may need to:
 - Hard refresh the browser (Cmd+Shift+R on Mac)
 - Clear browser cache
 - Wait for service worker to update (usually within 24 hours)
+
+## Git Branch Strategy
+
+### Important Notes
+- **Production ALWAYS runs from `main` branch**
+- **Always push to BOTH remotes (GitHub and GitLab)**
+- **Always push to BOTH branches (`main` and `dev`)**
+- The server pulls from GitLab (local network)
+- GitHub is the backup/public repository
+
+### Why This Matters
+The production server was previously stuck on an old `dev` branch, causing deployments to fail silently. Always ensure:
+1. Production server is on `main` branch
+2. Changes are pushed to both `main` and `dev`
+3. Both GitHub and GitLab have the latest code
 
 ## Production Environment
 
