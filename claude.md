@@ -94,23 +94,86 @@ git push gitlab main
 ### 3. Deploy to Production (Beelink Server)
 ```bash
 # SSH into the Beelink server
-ssh ams237@beelink
+ssh ams237beelink
 
 # Navigate to project directory
-cd whiskey-vault
+cd /home/ams237/webapps/whiskey-inventory-app
 
 # Pull latest changes
 git pull
 
-# Rebuild and restart Docker containers
-docker-compose down
-docker-compose up -d --build
+# Rebuild and restart Docker containers (use production compose file)
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up -d --build
 
 # Check logs to ensure successful deployment
-docker-compose logs -f
+docker-compose -f docker-compose.prod.yml logs -f
+
+# The production app runs on port 3005
+# Access at: http://192.168.1.71:3005
 ```
 
+## PWA Updates
+
+### Refreshing PWA After Deployment
+When deploying updates to production, PWA users need to refresh their app to get the latest changes:
+
+1. **Option 1: Force Close and Reopen**
+   - Close the PWA app completely
+   - Reopen it
+
+2. **Option 2: Clear Safari Website Data**
+   - Go to Settings > Safari > Advanced > Website Data
+   - Find your site and delete it
+   - Reopen the PWA
+
+3. **Option 3: Pull to Refresh**
+   - On the home screen, pull down to refresh
+
+### Service Worker Cache
+The service worker caches static assets. After deployment, users may need to:
+- Hard refresh the browser (Cmd+Shift+R on Mac)
+- Clear browser cache
+- Wait for service worker to update (usually within 24 hours)
+
+## Production Environment
+
+### Docker Containers
+The production environment runs two potential containers:
+- **whiskey-inventory** (Production) - Port 3005 - Uses `docker-compose.prod.yml`
+- **whiskey-vault-dev** (Development) - Port 3001 - Uses `docker-compose.yml`
+
+### Checking Container Status
+```bash
+# View running containers
+ssh ams237beelink 'docker ps | grep whiskey'
+
+# Check production logs
+ssh ams237beelink 'docker logs whiskey-inventory --tail 20'
+
+# Stop old/orphaned containers
+ssh ams237beelink 'docker-compose -f docker-compose.prod.yml down --remove-orphans'
+```
+
+### Port Conflicts
+- Port 3000: Used by Grafana (system monitoring)
+- Port 3001: Development container (if running)
+- Port 3005: Production container
+
 ## Common Issues & Fixes
+
+### Port Already Allocated Error
+If you get "port is already allocated" error:
+```bash
+# Check what's using the port
+ssh ams237beelink 'lsof -i :3005'
+
+# Or check Docker
+ssh ams237beelink 'docker ps | grep 3005'
+
+# Stop conflicting container
+ssh ams237beelink 'docker stop [container_id]'
+```
 
 ### TypeScript Errors
 - Use type casting when TypeScript doesn't recognize populated MongoDB fields:
@@ -118,9 +181,30 @@ docker-compose logs -f
   (object as any).property
   ```
 
-### Camera Issues
-- Html5QrScanner must use unique IDs to prevent duplicate cameras
-- Always clean up scanner instances in useEffect cleanup
+### Camera Scanner Implementation
+We use two scanner components:
+1. **Html5QrScanner** - Original scanner with manual camera selection
+2. **AutoStartScanner** - Enhanced scanner with automatic setup
+
+#### AutoStartScanner Features
+- Automatically requests camera permissions
+- Auto-selects best camera (prioritizes: back ultra-wide > ultra-wide > back > rear)
+- Starts scanning immediately without manual steps
+- Shows user-friendly status messages during initialization
+
+#### Scanner Usage Locations
+The scanner is used in multiple pages:
+- `/scan` - Main barcode scanning page
+- `/pour/quick` - Quick pour session scanning
+- `/dashboard` - Dashboard quick scan
+- `/bottles` - Bottle collection scanning
+- `/admin/upc` - Admin UPC management
+
+#### Camera Issues & Solutions
+- **Duplicate cameras bug**: Fixed by using unique timestamp-based IDs
+- **Cleanup issues**: Always clean up scanner instances synchronously in useEffect cleanup
+- **Permission errors**: AutoStartScanner handles permission requests automatically
+- **Camera selection**: AutoStartScanner intelligently selects the best available camera
 
 ### MongoDB Population
 - Remember to use `.populate('fieldName')` when referencing other collections
