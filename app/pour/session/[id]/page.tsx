@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ChevronLeft, Wine, Calendar, MapPin, Users, Tag, Star, UserPlus } from 'lucide-react';
+import { ChevronLeft, Wine, Calendar, MapPin, Users, Tag, Star, UserPlus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { formatDate, formatTime, formatPourDateTime } from '@/lib/date-utils';
 
@@ -62,6 +62,56 @@ export default function PourSessionPage() {
   const [pourSession, setPourSession] = useState<PourSession | null>(null);
   const [pours, setPours] = useState<Pour[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingPour, setDeletingPour] = useState<string | null>(null);
+
+  const handleDeletePour = async (pourId: string) => {
+    if (!confirm('Are you sure you want to delete this pour?')) {
+      return;
+    }
+
+    setDeletingPour(pourId);
+    try {
+      const response = await fetch(`/api/pours/${pourId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove the deleted pour from the list
+        setPours(pours.filter(p => p._id !== pourId));
+
+        // Update session statistics if needed
+        if (pourSession) {
+          const deletedPour = pours.find(p => p._id === pourId);
+          if (deletedPour) {
+            setPourSession({
+              ...pourSession,
+              totalPours: pourSession.totalPours - 1,
+              totalAmount: pourSession.totalAmount - deletedPour.amount,
+              totalCost: pourSession.totalCost ?
+                pourSession.totalCost - (deletedPour.costPerPour || 0) : undefined,
+              averageRating: pourSession.averageRating ?
+                calculateNewAverage(pours.filter(p => p._id !== pourId)) : undefined
+            });
+          }
+        }
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete pour: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting pour:', error);
+      alert('Failed to delete pour. Please try again.');
+    } finally {
+      setDeletingPour(null);
+    }
+  };
+
+  const calculateNewAverage = (remainingPours: Pour[]) => {
+    const ratedPours = remainingPours.filter(p => p.rating);
+    if (ratedPours.length === 0) return undefined;
+    const sum = ratedPours.reduce((acc, p) => acc + (p.rating || 0), 0);
+    return parseFloat((sum / ratedPours.length).toFixed(1));
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -306,17 +356,31 @@ export default function PourSessionPage() {
           <h3 className="text-xl font-semibold mb-4">Pours in this Session</h3>
           
           {pours.map((pour) => (
-            <div key={pour._id} className="bg-gray-800 rounded-lg p-4">
+            <div key={pour._id} className="bg-gray-800 rounded-lg p-4 relative">
               <div className="flex items-start justify-between mb-2">
-                <div>
+                <div className="flex-1">
                   <h4 className="font-semibold">{pour.userBottleId.masterBottleId.name}</h4>
                   <p className="text-sm text-gray-400">{pour.userBottleId.masterBottleId.distillery}</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-copper">{pour.amount}oz</div>
-                  {pour.costPerPour && (
-                    <div className="text-sm text-gray-400">${pour.costPerPour.toFixed(2)}</div>
-                  )}
+                <div className="flex items-start gap-3">
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-copper">{pour.amount}oz</div>
+                    {pour.costPerPour && (
+                      <div className="text-sm text-gray-400">${pour.costPerPour.toFixed(2)}</div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDeletePour(pour._id)}
+                    disabled={deletingPour === pour._id}
+                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Delete this pour"
+                  >
+                    {deletingPour === pour._id ? (
+                      <div className="w-5 h-5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
               </div>
               
