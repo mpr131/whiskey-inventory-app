@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { ScanLine, Search, X, ChevronLeft, Wine, Users, MapPin, Tag, Camera, Star } from 'lucide-react';
 import FriendSelector, { Companion } from '@/components/FriendSelector';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/Html5QrScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/AutoStartScanner'), {
   ssr: false,
 });
 

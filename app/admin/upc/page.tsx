@@ -10,7 +10,7 @@ import MasterBottleSearch from '@/components/MasterBottleSearch';
 import UPCBackfillTool from '@/components/admin/UPCBackfillTool';
 import FWGSImportDashboard from '@/components/admin/FWGSImportDashboard';
 
-const Html5QrScanner = dynamic(() => import('@/components/Html5QrScanner'), {
+const Html5QrScanner = dynamic(() => import('@/components/AutoStartScanner'), {
   ssr: false,
 });
 

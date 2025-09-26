@@ -60,7 +60,7 @@ export default function Html5QrScanner({ onScan, onClose }: Html5QrScannerProps)
               experimentalFeatures: {
                 useBarCodeDetectorIfSupported: true // Use native detector if available!
               },
-              rememberLastUsedCamera: true, // Let it remember the working camera
+              rememberLastUsedCamera: false, // Don't remember - we'll auto-select
               showTorchButtonIfSupported: true,
               showZoomSliderIfSupported: true,
               defaultZoomValueIfSupported: 2, // 2x zoom for better barcode reading

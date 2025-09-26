@@ -24,7 +24,7 @@ import GalleryView from '@/components/bottles/GalleryView';
 import ShelfView from '@/components/bottles/ShelfView';
 import CollectionInsights from '@/components/bottles/CollectionInsights';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/Html5QrScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/AutoStartScanner'), {
   ssr: false,
 });
 

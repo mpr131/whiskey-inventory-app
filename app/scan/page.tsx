@@ -6,7 +6,7 @@ import { ArrowLeft, ScanLine, Package, Wine } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
-const Html5QrScanner = dynamic(() => import('@/components/Html5QrScanner'), {
+const AutoStartScanner = dynamic(() => import('@/components/AutoStartScanner'), {
   ssr: false,
 });
 
@@ -81,12 +81,10 @@ export default function ScanPage() {
           )}
 
           {isScanning && (
-            <div className="card-premium">
-              <Html5QrScanner
-                onScan={handleBarcodeScan}
-                onClose={() => setIsScanning(false)}
-              />
-            </div>
+            <AutoStartScanner
+              onScan={handleBarcodeScan}
+              onClose={() => setIsScanning(false)}
+            />
           )}
         </div>
       </main>

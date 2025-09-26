@@ -10,7 +10,7 @@ import MasterBottleSearch from '@/components/MasterBottleSearch';
 import TopNav from '@/components/TopNav';
 // import TestNotifications from '@/components/TestNotifications';
 
-const BarcodeScanner = dynamicImport(() => import('@/components/Html5QrScanner'), {
+const BarcodeScanner = dynamicImport(() => import('@/components/AutoStartScanner'), {
   ssr: false,
 });
 
